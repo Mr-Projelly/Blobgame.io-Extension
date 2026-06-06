@@ -14,7 +14,7 @@ Install this loader in Tampermonkey:
 https://cdn.jsdelivr.net/gh/SkyViewBlobio/Blobgame.io-Web-Script@main/loader/blobio-loader.user.js
 ```
 
-Existing installs before `0.1.1` may need to be reinstalled once because the old loader update URL can be cached.
+Existing installs before `0.1.2` may need to be reinstalled once because the old loader update URL can be cached.
 
 The loader fetches:
 
