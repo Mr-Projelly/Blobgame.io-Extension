@@ -1,11 +1,11 @@
-import backgroundUrl from '../background.png';
-import discordIconUrl from '../discord_icon.png';
-import facebookIconUrl from '../facebook_icon.png';
-import instagramIconUrl from '../instagram_icon.png';
-import socialsButtonUrl from '../socal_icon_n.png';
-import updatesButtonUrl from '../update_notes_n_.png';
-import youtubeIconUrl from '../youtube_icon.png';
-import recommendedButtonUrl from '../yt_recommended_n.png';
+import backgroundUrl from '../assets/background.png';
+import discordIconUrl from '../assets/discord_icon.png';
+import facebookIconUrl from '../assets/facebook_icon.png';
+import instagramIconUrl from '../assets/instagram_icon.png';
+import socialsButtonUrl from '../assets/socal_icon_n.png';
+import updatesButtonUrl from '../assets/update_notes_n_.png';
+import youtubeIconUrl from '../assets/youtube_icon.png';
+import recommendedButtonUrl from '../assets/yt_recommended_n.png';
 import { BackgroundFeature } from './features/BackgroundFeature.js';
 import { MenuFeature } from './features/MenuFeature.js';
 

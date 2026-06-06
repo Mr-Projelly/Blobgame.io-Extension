@@ -14,7 +14,7 @@ Install this loader in Tampermonkey:
 https://raw.githubusercontent.com/SkyViewBlobio/Blobgame.io-Web-Script/main/loader/blobio-loader.user.js
 ```
 
-Existing installs before `0.1.3` should use Tampermonkey's update check or be reinstalled once.
+Existing installs before `0.1.4` should use Tampermonkey's update check or be reinstalled once.
 
 The loader fetches:
 
@@ -36,4 +36,4 @@ Source files live in `src/`. The generated file in `dist/` is the runtime loaded
 
 ## Current Feature
 
-The first feature applies `background.png` as a menu/page background using injected CSS. It does not try to alter the in-game canvas background.
+The first feature applies `assets/background.png` as a menu/page background using injected CSS. It does not try to alter the in-game canvas background.

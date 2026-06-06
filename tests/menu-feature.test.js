@@ -48,6 +48,67 @@ function addOriginalSocialLinks(document) {
   document.body.appendChild(social);
 }
 
+function addOriginalFeaturedVideo(document) {
+  const title = document.createElement('div');
+  title.id = 'youtube-title';
+  title.textContent = 'Featured Video: KING OF CRAZY 2 - BLOB.IO YT RANK SPECIAL';
+
+  const youtube = document.createElement('div');
+  youtube.classList.add('youtube', 'hide-on-small-screen');
+
+  const iframe = document.createElement('iframe');
+  iframe.id = 'youtube-iframe';
+  iframe.setAttribute('src', 'https://www.youtube.com/embed/EY-XCBj5Tjs');
+
+  youtube.appendChild(iframe);
+  document.body.append(title, youtube);
+}
+
+function addOriginalUpdateNotes(document) {
+  const aside = document.createElement('div');
+  aside.classList.add('aside', 'aside-2');
+
+  const heading = document.createElement('h3');
+  heading.textContent = 'Updates';
+
+  const history = document.createElement('div');
+  history.classList.add('history-wrapper');
+  history.textContent = 'Old update history';
+
+  aside.append(heading, history);
+  document.body.appendChild(aside);
+}
+
+function addCuedOverlay(document) {
+  const overlay = document.createElement('cued-overlay');
+  overlay.classList.add('ytmCuedOverlayHost');
+
+  const gradient = document.createElement('div');
+  gradient.classList.add('ytmCuedOverlayGradient');
+
+  overlay.appendChild(gradient);
+  document.body.appendChild(overlay);
+}
+
+function addOriginalPolicyLinks(document) {
+  const policy = document.createElement('div');
+  policy.classList.add('policy');
+
+  const heading = document.createElement('h3');
+  heading.textContent = 'Policy';
+
+  const privacy = document.createElement('a');
+  privacy.setAttribute('href', 'https://blob-devour.blogspot.com/2017/08/privacy-policy-this-policy-will-explain.html');
+  privacy.textContent = 'Privacy Policy';
+
+  const terms = document.createElement('a');
+  terms.setAttribute('href', 'https://blob-terms-and-conditions.blogspot.com/2018/12/blob-io-terms-and-conditions.html');
+  terms.textContent = 'Terms and Conditions';
+
+  policy.append(heading, privacy, terms);
+  document.body.appendChild(policy);
+}
+
 test('MenuFeature injects toolbar buttons next to the Replay button and hides original socials', () => {
   const document = createFakeDocument();
   const { controls, replayButton } = addReplayButton(document);
@@ -65,15 +126,43 @@ test('MenuFeature injects toolbar buttons next to the Replay button and hides or
   assert.notEqual(toolbar, null);
   assert.equal(toolbar.parentNode, controls);
   assert.equal(controls.children.indexOf(toolbar), controls.children.indexOf(replayButton) + 1);
-  assert.equal(toolbar.querySelector('.blobio-menu-buttons').querySelectorAll('button').length, 3);
+  const buttons = toolbar.querySelector('.blobio-menu-buttons').querySelectorAll('button');
+  assert.equal(buttons.length, 3);
+  assert.equal(buttons[0].classList.contains('button'), true);
+  assert.equal(buttons[0].classList.contains('image'), true);
+  assert.equal(buttons[0].classList.contains('icons'), true);
   assert.match(toolbar.textContent, /Featured/);
   assert.match(toolbar.textContent, /Updates/);
   assert.match(toolbar.textContent, /Socials/);
+  assert.doesNotMatch(style.textContent, /radial-gradient/);
+  assert.doesNotMatch(style.textContent, /\.blobio-menu-button:hover/);
 
   feature.destroy();
 
   assert.equal(document.getElementById('blobio-menu-style'), null);
   assert.equal(document.querySelector('.blobio-menu-toolbar'), null);
+});
+
+test('MenuFeature hides original featured video, update history, and cued overlay blocks', () => {
+  const document = createFakeDocument();
+  addReplayButton(document);
+  addOriginalFeaturedVideo(document);
+  addOriginalUpdateNotes(document);
+  addCuedOverlay(document);
+
+  const feature = new MenuFeature({ document, assets });
+  feature.start();
+
+  assert.equal(document.getElementById('youtube-title').classList.contains('blobio-original-hidden'), true);
+  assert.equal(document.querySelector('.youtube').classList.contains('blobio-original-hidden'), true);
+  assert.equal(document.querySelector('.history-wrapper').classList.contains('blobio-original-hidden'), true);
+  assert.equal(document.querySelector('.aside.aside-2 h3').classList.contains('blobio-original-hidden'), true);
+  assert.equal(document.querySelector('cued-overlay.ytmCuedOverlayHost').classList.contains('blobio-original-hidden'), true);
+  assert.equal(document.querySelector('.ytmCuedOverlayGradient').classList.contains('blobio-original-hidden'), true);
+
+  feature.destroy();
+
+  assert.equal(document.getElementById('youtube-title').classList.contains('blobio-original-hidden'), false);
 });
 
 test('MenuFeature opens one animated panel and closes it on Escape or outside click', () => {
@@ -109,6 +198,42 @@ test('MenuFeature opens one animated panel and closes it on Escape or outside cl
   feature.destroy();
 });
 
+test('MenuFeature uses the current Blobgame featured video title and thumbnail', () => {
+  const document = createFakeDocument();
+  addReplayButton(document);
+  addOriginalFeaturedVideo(document);
+
+  const feature = new MenuFeature({ document, assets });
+  feature.start();
+
+  const toolbar = document.querySelector('.blobio-menu-toolbar');
+  const featuredButton = toolbar.querySelectorAll('button')[0];
+  featuredButton.click();
+
+  const panel = document.getElementById('blobio-panel-featured');
+  let videoLink = panel.querySelector('a[href]');
+  let thumbnail = panel.querySelector('img');
+
+  assert.equal(videoLink.getAttribute('href'), 'https://www.youtube.com/watch?v=EY-XCBj5Tjs');
+  assert.equal(thumbnail.getAttribute('src'), 'https://img.youtube.com/vi/EY-XCBj5Tjs/hqdefault.jpg');
+  assert.match(panel.textContent, /KING OF CRAZY 2 - BLOB\.IO YT RANK SPECIAL/);
+
+  document.getElementById('youtube-title').textContent = 'Featured Video: NEW BLOB.IO CLIP';
+  document.getElementById('youtube-iframe').setAttribute('src', 'https://www.youtube.com/embed/XL316v1Ww6k');
+
+  featuredButton.click();
+  featuredButton.click();
+
+  videoLink = panel.querySelector('a[href]');
+  thumbnail = panel.querySelector('img');
+
+  assert.equal(videoLink.getAttribute('href'), 'https://www.youtube.com/watch?v=XL316v1Ww6k');
+  assert.equal(thumbnail.getAttribute('src'), 'https://img.youtube.com/vi/XL316v1Ww6k/hqdefault.jpg');
+  assert.match(panel.textContent, /NEW BLOB\.IO CLIP/);
+
+  feature.destroy();
+});
+
 test('MenuFeature rebuilds social links with local icons and existing hrefs', () => {
   const document = createFakeDocument();
   addReplayButton(document);
@@ -126,6 +251,7 @@ test('MenuFeature rebuilds social links with local icons and existing hrefs', ()
 
   assert.equal(panel.classList.contains('is-open'), true);
   assert.match(panel.textContent, /Blobio Socials/);
+  assert.equal(panel.textContent.match(/Blobio Socials/g)?.length, 1);
   assert.equal(links.length, 4);
   assert.equal(links[0].getAttribute('href'), 'https://youtube.com/@blobio');
   assert.equal(links[1].getAttribute('href'), 'https://disc.blobgame.io/');
@@ -134,4 +260,39 @@ test('MenuFeature rebuilds social links with local icons and existing hrefs', ()
   assert.equal(links[0].querySelector('img').getAttribute('src'), assets.youtubeIcon);
 
   feature.destroy();
+});
+
+test('MenuFeature folds original policy links into a bottom policy menu', () => {
+  const document = createFakeDocument();
+  addReplayButton(document);
+  addOriginalPolicyLinks(document);
+
+  const feature = new MenuFeature({ document, assets });
+  feature.start();
+
+  const originalLinks = document.querySelectorAll('.policy a[href]');
+  const policyDock = document.querySelector('.blobio-policy-dock');
+  const policyPanel = document.getElementById('blobio-panel-policy');
+
+  assert.equal(originalLinks.length, 2);
+  assert.equal(originalLinks[0].classList.contains('blobio-original-hidden'), true);
+  assert.notEqual(policyDock, null);
+  assert.equal(policyPanel.classList.contains('is-open'), false);
+
+  policyDock.querySelector('button').click();
+
+  const foldedLinks = policyPanel.querySelectorAll('a[href]');
+  assert.equal(policyPanel.classList.contains('is-open'), true);
+  assert.equal(foldedLinks.length, 2);
+  assert.equal(foldedLinks[0].getAttribute('href'), originalLinks[0].getAttribute('href'));
+  assert.match(policyPanel.textContent, /Privacy Policy/);
+  assert.match(policyPanel.textContent, /Terms and Conditions/);
+
+  document.dispatchEvent({ type: 'keydown', key: 'Escape' });
+  assert.equal(policyPanel.classList.contains('is-open'), false);
+
+  feature.destroy();
+
+  assert.equal(document.querySelector('.blobio-policy-dock'), null);
+  assert.equal(originalLinks[0].classList.contains('blobio-original-hidden'), false);
 });
