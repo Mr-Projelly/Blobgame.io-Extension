@@ -2,7 +2,7 @@
 
 Tampermonkey loader and modular extension code for `blobgame.io` and `custom.client.blobgame.io`.
 
-The installed userscript is only a small loader. It fetches the built extension bundle from GitHub through jsDelivr, so users can receive updates without reinstalling the full script.
+The installed userscript is only a small loader. It fetches the built extension bundle from GitHub, with jsDelivr as a fallback, so users can receive updates without reinstalling the full script.
 
 ## Install
 
@@ -11,10 +11,10 @@ This install URL only works for normal Tampermonkey users.
 Install this loader in Tampermonkey:
 
 ```text
-https://cdn.jsdelivr.net/gh/SkyViewBlobio/Blobgame.io-Web-Script@main/loader/blobio-loader.user.js
+https://raw.githubusercontent.com/SkyViewBlobio/Blobgame.io-Web-Script/main/loader/blobio-loader.user.js
 ```
 
-Existing installs before `0.1.2` may need to be reinstalled once because the old loader update URL can be cached.
+Existing installs before `0.1.2` should use Tampermonkey's update check or be reinstalled once.
 
 The loader fetches:
 
