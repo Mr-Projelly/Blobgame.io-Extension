@@ -15,14 +15,22 @@ const assets = {
 };
 
 function addReplayButton(document) {
+  const header = document.createElement('div');
+  header.classList.add('header');
+  header.setAttribute('_ngcontent-c1', '');
+
   const controls = document.createElement('div');
-  controls.classList.add('menu-actions');
+  controls.classList.add('right');
+  controls.setAttribute('_ngcontent-c1', '');
 
   const replayButton = document.createElement('button');
+  replayButton.classList.add('replays', 'icon-button');
+  replayButton.setAttribute('_ngcontent-c1', '');
   replayButton.textContent = 'Replay';
 
   controls.appendChild(replayButton);
-  document.body.appendChild(controls);
+  header.appendChild(controls);
+  document.body.appendChild(header);
 
   return { controls, replayButton };
 }
@@ -200,17 +208,18 @@ test('MenuFeature injects toolbar buttons next to the Replay button and hides or
   const buttons = toolbar.querySelector('.blobio-menu-buttons').querySelectorAll('button');
   assert.equal(buttons.length, 3);
   assert.equal(buttons[0].classList.contains('icon-button'), true);
-  assert.equal(buttons[0].style.width, '50px');
-  assert.equal(buttons[0].style.height, '50px');
-  assert.equal(buttons[0].style.backgroundSize, 'cover');
-  assert.equal(buttons[0].style.backgroundRepeat, 'repeat');
-  assert.equal(buttons[0].style.backgroundPosition, '0% 0%');
-  assert.equal(buttons[0].style.display, 'inline-block');
-  assert.equal(buttons[0].style.padding, '1px 6px');
-  assert.equal(buttons[0].style.border, '0px none');
-  assert.equal(buttons[0].style.backgroundColor, 'transparent');
-  assert.match(style.textContent, /\.blobio-menu-buttons\s*{[\s\S]*display: inline-block;/);
-  assert.match(style.textContent, /\.blobio-menu-button\s*{[\s\S]*display: inline-block !important;/);
+  assert.equal(buttons[0].hasAttribute('_ngcontent-c1'), true);
+  assert.equal(buttons[0].style.backgroundImage, 'url("data:image/png;base64,yt-button")');
+  assert.equal(buttons[0].style.width, undefined);
+  assert.equal(buttons[0].style.height, undefined);
+  assert.equal(buttons[0].style.backgroundSize, undefined);
+  assert.equal(buttons[0].style.backgroundRepeat, undefined);
+  assert.equal(buttons[0].style.backgroundPosition, undefined);
+  assert.equal(buttons[0].style.display, undefined);
+  assert.equal(buttons[0].style.padding, undefined);
+  assert.equal(buttons[0].style.border, undefined);
+  assert.equal(buttons[0].style.backgroundColor, undefined);
+  assert.doesNotMatch(style.textContent, /\.blobio-menu-button\s*{/);
   assert.match(toolbar.textContent, /Featured/);
   assert.match(toolbar.textContent, /Updates/);
   assert.match(toolbar.textContent, /Socials/);

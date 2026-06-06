@@ -272,18 +272,10 @@ export class MenuFeature {
     button.type = 'button';
     button.title = label;
     button.setAttribute('aria-label', label);
+    button.setAttribute('_ngcontent-c1', '');
     button.dataset.panel = panelName;
     button.classList.add('icon-button', 'blobio-menu-button');
-    button.style.display = 'inline-block';
-    button.style.width = '50px';
-    button.style.height = '50px';
-    button.style.padding = '1px 6px';
-    button.style.border = '0px none';
-    button.style.backgroundColor = 'transparent';
     button.style.backgroundImage = imageUrl ? `url("${imageUrl}")` : '';
-    button.style.backgroundSize = 'cover';
-    button.style.backgroundRepeat = 'repeat';
-    button.style.backgroundPosition = '0% 0%';
 
     const hiddenLabel = this.document.createElement('span');
     hiddenLabel.classList.add('blobio-menu-label');

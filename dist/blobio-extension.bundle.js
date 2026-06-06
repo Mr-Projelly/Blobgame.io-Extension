@@ -189,10 +189,8 @@ html.${className} .history-wrapper {
 
 .${toolbarClass} {
   position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: 8px;
+  display: inline-block;
+  margin-left: 0;
   vertical-align: middle;
   z-index: 2147482500;
 }
@@ -207,22 +205,6 @@ html.${className} .history-wrapper {
 .blobio-menu-buttons {
   display: inline-block;
   white-space: nowrap;
-}
-
-.blobio-menu-button {
-  display: inline-block !important;
-  width: 50px !important;
-  height: 50px !important;
-  padding: 1px 6px !important;
-  border: 0 none transparent !important;
-  background-color: transparent !important;
-  background-size: cover !important;
-  background-repeat: repeat !important;
-  background-position: 0% 0% !important;
-}
-
-.blobio-menu-button + .blobio-menu-button {
-  margin-left: 6px;
 }
 
 .blobio-menu-label {
@@ -665,18 +647,10 @@ html.${className} .history-wrapper {
       button.type = "button";
       button.title = label;
       button.setAttribute("aria-label", label);
+      button.setAttribute("_ngcontent-c1", "");
       button.dataset.panel = panelName;
       button.classList.add("icon-button", "blobio-menu-button");
-      button.style.display = "inline-block";
-      button.style.width = "50px";
-      button.style.height = "50px";
-      button.style.padding = "1px 6px";
-      button.style.border = "0px none";
-      button.style.backgroundColor = "transparent";
       button.style.backgroundImage = imageUrl ? `url("${imageUrl}")` : "";
-      button.style.backgroundSize = "cover";
-      button.style.backgroundRepeat = "repeat";
-      button.style.backgroundPosition = "0% 0%";
       const hiddenLabel = this.document.createElement("span");
       hiddenLabel.classList.add("blobio-menu-label");
       hiddenLabel.textContent = label;
