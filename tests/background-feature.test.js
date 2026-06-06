@@ -40,3 +40,21 @@ test('BackgroundFeature does not create duplicate styles when started twice', ()
 
   feature.destroy();
 });
+
+test('BackgroundFeature targets the Blobgame wrapper background image', () => {
+  const document = createFakeDocument();
+  const feature = new BackgroundFeature({
+    document,
+    backgroundUrl: 'data:image/png;base64,test-image',
+  });
+
+  feature.start();
+
+  const style = document.getElementById('blobio-background-style');
+  const wrapperBackgroundRule = new RegExp(
+    String.raw`\.wrapper[\s\S]*background-image: url\("data:image/png;base64,test-image"\) !important`,
+  );
+  assert.match(style.textContent, wrapperBackgroundRule);
+
+  feature.destroy();
+});

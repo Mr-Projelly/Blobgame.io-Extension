@@ -86,6 +86,14 @@ body.${this.className} {
 html.${this.className} body {
   background-color: transparent !important;
 }
+
+html.${this.className} .wrapper,
+body.${this.className} .wrapper {
+  background-image: url("${this.backgroundUrl}") !important;
+  background-position: center center !important;
+  background-repeat: no-repeat !important;
+  background-size: cover !important;
+}
 `.trim();
   }
 
