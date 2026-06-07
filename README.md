@@ -1,4 +1,4 @@
-# Blobgame.io Web Script
+# Blobgame.io Web Extension
 
 Tampermonkey loader and modular extension code for `blobgame.io` and `custom.client.blobgame.io`.
 
