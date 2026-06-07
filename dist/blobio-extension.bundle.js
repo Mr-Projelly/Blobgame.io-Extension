@@ -187,11 +187,61 @@ html.${className} .history-wrapper {
   background: rgba(0, 20, 12, 0.36) !important;
 }
 
+html.${className} img.inputs-background-img {
+  display: none !important;
+}
+
+html.${className} .inputs-container input,
+html.${className} .inputs-container .choose-skin-btn,
+html.${className} .inputs-container button,
+html.${className} #game-wrapper .custom-select {
+  border: 1px solid rgba(142, 255, 174, 0.42) !important;
+  border-radius: 8px !important;
+  background-color: rgba(3, 28, 17, 0.46) !important;
+  box-shadow: 0 0 13px rgba(79, 255, 130, 0.24), inset 0 0 10px rgba(79, 255, 130, 0.12) !important;
+}
+
+html.${className} .inputs-container input {
+  color: #eaffee !important;
+  text-shadow: 0 0 5px rgba(118, 255, 154, 0.55) !important;
+}
+
+html.${className} .progress-bar {
+  border: 1px solid rgba(142, 255, 174, 0.38) !important;
+  box-shadow: 0 0 14px rgba(79, 255, 130, 0.24), inset 0 0 10px rgba(79, 255, 130, 0.12) !important;
+}
+
+html.${className} #ip-container table {
+  padding: 2px 8px !important;
+  border: 1px solid rgba(142, 255, 174, 0.58) !important;
+  border-radius: 9px !important;
+  background: rgba(3, 44, 23, 0.48) !important;
+  box-shadow: 0 0 16px rgba(79, 255, 130, 0.26), inset 0 0 10px rgba(79, 255, 130, 0.12) !important;
+}
+
+html.${className} #ip-container td {
+  color: #dfffe6 !important;
+  font-weight: 700 !important;
+  text-shadow: 0 0 6px rgba(118, 255, 154, 0.58) !important;
+}
+
+html.${className} #custom-host-input {
+  height: 24px !important;
+  border: 1px solid rgba(142, 255, 174, 0.48) !important;
+  border-radius: 6px !important;
+  background: rgba(0, 0, 0, 0.62) !important;
+  color: #effff1 !important;
+  font-weight: 700 !important;
+  text-align: center !important;
+  text-shadow: 0 0 6px rgba(118, 255, 154, 0.72) !important;
+  box-shadow: inset 0 0 8px rgba(79, 255, 130, 0.18) !important;
+}
+
 .${toolbarClass} {
   position: relative;
   display: inline-block;
   margin-left: 0;
-  vertical-align: middle;
+  vertical-align: top;
   z-index: 2147482500;
 }
 
@@ -204,6 +254,8 @@ html.${className} .history-wrapper {
 
 .blobio-menu-buttons {
   display: inline-block;
+  position: relative;
+  top: -3px;
   white-space: nowrap;
 }
 
@@ -356,30 +408,54 @@ html.${className} .history-wrapper {
   object-fit: contain;
 }
 
-.blobio-policy-dock {
+.blobio-footer-dock {
   position: fixed;
   left: 50%;
-  bottom: 26px;
+  bottom: 170px;
   transform: translateX(-50%);
   z-index: 2147482500;
 }
 
-.blobio-policy-dock .blobio-menu-panel {
-  top: auto;
+.blobio-dock-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.blobio-dock-button {
+  padding: 5px 11px;
+  border: 1px solid rgba(142, 255, 174, 0.68);
+  border-radius: 8px;
+  background: rgba(3, 44, 23, 0.46);
+  color: #dfffe6;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.1;
+  text-shadow: 0 0 6px rgba(118, 255, 154, 0.7);
+  box-shadow: 0 0 12px rgba(79, 255, 130, 0.22), inset 0 0 8px rgba(79, 255, 130, 0.13);
+  cursor: pointer;
+}
+
+.blobio-dock-button:hover,
+.blobio-dock-button.is-active {
+  background: rgba(10, 69, 35, 0.64);
+  box-shadow: 0 0 16px rgba(99, 255, 142, 0.34), inset 0 0 10px rgba(99, 255, 142, 0.18);
+}
+
+.blobio-footer-dock .blobio-menu-panel {
+  top: calc(100% + 8px);
   right: auto;
-  bottom: calc(100% + 9px);
+  bottom: auto;
   left: 50%;
   width: min(360px, calc(100vw - 28px));
-  transform: translateX(-50%) translateY(8px) scaleY(0.96);
-  transform-origin: bottom center;
+  max-height: 150px;
+  overflow: auto;
+  transform: translateX(-50%) translateY(-8px) scaleY(0.96);
+  transform-origin: top center;
 }
 
-.blobio-policy-dock .blobio-menu-panel.is-open {
+.blobio-footer-dock .blobio-menu-panel.is-open {
   transform: translateX(-50%) translateY(0) scaleY(1);
-}
-
-.blobio-policy-button {
-  padding: 4px 10px;
 }
 
 .blobio-policy-links {
@@ -396,6 +472,29 @@ html.${className} .history-wrapper {
 
 .blobio-policy-link:hover {
   color: #a8ffba;
+}
+
+.blobio-game-links {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.blobio-game-link {
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(142, 255, 174, 0.5);
+  border-radius: 9px;
+  background-color: rgba(3, 30, 17, 0.72);
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  box-shadow: inset 0 0 8px rgba(91, 255, 132, 0.16);
+  cursor: pointer;
+}
+
+.blobio-game-link:hover {
+  box-shadow: 0 0 16px rgba(92, 255, 132, 0.38), inset 0 0 8px rgba(91, 255, 132, 0.18);
 }
 
 @keyframes blobio-social-glow {
@@ -504,6 +603,7 @@ html.${className} .history-wrapper {
       this.styleNode = null;
       this.toolbar = null;
       this.observer = null;
+      this.refreshTimer = null;
       this.panelBodies = /* @__PURE__ */ new Map();
       this.hiddenOriginalNodes = /* @__PURE__ */ new Set();
       this.policyDock = null;
@@ -543,6 +643,7 @@ html.${className} .history-wrapper {
     destroy() {
       this.observer?.disconnect();
       this.observer = null;
+      this.clearRefreshTimer();
       if (this.documentClickHandler) {
         this.document.removeEventListener?.("click", this.documentClickHandler);
         this.documentClickHandler = null;
@@ -596,13 +697,37 @@ html.${className} .history-wrapper {
       if (!MutationObserver) {
         return;
       }
-      this.observer = new MutationObserver(() => {
+      this.observer = new MutationObserver((mutations = []) => {
+        if (mutations.length > 0 && mutations.every((mutation) => this.isInsideOwnUi(mutation.target))) {
+          return;
+        }
+        this.scheduleRefresh();
+      });
+      this.observer.observe(this.document.documentElement, { childList: true, subtree: true });
+    }
+    scheduleRefresh() {
+      if (this.refreshTimer !== null) {
+        return;
+      }
+      const setTimer = this.document.defaultView?.setTimeout || globalThis.setTimeout;
+      this.refreshTimer = setTimer(() => {
+        this.refreshTimer = null;
+        if (!this.started) {
+          return;
+        }
         this.applyPageClass();
         this.installToolbar();
         this.hideOriginalSections();
         this.installPolicyDock();
-      });
-      this.observer.observe(this.document.documentElement, { childList: true, subtree: true });
+      }, 0);
+    }
+    clearRefreshTimer() {
+      if (this.refreshTimer === null) {
+        return;
+      }
+      const clearTimer = this.document.defaultView?.clearTimeout || globalThis.clearTimeout;
+      clearTimer(this.refreshTimer);
+      this.refreshTimer = null;
     }
     installToolbar() {
       if (!this.document.body) {
@@ -697,7 +822,8 @@ html.${className} .history-wrapper {
     }
     installPolicyDock() {
       const links = this.getPolicyPanelLinks();
-      if (links.length === 0) {
+      const games = this.getOtherProjectLinks();
+      if (links.length === 0 && games.length === 0) {
         this.policyDock?.remove();
         this.policyDock = null;
         return;
@@ -709,17 +835,31 @@ html.${className} .history-wrapper {
     }
     createPolicyDock() {
       const dock = this.document.createElement("div");
-      dock.classList.add("blobio-policy-dock");
+      dock.classList.add("blobio-footer-dock", "blobio-policy-dock");
+      const buttons = this.document.createElement("div");
+      buttons.classList.add("blobio-dock-buttons");
+      if (this.getPolicyPanelLinks().length > 0) {
+        buttons.appendChild(this.createDockButton("Policy", "policy", "blobio-policy-button"));
+        dock.appendChild(this.createPanel("policy", ""));
+      }
+      if (this.getOtherProjectLinks().length > 0) {
+        buttons.appendChild(this.createDockButton("Other Games", "games", "blobio-games-button"));
+        dock.appendChild(this.createPanel("games", ""));
+      }
+      dock.insertBefore(buttons, dock.children[0] || null);
+      return dock;
+    }
+    createDockButton(label, panelName, className) {
       const button = this.document.createElement("button");
       button.type = "button";
-      button.classList.add("button", "blobio-policy-button");
-      button.textContent = "Policy";
+      button.classList.add("blobio-dock-button", className);
+      button.dataset.panel = panelName;
+      button.textContent = label;
       button.addEventListener("click", (event) => {
         event.stopPropagation?.();
-        this.togglePanel("policy");
+        this.togglePanel(panelName);
       });
-      dock.append(button, this.createPanel("policy", "Policy"));
-      return dock;
+      return button;
     }
     createPanel(name, titleText) {
       const panel = this.document.createElement("section");
@@ -819,6 +959,35 @@ html.${className} .history-wrapper {
       }
       body.appendChild(links);
     }
+    renderGamesPanel() {
+      const body = this.panelBodies.get("games");
+      if (!body) {
+        return;
+      }
+      this.clearElement(body);
+      const links = this.document.createElement("div");
+      links.classList.add("blobio-game-links");
+      for (const original of this.getOtherProjectLinks()) {
+        const href = original.getAttribute("href");
+        const gameLink = this.document.createElement(href ? "a" : "button");
+        gameLink.classList.add("blobio-game-link");
+        gameLink.setAttribute("aria-label", original.getAttribute("aria-label") || original.getAttribute("title") || "Other game");
+        gameLink.style.backgroundImage = original.style?.backgroundImage || this.extractBackgroundImage(original.getAttribute("style") || "");
+        if (href) {
+          gameLink.setAttribute("href", href);
+          gameLink.setAttribute("target", original.getAttribute("target") || "_blank");
+          gameLink.setAttribute("rel", "noopener noreferrer");
+        } else {
+          gameLink.type = "button";
+          gameLink.addEventListener("click", (event) => {
+            event.stopPropagation?.();
+            original.click?.();
+          });
+        }
+        links.appendChild(gameLink);
+      }
+      body.appendChild(links);
+    }
     togglePanel(panelName) {
       const panel = this.document.getElementById?.(`blobio-panel-${panelName}`);
       if (!panel) {
@@ -830,6 +999,8 @@ html.${className} .history-wrapper {
         this.renderSocialPanel();
       } else if (panelName === "policy") {
         this.renderPolicyPanel();
+      } else if (panelName === "games") {
+        this.renderGamesPanel();
       }
       const willOpen = !panel.classList.contains("is-open");
       this.closePanels();
@@ -911,7 +1082,7 @@ html.${className} .history-wrapper {
     getOriginalPolicyLinks() {
       const links = Array.from(this.document.querySelectorAll?.("a[href]") || []);
       return links.filter((link) => {
-        if (this.policyDock?.contains(link)) {
+        if (this.isInsideOwnUi(link)) {
           return false;
         }
         const href = link.getAttribute("href") || "";
@@ -944,14 +1115,43 @@ html.${className} .history-wrapper {
     getPartnerLinkContainers() {
       const containers = /* @__PURE__ */ new Set();
       for (const link of this.document.querySelectorAll?.("a[href]") || []) {
+        if (this.isInsideOwnUi(link)) {
+          continue;
+        }
         if (PARTNER_LINK_MATCH.test(link.getAttribute("href") || "") && link.parentElement) {
           containers.add(link.parentElement);
         }
       }
       return [...containers].filter((container) => {
+        if (this.isInsideOwnUi(container)) {
+          return false;
+        }
         const directPartnerLinks = Array.from(container.querySelectorAll?.("a[href]") || []).filter((link) => link.parentElement === container && PARTNER_LINK_MATCH.test(link.getAttribute("href") || ""));
         return directPartnerLinks.length >= 2;
       });
+    }
+    getOtherProjectContainers() {
+      const containers = Array.from(this.document.querySelectorAll?.(".partner") || []);
+      return containers.filter((container) => {
+        if (this.isInsideOwnUi(container)) {
+          return false;
+        }
+        return /our\s+other\s+projects/i.test(container.textContent || "") && this.getOtherProjectLinksFrom(container).length > 0;
+      });
+    }
+    getOtherProjectLinks() {
+      return this.getOtherProjectContainers().flatMap((container) => this.getOtherProjectLinksFrom(container));
+    }
+    getOtherProjectLinksFrom(container) {
+      const links = Array.from(container.querySelectorAll?.("a") || []);
+      return links.filter((link) => {
+        const className = link.className?.toString?.() || "";
+        const image = link.style?.backgroundImage || link.getAttribute("style") || "";
+        return className.includes("mus-conv") || image.includes("background-image");
+      });
+    }
+    extractBackgroundImage(styleText) {
+      return styleText.match(/background-image:\s*([^;]+)/i)?.[1]?.trim() || "";
     }
     getFailedViralFrames() {
       const frames = Array.from(this.document.querySelectorAll?.("iframe") || []);
@@ -1002,6 +1202,9 @@ html.${className} .history-wrapper {
       for (const node of this.getPartnerLinkContainers()) {
         this.hideOriginalNode(node);
       }
+      for (const node of this.getOtherProjectContainers()) {
+        this.hideOriginalNode(node);
+      }
       for (const frame of this.getFailedViralFrames()) {
         this.hideOriginalNode(frame);
         const parent = frame.parentElement;
@@ -1014,8 +1217,14 @@ html.${className} .history-wrapper {
       }
     }
     hideOriginalNode(node) {
+      if (this.isInsideOwnUi(node)) {
+        return;
+      }
       node.classList?.add(HIDDEN_CLASS);
       this.hiddenOriginalNodes.add(node);
+    }
+    isInsideOwnUi(node) {
+      return Boolean(node && (this.toolbar?.contains(node) || this.policyDock?.contains(node)));
     }
     getPanels() {
       return [

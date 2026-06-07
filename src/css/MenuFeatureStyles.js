@@ -33,11 +33,61 @@ html.${className} .history-wrapper {
   background: rgba(0, 20, 12, 0.36) !important;
 }
 
+html.${className} img.inputs-background-img {
+  display: none !important;
+}
+
+html.${className} .inputs-container input,
+html.${className} .inputs-container .choose-skin-btn,
+html.${className} .inputs-container button,
+html.${className} #game-wrapper .custom-select {
+  border: 1px solid rgba(142, 255, 174, 0.42) !important;
+  border-radius: 8px !important;
+  background-color: rgba(3, 28, 17, 0.46) !important;
+  box-shadow: 0 0 13px rgba(79, 255, 130, 0.24), inset 0 0 10px rgba(79, 255, 130, 0.12) !important;
+}
+
+html.${className} .inputs-container input {
+  color: #eaffee !important;
+  text-shadow: 0 0 5px rgba(118, 255, 154, 0.55) !important;
+}
+
+html.${className} .progress-bar {
+  border: 1px solid rgba(142, 255, 174, 0.38) !important;
+  box-shadow: 0 0 14px rgba(79, 255, 130, 0.24), inset 0 0 10px rgba(79, 255, 130, 0.12) !important;
+}
+
+html.${className} #ip-container table {
+  padding: 2px 8px !important;
+  border: 1px solid rgba(142, 255, 174, 0.58) !important;
+  border-radius: 9px !important;
+  background: rgba(3, 44, 23, 0.48) !important;
+  box-shadow: 0 0 16px rgba(79, 255, 130, 0.26), inset 0 0 10px rgba(79, 255, 130, 0.12) !important;
+}
+
+html.${className} #ip-container td {
+  color: #dfffe6 !important;
+  font-weight: 700 !important;
+  text-shadow: 0 0 6px rgba(118, 255, 154, 0.58) !important;
+}
+
+html.${className} #custom-host-input {
+  height: 24px !important;
+  border: 1px solid rgba(142, 255, 174, 0.48) !important;
+  border-radius: 6px !important;
+  background: rgba(0, 0, 0, 0.62) !important;
+  color: #effff1 !important;
+  font-weight: 700 !important;
+  text-align: center !important;
+  text-shadow: 0 0 6px rgba(118, 255, 154, 0.72) !important;
+  box-shadow: inset 0 0 8px rgba(79, 255, 130, 0.18) !important;
+}
+
 .${toolbarClass} {
   position: relative;
   display: inline-block;
   margin-left: 0;
-  vertical-align: middle;
+  vertical-align: top;
   z-index: 2147482500;
 }
 
@@ -50,6 +100,8 @@ html.${className} .history-wrapper {
 
 .blobio-menu-buttons {
   display: inline-block;
+  position: relative;
+  top: -3px;
   white-space: nowrap;
 }
 
@@ -202,30 +254,54 @@ html.${className} .history-wrapper {
   object-fit: contain;
 }
 
-.blobio-policy-dock {
+.blobio-footer-dock {
   position: fixed;
   left: 50%;
-  bottom: 26px;
+  bottom: 170px;
   transform: translateX(-50%);
   z-index: 2147482500;
 }
 
-.blobio-policy-dock .blobio-menu-panel {
-  top: auto;
+.blobio-dock-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.blobio-dock-button {
+  padding: 5px 11px;
+  border: 1px solid rgba(142, 255, 174, 0.68);
+  border-radius: 8px;
+  background: rgba(3, 44, 23, 0.46);
+  color: #dfffe6;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.1;
+  text-shadow: 0 0 6px rgba(118, 255, 154, 0.7);
+  box-shadow: 0 0 12px rgba(79, 255, 130, 0.22), inset 0 0 8px rgba(79, 255, 130, 0.13);
+  cursor: pointer;
+}
+
+.blobio-dock-button:hover,
+.blobio-dock-button.is-active {
+  background: rgba(10, 69, 35, 0.64);
+  box-shadow: 0 0 16px rgba(99, 255, 142, 0.34), inset 0 0 10px rgba(99, 255, 142, 0.18);
+}
+
+.blobio-footer-dock .blobio-menu-panel {
+  top: calc(100% + 8px);
   right: auto;
-  bottom: calc(100% + 9px);
+  bottom: auto;
   left: 50%;
   width: min(360px, calc(100vw - 28px));
-  transform: translateX(-50%) translateY(8px) scaleY(0.96);
-  transform-origin: bottom center;
+  max-height: 150px;
+  overflow: auto;
+  transform: translateX(-50%) translateY(-8px) scaleY(0.96);
+  transform-origin: top center;
 }
 
-.blobio-policy-dock .blobio-menu-panel.is-open {
+.blobio-footer-dock .blobio-menu-panel.is-open {
   transform: translateX(-50%) translateY(0) scaleY(1);
-}
-
-.blobio-policy-button {
-  padding: 4px 10px;
 }
 
 .blobio-policy-links {
@@ -242,6 +318,29 @@ html.${className} .history-wrapper {
 
 .blobio-policy-link:hover {
   color: #a8ffba;
+}
+
+.blobio-game-links {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.blobio-game-link {
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(142, 255, 174, 0.5);
+  border-radius: 9px;
+  background-color: rgba(3, 30, 17, 0.72);
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  box-shadow: inset 0 0 8px rgba(91, 255, 132, 0.16);
+  cursor: pointer;
+}
+
+.blobio-game-link:hover {
+  box-shadow: 0 0 16px rgba(92, 255, 132, 0.38), inset 0 0 8px rgba(91, 255, 132, 0.18);
 }
 
 @keyframes blobio-social-glow {

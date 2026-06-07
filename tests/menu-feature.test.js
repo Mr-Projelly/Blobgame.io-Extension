@@ -172,6 +172,35 @@ function addPartnerLinks(document) {
   return wrapper;
 }
 
+function addOtherProjectLinks(document) {
+  const footer = document.createElement('footer');
+  footer.classList.add('footer');
+
+  const partner = document.createElement('div');
+  partner.classList.add('partner');
+
+  const title = document.createElement('p');
+  title.textContent = 'Our other projects:';
+
+  const row = document.createElement('div');
+  const clicks = [];
+
+  for (const [label, image] of [['Game One', 'url("game-one.png")'], ['Game Two', 'url("game-two.png")']]) {
+    const link = document.createElement('a');
+    link.classList.add('mus-conv', 'icon-button', 'pulse');
+    link.setAttribute('aria-label', label);
+    link.style.backgroundImage = image;
+    link.addEventListener('click', () => clicks.push(label));
+    row.appendChild(link);
+  }
+
+  partner.append(title, row);
+  footer.appendChild(partner);
+  document.body.appendChild(footer);
+
+  return { partner, clicks };
+}
+
 function addFailedViralFrame(document) {
   const wrapper = document.createElement('div');
   wrapper.classList.add('hide-on-small-screen');
@@ -392,15 +421,20 @@ test('MenuFeature folds original policy links into a bottom policy menu', () => 
   assert.notEqual(policyDock, null);
   assert.equal(policyPanel.classList.contains('is-open'), false);
   assert.equal(policyPanel.querySelectorAll('a[href]').length, 0);
-  assert.match(style.textContent, /\.blobio-policy-dock\s*{[\s\S]*left: 50%;/);
-  assert.match(style.textContent, /\.blobio-policy-dock\s*{[\s\S]*bottom: 26px;/);
-  assert.match(style.textContent, /\.blobio-policy-dock\s*{[\s\S]*transform: translateX\(-50%\);/);
+  assert.match(style.textContent, /\.blobio-footer-dock\s*{[\s\S]*left: 50%;/);
+  assert.match(style.textContent, /\.blobio-footer-dock\s*{[\s\S]*bottom: 170px;/);
+  assert.match(style.textContent, /\.blobio-footer-dock\s*{[\s\S]*transform: translateX\(-50%\);/);
+  assert.match(style.textContent, /\.blobio-dock-button\s*{[\s\S]*background: rgba\(3, 44, 23, 0\.46\)/);
+  assert.match(style.textContent, /\.blobio-dock-button\s*{[\s\S]*border: 1px solid rgba\(142, 255, 174, 0\.68\)/);
+  assert.match(style.textContent, /\.blobio-footer-dock \.blobio-menu-panel\s*{[\s\S]*top: calc\(100% \+ 8px\);/);
+  assert.doesNotMatch(style.textContent, /\.blobio-policy-dock \.blobio-menu-panel\s*{[\s\S]*bottom: calc\(100%/);
 
   policyDock.querySelector('button').click();
 
   const foldedLinks = policyPanel.querySelectorAll('a[href]');
   assert.equal(policyPanel.classList.contains('is-open'), true);
   assert.equal(foldedLinks.length, 7);
+  assert.doesNotMatch(policyPanel.textContent, /^Policy/);
   assert.equal(foldedLinks[0].getAttribute('href'), originalLinks[0].getAttribute('href'));
   assert.equal(foldedLinks[2].getAttribute('href'), 'https://iogames.space');
   assert.match(policyPanel.textContent, /Privacy Policy/);
@@ -416,6 +450,82 @@ test('MenuFeature folds original policy links into a bottom policy menu', () => 
   assert.equal(document.querySelector('.blobio-policy-dock'), null);
   assert.equal(originalLinks[0].classList.contains('blobio-original-hidden'), false);
   assert.equal(partnerLinks.classList.contains('blobio-original-hidden'), false);
+});
+
+test('MenuFeature keeps folded policy links visible after a page refresh pass', () => {
+  const document = createFakeDocument();
+  addReplayButton(document);
+  addOriginalPolicyLinks(document);
+  addPartnerLinks(document);
+
+  const feature = new MenuFeature({ document, assets });
+  feature.start();
+
+  const policyDock = document.querySelector('.blobio-policy-dock');
+  const policyPanel = document.getElementById('blobio-panel-policy');
+  policyDock.querySelector('button').click();
+
+  feature.hideOriginalSections();
+
+  assert.equal(policyPanel.querySelector('.blobio-policy-links').classList.contains('blobio-original-hidden'), false);
+  assert.equal(policyPanel.querySelectorAll('a[href]').length, 7);
+
+  feature.destroy();
+});
+
+test('MenuFeature folds other project icons into a transparent games dropdown', () => {
+  const document = createFakeDocument();
+  addReplayButton(document);
+  addOriginalPolicyLinks(document);
+  const { partner, clicks } = addOtherProjectLinks(document);
+
+  const feature = new MenuFeature({ document, assets });
+  feature.start();
+
+  const style = document.getElementById('blobio-menu-style');
+  const dock = document.querySelector('.blobio-footer-dock');
+  const gamesButton = dock.querySelectorAll('button').find((button) => button.dataset.panel === 'games');
+  const gamesPanel = document.getElementById('blobio-panel-games');
+
+  assert.equal(partner.classList.contains('blobio-original-hidden'), true);
+  assert.notEqual(gamesButton, undefined);
+  assert.match(gamesButton.className, /blobio-dock-button/);
+  assert.match(style.textContent, /\.blobio-game-links/);
+  assert.equal(gamesPanel.classList.contains('is-open'), false);
+
+  gamesButton.click();
+
+  const gameButtons = gamesPanel.querySelectorAll('.blobio-game-links button');
+  assert.equal(gamesPanel.classList.contains('is-open'), true);
+  assert.equal(gameButtons.length, 2);
+  assert.equal(gameButtons[0].style.backgroundImage, 'url("game-one.png")');
+
+  gameButtons[0].click();
+
+  assert.deepEqual(clicks, ['Game One']);
+
+  feature.destroy();
+
+  assert.equal(partner.classList.contains('blobio-original-hidden'), false);
+});
+
+test('MenuFeature CSS hides the inputs image and frames main menu fields with green glow', () => {
+  const document = createFakeDocument();
+  addReplayButton(document);
+
+  const feature = new MenuFeature({ document, assets });
+  feature.start();
+
+  const style = document.getElementById('blobio-menu-style').textContent;
+
+  assert.match(style, /img\.inputs-background-img\s*{[\s\S]*display: none !important;/);
+  assert.match(style, /\.inputs-container input\s*,[\s\S]*\.choose-skin-btn\s*,[\s\S]*#game-wrapper \.custom-select/);
+  assert.match(style, /\.progress-bar\s*{[\s\S]*box-shadow:/);
+  assert.match(style, /#ip-container table\s*{[\s\S]*background: rgba\(3, 44, 23, 0\.48\)/);
+  assert.match(style, /#custom-host-input\s*{[\s\S]*font-weight: 700/);
+  assert.match(style, /#custom-host-input\s*{[\s\S]*background: rgba\(0, 0, 0, 0\.62\)/);
+
+  feature.destroy();
 });
 
 test('MenuFeature ignores consent-manager vendor policy links', () => {

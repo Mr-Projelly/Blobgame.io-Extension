@@ -95,6 +95,7 @@ export class MenuFeature {
     this.styleNode = null;
     this.toolbar = null;
     this.observer = null;
+    this.refreshTimer = null;
     this.panelBodies = new Map();
     this.hiddenOriginalNodes = new Set();
     this.policyDock = null;
@@ -143,6 +144,7 @@ export class MenuFeature {
   destroy() {
     this.observer?.disconnect();
     this.observer = null;
+    this.clearRefreshTimer();
 
     if (this.documentClickHandler) {
       this.document.removeEventListener?.('click', this.documentClickHandler);
@@ -210,14 +212,44 @@ export class MenuFeature {
       return;
     }
 
-    this.observer = new MutationObserver(() => {
+    this.observer = new MutationObserver((mutations = []) => {
+      if (mutations.length > 0 && mutations.every((mutation) => this.isInsideOwnUi(mutation.target))) {
+        return;
+      }
+
+      this.scheduleRefresh();
+    });
+
+    this.observer.observe(this.document.documentElement, { childList: true, subtree: true });
+  }
+
+  scheduleRefresh() {
+    if (this.refreshTimer !== null) {
+      return;
+    }
+
+    const setTimer = this.document.defaultView?.setTimeout || globalThis.setTimeout;
+    this.refreshTimer = setTimer(() => {
+      this.refreshTimer = null;
+      if (!this.started) {
+        return;
+      }
+
       this.applyPageClass();
       this.installToolbar();
       this.hideOriginalSections();
       this.installPolicyDock();
-    });
+    }, 0);
+  }
 
-    this.observer.observe(this.document.documentElement, { childList: true, subtree: true });
+  clearRefreshTimer() {
+    if (this.refreshTimer === null) {
+      return;
+    }
+
+    const clearTimer = this.document.defaultView?.clearTimeout || globalThis.clearTimeout;
+    clearTimer(this.refreshTimer);
+    this.refreshTimer = null;
   }
 
   installToolbar() {
@@ -335,7 +367,8 @@ export class MenuFeature {
 
   installPolicyDock() {
     const links = this.getPolicyPanelLinks();
-    if (links.length === 0) {
+    const games = this.getOtherProjectLinks();
+    if (links.length === 0 && games.length === 0) {
       this.policyDock?.remove();
       this.policyDock = null;
       return;
@@ -349,19 +382,37 @@ export class MenuFeature {
 
   createPolicyDock() {
     const dock = this.document.createElement('div');
-    dock.classList.add('blobio-policy-dock');
+    dock.classList.add('blobio-footer-dock', 'blobio-policy-dock');
 
+    const buttons = this.document.createElement('div');
+    buttons.classList.add('blobio-dock-buttons');
+
+    if (this.getPolicyPanelLinks().length > 0) {
+      buttons.appendChild(this.createDockButton('Policy', 'policy', 'blobio-policy-button'));
+      dock.appendChild(this.createPanel('policy', ''));
+    }
+
+    if (this.getOtherProjectLinks().length > 0) {
+      buttons.appendChild(this.createDockButton('Other Games', 'games', 'blobio-games-button'));
+      dock.appendChild(this.createPanel('games', ''));
+    }
+
+    dock.insertBefore(buttons, dock.children[0] || null);
+    return dock;
+  }
+
+  createDockButton(label, panelName, className) {
     const button = this.document.createElement('button');
     button.type = 'button';
-    button.classList.add('button', 'blobio-policy-button');
-    button.textContent = 'Policy';
+    button.classList.add('blobio-dock-button', className);
+    button.dataset.panel = panelName;
+    button.textContent = label;
     button.addEventListener('click', (event) => {
       event.stopPropagation?.();
-      this.togglePanel('policy');
+      this.togglePanel(panelName);
     });
 
-    dock.append(button, this.createPanel('policy', 'Policy'));
-    return dock;
+    return button;
   }
 
   createPanel(name, titleText) {
@@ -489,6 +540,42 @@ export class MenuFeature {
     body.appendChild(links);
   }
 
+  renderGamesPanel() {
+    const body = this.panelBodies.get('games');
+    if (!body) {
+      return;
+    }
+
+    this.clearElement(body);
+
+    const links = this.document.createElement('div');
+    links.classList.add('blobio-game-links');
+
+    for (const original of this.getOtherProjectLinks()) {
+      const href = original.getAttribute('href');
+      const gameLink = this.document.createElement(href ? 'a' : 'button');
+      gameLink.classList.add('blobio-game-link');
+      gameLink.setAttribute('aria-label', original.getAttribute('aria-label') || original.getAttribute('title') || 'Other game');
+      gameLink.style.backgroundImage = original.style?.backgroundImage || this.extractBackgroundImage(original.getAttribute('style') || '');
+
+      if (href) {
+        gameLink.setAttribute('href', href);
+        gameLink.setAttribute('target', original.getAttribute('target') || '_blank');
+        gameLink.setAttribute('rel', 'noopener noreferrer');
+      } else {
+        gameLink.type = 'button';
+        gameLink.addEventListener('click', (event) => {
+          event.stopPropagation?.();
+          original.click?.();
+        });
+      }
+
+      links.appendChild(gameLink);
+    }
+
+    body.appendChild(links);
+  }
+
   togglePanel(panelName) {
     const panel = this.document.getElementById?.(`blobio-panel-${panelName}`);
     if (!panel) {
@@ -501,6 +588,8 @@ export class MenuFeature {
       this.renderSocialPanel();
     } else if (panelName === 'policy') {
       this.renderPolicyPanel();
+    } else if (panelName === 'games') {
+      this.renderGamesPanel();
     }
 
     const willOpen = !panel.classList.contains('is-open');
@@ -609,7 +698,7 @@ export class MenuFeature {
   getOriginalPolicyLinks() {
     const links = Array.from(this.document.querySelectorAll?.('a[href]') || []);
     return links.filter((link) => {
-      if (this.policyDock?.contains(link)) {
+      if (this.isInsideOwnUi(link)) {
         return false;
       }
 
@@ -651,17 +740,53 @@ export class MenuFeature {
     const containers = new Set();
 
     for (const link of this.document.querySelectorAll?.('a[href]') || []) {
+      if (this.isInsideOwnUi(link)) {
+        continue;
+      }
+
       if (PARTNER_LINK_MATCH.test(link.getAttribute('href') || '') && link.parentElement) {
         containers.add(link.parentElement);
       }
     }
 
     return [...containers].filter((container) => {
+      if (this.isInsideOwnUi(container)) {
+        return false;
+      }
+
       const directPartnerLinks = Array.from(container.querySelectorAll?.('a[href]') || [])
         .filter((link) => link.parentElement === container && PARTNER_LINK_MATCH.test(link.getAttribute('href') || ''));
 
       return directPartnerLinks.length >= 2;
     });
+  }
+
+  getOtherProjectContainers() {
+    const containers = Array.from(this.document.querySelectorAll?.('.partner') || []);
+    return containers.filter((container) => {
+      if (this.isInsideOwnUi(container)) {
+        return false;
+      }
+
+      return /our\s+other\s+projects/i.test(container.textContent || '') && this.getOtherProjectLinksFrom(container).length > 0;
+    });
+  }
+
+  getOtherProjectLinks() {
+    return this.getOtherProjectContainers().flatMap((container) => this.getOtherProjectLinksFrom(container));
+  }
+
+  getOtherProjectLinksFrom(container) {
+    const links = Array.from(container.querySelectorAll?.('a') || []);
+    return links.filter((link) => {
+      const className = link.className?.toString?.() || '';
+      const image = link.style?.backgroundImage || link.getAttribute('style') || '';
+      return className.includes('mus-conv') || image.includes('background-image');
+    });
+  }
+
+  extractBackgroundImage(styleText) {
+    return styleText.match(/background-image:\s*([^;]+)/i)?.[1]?.trim() || '';
   }
 
   getFailedViralFrames() {
@@ -730,6 +855,10 @@ export class MenuFeature {
       this.hideOriginalNode(node);
     }
 
+    for (const node of this.getOtherProjectContainers()) {
+      this.hideOriginalNode(node);
+    }
+
     for (const frame of this.getFailedViralFrames()) {
       this.hideOriginalNode(frame);
 
@@ -745,8 +874,16 @@ export class MenuFeature {
   }
 
   hideOriginalNode(node) {
+    if (this.isInsideOwnUi(node)) {
+      return;
+    }
+
     node.classList?.add(HIDDEN_CLASS);
     this.hiddenOriginalNodes.add(node);
+  }
+
+  isInsideOwnUi(node) {
+    return Boolean(node && (this.toolbar?.contains(node) || this.policyDock?.contains(node)));
   }
 
   getPanels() {
