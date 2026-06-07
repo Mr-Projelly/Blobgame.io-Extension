@@ -130,12 +130,25 @@ html.${className} #custom-host-input {
 }
 
 html.${className} .fleft.username {
-  color: #dfffe6 !important;
-  text-shadow: 0 0 7px rgba(118, 255, 154, 0.72) !important;
+  position: relative !important;
+  color: transparent !important;
+  text-shadow: none !important;
   white-space: nowrap !important;
 }
 
-html.${className} .fleft.username .blobio-username-letter {
+html.${className} .fleft.username .blobio-username-animated {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: inline-flex;
+  color: #dfffe6;
+  line-height: inherit;
+  white-space: nowrap;
+  pointer-events: none;
+  text-shadow: 0 0 7px rgba(118, 255, 154, 0.72);
+}
+
+html.${className} .fleft.username .blobio-username-animated .blobio-username-letter {
   display: inline-block;
   color: #dfffe6;
   transform-origin: center bottom;
@@ -339,18 +352,22 @@ html.${className} .fleft.username .blobio-username-letter {
   left: 50%;
   bottom: 170px;
   transform: translateX(-50%);
-  z-index: 2147482500;
+  z-index: 20;
   visibility: visible !important;
   pointer-events: auto !important;
 }
 
 .blobio-dock-buttons {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
+  position: relative;
+  width: 230px;
+  height: 30px;
+  display: block;
 }
 
 .blobio-dock-button {
+  position: absolute;
+  top: 0;
+  left: 50%;
   padding: 5px 11px;
   border: 1px solid rgba(142, 255, 174, 0.68);
   border-radius: 8px;
@@ -362,6 +379,31 @@ html.${className} .fleft.username .blobio-username-letter {
   text-shadow: 0 0 6px rgba(118, 255, 154, 0.7);
   box-shadow: 0 0 12px rgba(79, 255, 130, 0.22), inset 0 0 8px rgba(79, 255, 130, 0.13);
   cursor: pointer;
+  transition: transform 180ms ease, background 150ms ease, box-shadow 150ms ease;
+}
+
+.blobio-policy-button {
+  transform: translateX(calc(-100% - 4px));
+}
+
+.blobio-games-button {
+  transform: translateX(4px);
+}
+
+.blobio-footer-dock.is-focusing-policy .blobio-policy-button {
+  transform: translateX(-50%);
+}
+
+.blobio-footer-dock.is-focusing-games .blobio-games-button {
+  transform: translateX(-50%);
+}
+
+.blobio-footer-dock.is-focusing-policy .blobio-games-button {
+  transform: translateX(calc(-100% - 36px));
+}
+
+.blobio-footer-dock.is-focusing-games .blobio-policy-button {
+  transform: translateX(56px);
 }
 
 .blobio-dock-button:hover,

@@ -612,6 +612,7 @@ export class MenuFeature {
     }
 
     panel.classList.add('is-open');
+    this.setDockFocus(panelName);
 
     for (const button of this.getPanelButtons()) {
       if (button.dataset.panel === panelName) {
@@ -628,6 +629,23 @@ export class MenuFeature {
     for (const button of this.getPanelButtons()) {
       button.classList.remove('is-active');
     }
+
+    this.clearDockFocus();
+  }
+
+  setDockFocus(panelName) {
+    this.clearDockFocus();
+
+    if (panelName === 'policy') {
+      this.policyDock?.classList.add('is-focusing-policy');
+    } else if (panelName === 'games') {
+      this.policyDock?.classList.add('is-focusing-games');
+    }
+  }
+
+  clearDockFocus() {
+    this.policyDock?.classList.remove('is-focusing-policy');
+    this.policyDock?.classList.remove('is-focusing-games');
   }
 
   findReplayButton() {
@@ -906,15 +924,22 @@ export class MenuFeature {
         continue;
       }
 
-      const text = (username.textContent || '').trim();
+      const text = this.getUsernameSourceText(username);
       const currentText = username.dataset.blobioUsernameText || '';
-      const existingLetters = username.querySelectorAll?.('.blobio-username-letter') || [];
+      let animated = this.getUsernameAnimatedNode(username);
+      const existingLetters = animated?.querySelectorAll?.('.blobio-username-letter') || [];
 
       if (!text || (text === currentText && existingLetters.length === Array.from(text).length)) {
         continue;
       }
 
-      this.clearElement(username);
+      if (!animated) {
+        animated = this.document.createElement('span');
+        animated.classList.add('blobio-username-animated');
+        username.appendChild(animated);
+      }
+
+      this.clearElement(animated);
       username.dataset.blobioUsernameText = text;
 
       const letters = Array.from(text);
@@ -928,9 +953,43 @@ export class MenuFeature {
         span.classList.add('blobio-username-letter');
         span.textContent = letter;
         this.setStyleProperty(span, '--blobio-letter-delay', `${index * 160}ms`);
-        username.appendChild(span);
+        animated.appendChild(span);
       });
     }
+  }
+
+  getUsernameAnimatedNode(username) {
+    return Array.from(username.children || []).find((child) => child.classList?.contains('blobio-username-animated')) || null;
+  }
+
+  getUsernameSourceText(username) {
+    const animated = this.getUsernameAnimatedNode(username);
+
+    if (username.childNodes) {
+      return Array.from(username.childNodes)
+        .filter((node) => node !== animated)
+        .map((node) => {
+          if (node.nodeType === 3) {
+            return node.textContent || '';
+          }
+
+          if (node.nodeType === 1 && !node.classList?.contains('blobio-username-animated')) {
+            return node.textContent || '';
+          }
+
+          return '';
+        })
+        .join('')
+        .trim();
+    }
+
+    const fullText = username.textContent || '';
+    const animatedText = animated?.textContent || '';
+    if (animatedText && fullText.endsWith(animatedText)) {
+      return fullText.slice(0, -animatedText.length).trim();
+    }
+
+    return fullText.trim();
   }
 
   setStyleProperty(node, name, value) {

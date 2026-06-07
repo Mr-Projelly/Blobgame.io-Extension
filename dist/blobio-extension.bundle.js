@@ -284,12 +284,25 @@ html.${className} #custom-host-input {
 }
 
 html.${className} .fleft.username {
-  color: #dfffe6 !important;
-  text-shadow: 0 0 7px rgba(118, 255, 154, 0.72) !important;
+  position: relative !important;
+  color: transparent !important;
+  text-shadow: none !important;
   white-space: nowrap !important;
 }
 
-html.${className} .fleft.username .blobio-username-letter {
+html.${className} .fleft.username .blobio-username-animated {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: inline-flex;
+  color: #dfffe6;
+  line-height: inherit;
+  white-space: nowrap;
+  pointer-events: none;
+  text-shadow: 0 0 7px rgba(118, 255, 154, 0.72);
+}
+
+html.${className} .fleft.username .blobio-username-animated .blobio-username-letter {
   display: inline-block;
   color: #dfffe6;
   transform-origin: center bottom;
@@ -493,18 +506,22 @@ html.${className} .fleft.username .blobio-username-letter {
   left: 50%;
   bottom: 170px;
   transform: translateX(-50%);
-  z-index: 2147482500;
+  z-index: 20;
   visibility: visible !important;
   pointer-events: auto !important;
 }
 
 .blobio-dock-buttons {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
+  position: relative;
+  width: 230px;
+  height: 30px;
+  display: block;
 }
 
 .blobio-dock-button {
+  position: absolute;
+  top: 0;
+  left: 50%;
   padding: 5px 11px;
   border: 1px solid rgba(142, 255, 174, 0.68);
   border-radius: 8px;
@@ -516,6 +533,31 @@ html.${className} .fleft.username .blobio-username-letter {
   text-shadow: 0 0 6px rgba(118, 255, 154, 0.7);
   box-shadow: 0 0 12px rgba(79, 255, 130, 0.22), inset 0 0 8px rgba(79, 255, 130, 0.13);
   cursor: pointer;
+  transition: transform 180ms ease, background 150ms ease, box-shadow 150ms ease;
+}
+
+.blobio-policy-button {
+  transform: translateX(calc(-100% - 4px));
+}
+
+.blobio-games-button {
+  transform: translateX(4px);
+}
+
+.blobio-footer-dock.is-focusing-policy .blobio-policy-button {
+  transform: translateX(-50%);
+}
+
+.blobio-footer-dock.is-focusing-games .blobio-games-button {
+  transform: translateX(-50%);
+}
+
+.blobio-footer-dock.is-focusing-policy .blobio-games-button {
+  transform: translateX(calc(-100% - 36px));
+}
+
+.blobio-footer-dock.is-focusing-games .blobio-policy-button {
+  transform: translateX(56px);
 }
 
 .blobio-dock-button:hover,
@@ -1156,6 +1198,7 @@ html.${className} .fleft.username .blobio-username-letter {
         return;
       }
       panel.classList.add("is-open");
+      this.setDockFocus(panelName);
       for (const button of this.getPanelButtons()) {
         if (button.dataset.panel === panelName) {
           button.classList.add("is-active");
@@ -1169,6 +1212,19 @@ html.${className} .fleft.username .blobio-username-letter {
       for (const button of this.getPanelButtons()) {
         button.classList.remove("is-active");
       }
+      this.clearDockFocus();
+    }
+    setDockFocus(panelName) {
+      this.clearDockFocus();
+      if (panelName === "policy") {
+        this.policyDock?.classList.add("is-focusing-policy");
+      } else if (panelName === "games") {
+        this.policyDock?.classList.add("is-focusing-games");
+      }
+    }
+    clearDockFocus() {
+      this.policyDock?.classList.remove("is-focusing-policy");
+      this.policyDock?.classList.remove("is-focusing-games");
     }
     findReplayButton() {
       const candidates = Array.from(this.document.querySelectorAll?.('button, a, [role="button"]') || []);
@@ -1380,13 +1436,19 @@ html.${className} .fleft.username .blobio-username-letter {
         if (this.isInsideOwnUi(username)) {
           continue;
         }
-        const text = (username.textContent || "").trim();
+        const text = this.getUsernameSourceText(username);
         const currentText = username.dataset.blobioUsernameText || "";
-        const existingLetters = username.querySelectorAll?.(".blobio-username-letter") || [];
+        let animated = this.getUsernameAnimatedNode(username);
+        const existingLetters = animated?.querySelectorAll?.(".blobio-username-letter") || [];
         if (!text || text === currentText && existingLetters.length === Array.from(text).length) {
           continue;
         }
-        this.clearElement(username);
+        if (!animated) {
+          animated = this.document.createElement("span");
+          animated.classList.add("blobio-username-animated");
+          username.appendChild(animated);
+        }
+        this.clearElement(animated);
         username.dataset.blobioUsernameText = text;
         const letters = Array.from(text);
         const duration = letters.length * 160 + 5200;
@@ -1398,9 +1460,32 @@ html.${className} .fleft.username .blobio-username-letter {
           span.classList.add("blobio-username-letter");
           span.textContent = letter;
           this.setStyleProperty(span, "--blobio-letter-delay", `${index * 160}ms`);
-          username.appendChild(span);
+          animated.appendChild(span);
         });
       }
+    }
+    getUsernameAnimatedNode(username) {
+      return Array.from(username.children || []).find((child) => child.classList?.contains("blobio-username-animated")) || null;
+    }
+    getUsernameSourceText(username) {
+      const animated = this.getUsernameAnimatedNode(username);
+      if (username.childNodes) {
+        return Array.from(username.childNodes).filter((node) => node !== animated).map((node) => {
+          if (node.nodeType === 3) {
+            return node.textContent || "";
+          }
+          if (node.nodeType === 1 && !node.classList?.contains("blobio-username-animated")) {
+            return node.textContent || "";
+          }
+          return "";
+        }).join("").trim();
+      }
+      const fullText = username.textContent || "";
+      const animatedText = animated?.textContent || "";
+      if (animatedText && fullText.endsWith(animatedText)) {
+        return fullText.slice(0, -animatedText.length).trim();
+      }
+      return fullText.trim();
     }
     setStyleProperty(node, name, value) {
       if (typeof node.style?.setProperty === "function") {

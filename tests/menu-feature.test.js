@@ -436,6 +436,13 @@ test('MenuFeature folds original policy links into a bottom policy menu', () => 
   assert.match(style.textContent, /\.blobio-footer-dock\s*{[\s\S]*left: 50%;/);
   assert.match(style.textContent, /\.blobio-footer-dock\s*{[\s\S]*bottom: 170px;/);
   assert.match(style.textContent, /\.blobio-footer-dock\s*{[\s\S]*transform: translateX\(-50%\);/);
+  assert.match(style.textContent, /\.blobio-footer-dock\s*{[\s\S]*z-index: 20;/);
+  assert.doesNotMatch(style.textContent, /\.blobio-footer-dock\s*{[\s\S]*z-index: 2147482500;/);
+  assert.match(style.textContent, /\.blobio-dock-buttons\s*{[\s\S]*position: relative;/);
+  assert.match(style.textContent, /\.blobio-policy-button\s*{[\s\S]*transform: translateX\(calc\(-100% - 4px\)\);/);
+  assert.match(style.textContent, /\.blobio-games-button\s*{[\s\S]*transform: translateX\(4px\);/);
+  assert.match(style.textContent, /\.blobio-footer-dock\.is-focusing-policy \.blobio-policy-button\s*{[\s\S]*transform: translateX\(-50%\);/);
+  assert.match(style.textContent, /\.blobio-footer-dock\.is-focusing-games \.blobio-games-button\s*{[\s\S]*transform: translateX\(-50%\);/);
   assert.match(style.textContent, /\.blobio-dock-button\s*{[\s\S]*background: rgba\(3, 44, 23, 0\.46\)/);
   assert.match(style.textContent, /\.blobio-dock-button\s*{[\s\S]*border: 1px solid rgba\(142, 255, 174, 0\.68\)/);
   assert.match(style.textContent, /\.blobio-footer-dock \.blobio-menu-panel\s*{[\s\S]*top: calc\(100% \+ 8px\);/);
@@ -447,6 +454,8 @@ test('MenuFeature folds original policy links into a bottom policy menu', () => 
 
   const foldedLinks = policyPanel.querySelectorAll('a[href]');
   assert.equal(policyPanel.classList.contains('is-open'), true);
+  assert.equal(policyDock.classList.contains('is-focusing-policy'), true);
+  assert.equal(policyDock.classList.contains('is-focusing-games'), false);
   assert.equal(foldedLinks.length, 7);
   assert.doesNotMatch(policyPanel.textContent, /^Policy/);
   assert.equal(foldedLinks[0].getAttribute('href'), originalLinks[0].getAttribute('href'));
@@ -458,6 +467,7 @@ test('MenuFeature folds original policy links into a bottom policy menu', () => 
 
   document.dispatchEvent({ type: 'keydown', key: 'Escape' });
   assert.equal(policyPanel.classList.contains('is-open'), false);
+  assert.equal(policyDock.classList.contains('is-focusing-policy'), false);
 
   feature.destroy();
 
@@ -515,6 +525,8 @@ test('MenuFeature folds other project icons into a transparent games dropdown', 
   const gameCards = gamesPanel.querySelectorAll('.blobio-game-card');
   const gameButtons = gamesPanel.querySelectorAll('.blobio-game-card button');
   assert.equal(gamesPanel.classList.contains('is-open'), true);
+  assert.equal(dock.classList.contains('is-focusing-games'), true);
+  assert.equal(dock.classList.contains('is-focusing-policy'), false);
   assert.equal(gameCards.length, 2);
   assert.equal(gameButtons.length, 2);
   assert.match(gameCards[0].textContent, /Viper/);
@@ -524,6 +536,10 @@ test('MenuFeature folds other project icons into a transparent games dropdown', 
   gameButtons[0].click();
 
   assert.deepEqual(clicks, ['Game One']);
+
+  document.dispatchEvent({ type: 'click', target: document.body });
+  assert.equal(gamesPanel.classList.contains('is-open'), false);
+  assert.equal(dock.classList.contains('is-focusing-games'), false);
 
   feature.destroy();
 
@@ -561,7 +577,10 @@ test('MenuFeature CSS hides the inputs image and frames main menu fields with gr
   assert.match(style, /\.blobio-panel-close\s*{[\s\S]*display: inline-flex;/);
   assert.match(style, /\.blobio-panel-close\s*{[\s\S]*background: rgba\(102, 10, 16, 0\.92\);/);
   assert.match(style, /\.blobio-panel-close\s*{[\s\S]*color: #fff;/);
-  assert.match(style, /\.fleft\.username\s*{[\s\S]*color: #dfffe6 !important;/);
+  assert.match(style, /\.fleft\.username\s*{[\s\S]*position: relative !important;/);
+  assert.match(style, /\.fleft\.username\s*{[\s\S]*color: transparent !important;/);
+  assert.match(style, /\.blobio-username-animated\s*{[\s\S]*position: absolute;/);
+  assert.match(style, /\.blobio-username-animated\s*{[\s\S]*color: #dfffe6;/);
   assert.match(style, /\.blobio-username-letter\s*{[\s\S]*animation-name: blobio-username-letter-wave, blobio-username-all-glow;/);
   assert.doesNotMatch(style, /\.blobio-username-letter:last-child/);
   assert.match(style, /@keyframes blobio-username-letter-wave/);
@@ -578,27 +597,37 @@ test('MenuFeature splits logged-in username into staggered animated letters', ()
   const feature = new MenuFeature({ document, assets });
   feature.start();
 
+  let animated = username.querySelector('.blobio-username-animated');
   let letters = username.querySelectorAll('.blobio-username-letter');
+  assert.notEqual(animated, null);
   assert.equal(username.dataset.blobioUsernameText, 'Sky');
   assert.equal(letters.length, 3);
   assert.deepEqual(letters.map((letter) => letter.textContent), ['S', 'k', 'y']);
+  assert.equal(username.textContent, 'SkySky');
   assert.equal(username.style['--blobio-username-glow-delay'], '1570ms');
   assert.equal(letters[0].style['--blobio-letter-delay'], '0ms');
   assert.equal(letters[1].style['--blobio-letter-delay'], '160ms');
   assert.equal(letters[2].style['--blobio-letter-delay'], '320ms');
 
-  while (username.children.length > 0) {
-    username.children[0].remove();
-  }
-
   username.textContent = 'Blob';
   feature.syncUsernameAnimation();
 
+  animated = username.querySelector('.blobio-username-animated');
   letters = username.querySelectorAll('.blobio-username-letter');
   assert.equal(username.dataset.blobioUsernameText, 'Blob');
+  assert.notEqual(animated, null);
   assert.equal(letters.length, 4);
   assert.deepEqual(letters.map((letter) => letter.textContent), ['B', 'l', 'o', 'b']);
+  assert.equal(username.textContent, 'BlobBlob');
   assert.equal(username.style['--blobio-username-glow-delay'], '1730ms');
+
+  username.textContent = 'Guest';
+  feature.syncUsernameAnimation();
+
+  letters = username.querySelectorAll('.blobio-username-letter');
+  assert.equal(username.dataset.blobioUsernameText, 'Guest');
+  assert.equal(letters.length, 5);
+  assert.deepEqual(letters.map((letter) => letter.textContent), ['G', 'u', 'e', 's', 't']);
 
   feature.destroy();
 });
