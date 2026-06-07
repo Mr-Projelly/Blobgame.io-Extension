@@ -691,7 +691,7 @@ html.${className} app-skins .blobio-custom-skin-tab.active {
 html.${className} app-skins .blobio-custom-skin-panel {
   display: none !important;
   padding: 10px !important;
-  background: rgba(2, 18, 12, 0.36) !important;
+  background: transparent !important;
 }
 
 html.${className} app-skins.blobio-custom-skin-active .skins-container:not(.blobio-custom-skin-panel) {
@@ -774,6 +774,53 @@ html.${className} .blobio-custom-skin-actions button {
   font-weight: 800;
   text-shadow: 0 0 6px rgba(118, 255, 154, 0.62);
   box-shadow: 0 0 12px rgba(79, 255, 130, 0.2), inset 0 0 8px rgba(79, 255, 130, 0.12);
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+
+html.${className} .blobio-custom-skin-actions button:hover {
+  transform: scale(1.04);
+  box-shadow: 0 0 18px rgba(99, 255, 142, 0.38), inset 0 0 10px rgba(99, 255, 142, 0.18);
+}
+
+html.${className} .blobio-custom-skin-actions .blobio-custom-skin-action-remove {
+  border-color: rgba(255, 116, 116, 0.72);
+  background: rgba(102, 10, 16, 0.92);
+  color: #fff;
+  text-shadow: 0 0 6px rgba(60, 0, 0, 0.95), 0 0 10px rgba(255, 42, 42, 0.55);
+  box-shadow: 0 0 13px rgba(255, 49, 49, 0.28), inset 0 0 8px rgba(255, 89, 89, 0.18);
+}
+
+html.${className} .blobio-custom-skin-actions .blobio-custom-skin-action-remove:hover {
+  box-shadow: 0 0 20px rgba(255, 62, 62, 0.42), inset 0 0 10px rgba(255, 89, 89, 0.22);
+}
+
+html.${className} app-skins .blobio-custom-skin-notice-host {
+  position: relative;
+}
+
+html.${className} app-skins .blobio-custom-skin-notice {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 90%;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.2;
+  pointer-events: none;
+  text-align: center;
+  white-space: nowrap;
+}
+
+html.${className} app-skins .blobio-custom-skin-notice.is-success {
+  color: #dfffe6;
+  text-shadow: 0 0 8px rgba(118, 255, 154, 0.76), 0 0 18px rgba(79, 255, 130, 0.34);
+}
+
+html.${className} app-skins .blobio-custom-skin-notice.is-error {
+  color: #ffaaa8;
+  text-shadow: 0 0 8px rgba(148, 18, 18, 0.78), 0 0 18px rgba(255, 42, 42, 0.38);
 }
 
 html.${className} .blobio-watermark-host {
@@ -901,11 +948,64 @@ html.${className} .blobio-watermark-extension::after {
 `.trim();
   }
 
+  // src/storage/BlobioStorage.js
+  var SHARED_KEY_PREFIX = "blobio.customSkin.";
+  function getWindow(document) {
+    return document?.defaultView || globalThis;
+  }
+  function getLocalStorage(document) {
+    try {
+      return getWindow(document)?.localStorage || globalThis.localStorage || null;
+    } catch {
+      return null;
+    }
+  }
+  function getGmApi(document) {
+    const win = getWindow(document);
+    return {
+      getValue: win?.GM_getValue || globalThis.GM_getValue,
+      setValue: win?.GM_setValue || globalThis.GM_setValue,
+      deleteValue: win?.GM_deleteValue || globalThis.GM_deleteValue
+    };
+  }
+  function isSharedKey(key) {
+    return String(key || "").startsWith(SHARED_KEY_PREFIX);
+  }
+  function createBlobioStorage(document = globalThis.document) {
+    const localStorage = getLocalStorage(document);
+    const gmApi = getGmApi(document);
+    return {
+      getItem(key) {
+        if (isSharedKey(key) && typeof gmApi.getValue === "function") {
+          const value = gmApi.getValue(key, void 0);
+          if (value !== void 0 && value !== null) {
+            localStorage?.setItem?.(key, String(value));
+            return String(value);
+          }
+        }
+        return localStorage?.getItem?.(key) ?? null;
+      },
+      setItem(key, value) {
+        const nextValue = String(value);
+        if (isSharedKey(key) && typeof gmApi.setValue === "function") {
+          gmApi.setValue(key, nextValue);
+        }
+        localStorage?.setItem?.(key, nextValue);
+      },
+      removeItem(key) {
+        if (isSharedKey(key) && typeof gmApi.deleteValue === "function") {
+          gmApi.deleteValue(key);
+        }
+        localStorage?.removeItem?.(key);
+      }
+    };
+  }
+
   // src/features/MenuFeature.js
   var DEFAULT_CLASS_NAME2 = "blobio-menu-enabled";
   var DEFAULT_STYLE_ID2 = "blobio-menu-style";
   var DEFAULT_TOOLBAR_CLASS = "blobio-menu-toolbar";
-  var DEFAULT_EXTENSION_VERSION = "0.1.17";
+  var DEFAULT_EXTENSION_VERSION = "0.1.18";
   var HIDDEN_CLASS = "blobio-original-hidden";
   var PARTNER_LINK_MATCH = /iogames\.space|iogames\.live|io-games\.zone|silvergames\.com|crazygames\.com/i;
   var FAILED_VIRAL_FRAME_MATCH = /viral\.iogames\.space/i;
@@ -923,6 +1023,7 @@ html.${className} .blobio-watermark-extension::after {
   var CUSTOM_SKIN_NAME = "BlobioCustomSkin";
   var CUSTOM_SKIN_TYPE = "free";
   var DIRECT_IMGUR_IMAGE_MATCH = /^https:\/\/i\.imgur\.com\/[a-z0-9]+\.(?:png|jpe?g|gif|webp)(?:\?.*)?$/i;
+  var CUSTOM_SKIN_NOTICE_DURATION = 2200;
   var DEFAULT_VIDEO = {
     title: "Featured Blob.io Video",
     url: "https://www.youtube.com/watch?v=GOlXDLWeGMo"
@@ -991,13 +1092,6 @@ html.${className} .blobio-watermark-extension::after {
       assetKey: "instagramIcon"
     }
   ];
-  function getDefaultStorage(document) {
-    try {
-      return document?.defaultView?.localStorage || globalThis.localStorage || null;
-    } catch {
-      return null;
-    }
-  }
   var MenuFeature = class {
     constructor({
       document = globalThis.document,
@@ -1005,8 +1099,9 @@ html.${className} .blobio-watermark-extension::after {
       logger = console,
       className = DEFAULT_CLASS_NAME2,
       styleId = DEFAULT_STYLE_ID2,
-      storage = getDefaultStorage(document),
-      version = DEFAULT_EXTENSION_VERSION
+      storage = createBlobioStorage(document),
+      version = DEFAULT_EXTENSION_VERSION,
+      frontPageUi = true
     } = {}) {
       this.document = document;
       this.assets = assets;
@@ -1015,6 +1110,7 @@ html.${className} .blobio-watermark-extension::after {
       this.styleId = styleId;
       this.storage = storage;
       this.version = version;
+      this.frontPageUi = frontPageUi;
       this.started = false;
       this.styleNode = null;
       this.toolbar = null;
@@ -1027,6 +1123,7 @@ html.${className} .blobio-watermark-extension::after {
       this.settingsListeners = [];
       this.customSkinListeners = [];
       this.customSkinSelectedUrl = null;
+      this.customSkinNoticeTimer = null;
       this.documentClickHandler = null;
       this.keydownHandler = null;
     }
@@ -1038,9 +1135,13 @@ html.${className} .blobio-watermark-extension::after {
         this.logger.warn("[Blobio] Menu feature could not start: document is not ready.");
         return false;
       }
+      this.installCustomSkinRuntimeHook();
+      if (!this.frontPageUi) {
+        this.started = true;
+        return true;
+      }
       this.ensureStyle();
       this.applyPageClass();
-      this.installCustomSkinRuntimeHook();
       this.installToolbar();
       this.hideOriginalSections();
       this.installPolicyDock();
@@ -1084,6 +1185,7 @@ html.${className} .blobio-watermark-extension::after {
       this.footerModalHost?.remove();
       this.footerModalHost = null;
       this.panelBodies.clear();
+      this.clearCustomSkinNoticeTimer();
       this.cleanupExtensionSettings();
       this.cleanupCustomSkinUi();
       for (const node of this.hiddenOriginalNodes) {
@@ -1853,9 +1955,11 @@ html.${className} .blobio-watermark-extension::after {
       actions.classList.add("blobio-custom-skin-actions");
       const useButton = this.document.createElement("button");
       useButton.type = "button";
+      useButton.classList.add("blobio-custom-skin-action-use");
       useButton.textContent = "Use";
       const removeButton = this.document.createElement("button");
       removeButton.type = "button";
+      removeButton.classList.add("blobio-custom-skin-action-remove");
       removeButton.textContent = "Remove";
       controls.append(input, error);
       actions.append(useButton, removeButton);
@@ -1879,6 +1983,7 @@ html.${className} .blobio-watermark-extension::after {
         const url = panel.dataset.selectedSkinUrl || "";
         if (this.useCustomSkinUrl(url)) {
           this.renderCustomSkinGallery(panel);
+          this.showCustomSkinNotice(panel, "Skin is now applied", "success");
         }
       });
       this.addCustomSkinListener(removeButton, "click", (event) => {
@@ -1891,6 +1996,7 @@ html.${className} .blobio-watermark-extension::after {
         this.customSkinSelectedUrl = null;
         panel.dataset.selectedSkinUrl = "";
         this.renderCustomSkinGallery(panel);
+        this.showCustomSkinNotice(panel, "Skin was removed", "error");
       });
       return panel;
     }
@@ -1960,6 +2066,48 @@ html.${className} .blobio-watermark-extension::after {
         }
       }
     }
+    showCustomSkinNotice(panel, message, type) {
+      const skins = this.findAncestor(panel, "APP-SKINS");
+      const label = skins?.querySelector?.(".label");
+      if (!label) {
+        return;
+      }
+      this.clearCustomSkinNoticeTimer();
+      let notice = label.querySelector?.(".blobio-custom-skin-notice");
+      if (!notice) {
+        notice = this.document.createElement("div");
+        notice.classList.add("blobio-custom-skin-notice");
+        label.appendChild(notice);
+      }
+      label.classList?.add("blobio-custom-skin-notice-host");
+      notice.classList.remove("is-success", "is-error");
+      notice.classList.add(type === "error" ? "is-error" : "is-success");
+      notice.textContent = message;
+      const setTimer = this.document.defaultView?.setTimeout || globalThis.setTimeout;
+      this.customSkinNoticeTimer = setTimer(() => {
+        notice.remove();
+        label.classList?.remove("blobio-custom-skin-notice-host");
+        this.customSkinNoticeTimer = null;
+      }, CUSTOM_SKIN_NOTICE_DURATION);
+    }
+    clearCustomSkinNoticeTimer() {
+      if (this.customSkinNoticeTimer === null) {
+        return;
+      }
+      const clearTimer = this.document.defaultView?.clearTimeout || globalThis.clearTimeout;
+      clearTimer(this.customSkinNoticeTimer);
+      this.customSkinNoticeTimer = null;
+    }
+    findAncestor(node, tagName) {
+      let current = node;
+      while (current) {
+        if (current.tagName === tagName) {
+          return current;
+        }
+        current = current.parentElement;
+      }
+      return null;
+    }
     activateCustomSkinPanel(skins) {
       const tabs = skins.querySelector?.(".left")?.querySelector?.("ul");
       const customTab = skins.querySelector?.(".blobio-custom-skin-tab");
@@ -1978,6 +2126,7 @@ html.${className} .blobio-watermark-extension::after {
       this.customSkinListeners.push({ node, type, handler });
     }
     cleanupCustomSkinUi() {
+      this.clearCustomSkinNoticeTimer();
       for (const { node, type, handler } of this.customSkinListeners) {
         node.removeEventListener?.(type, handler);
       }
@@ -1988,6 +2137,12 @@ html.${className} .blobio-watermark-extension::after {
       }
       for (const node of this.document.querySelectorAll?.(".blobio-custom-skin-tab, .blobio-custom-skin-panel") || []) {
         node.remove();
+      }
+      for (const notice of this.document.querySelectorAll?.(".blobio-custom-skin-notice") || []) {
+        notice.remove();
+      }
+      for (const host of this.document.querySelectorAll?.(".blobio-custom-skin-notice-host") || []) {
+        host.classList?.remove("blobio-custom-skin-notice-host");
       }
     }
     installCustomSkinRuntimeHook() {
@@ -2019,6 +2174,18 @@ html.${className} .blobio-watermark-extension::after {
           const nextValue = String(name).toLowerCase() === "src" && typeof resolve === "function" ? resolve(value) : value;
           return originalSetAttribute.call(this, name, nextValue);
         };
+      }
+      const xhrPrototype = win.XMLHttpRequest?.prototype;
+      if (xhrPrototype && !win.__blobioCustomSkinXhrHookInstalled) {
+        const originalOpen = xhrPrototype.open;
+        if (typeof originalOpen === "function") {
+          xhrPrototype.open = function openCustomSkinRequest(method, url, ...rest) {
+            const resolve = win.__blobioCustomSkinResolve;
+            const nextUrl = typeof resolve === "function" ? resolve(url) : url;
+            return originalOpen.call(this, method, nextUrl, ...rest);
+          };
+          win.__blobioCustomSkinXhrHookInstalled = true;
+        }
       }
       win.__blobioCustomSkinHookInstalled = true;
     }
@@ -2509,6 +2676,18 @@ html.${className} .blobio-watermark-extension::after {
     }
   };
 
+  // src/hostRules.js
+  function getBlobioHostMode(locationLike = globalThis.location) {
+    const hostname = String(locationLike?.hostname || "").toLowerCase();
+    if (hostname === "custom.client.blobgame.io") {
+      return "runtime";
+    }
+    if (hostname === "blobgame.io" || hostname === "www.blobgame.io" || !hostname) {
+      return "frontpage";
+    }
+    return "off";
+  }
+
   // src/main.js
   var INSTANCE_KEY = "__blobioExtension";
   var BlobioExtension = class {
@@ -2529,26 +2708,35 @@ html.${className} .blobio-watermark-extension::after {
       if (!document.documentElement) {
         return false;
       }
-      this.features = [
-        new BackgroundFeature({
+      const hostMode = getBlobioHostMode(this.window.location);
+      if (hostMode === "off") {
+        this.started = true;
+        return true;
+      }
+      const menuAssets = {
+        recommendedButton: yt_recommended_n_default,
+        updatesButton: update_notes_n_default,
+        socialsButton: socal_icon_n_default,
+        youtubeIcon: youtube_icon_default,
+        discordIcon: discord_icon_default,
+        facebookIcon: facebook_icon_default,
+        instagramIcon: instagram_icon_default
+      };
+      if (hostMode === "frontpage") {
+        this.features.push(new BackgroundFeature({
           document,
           backgroundUrl: background_default,
           logger: this.window.console || console
-        }),
+        }));
+      }
+      this.features.push(
         new MenuFeature({
           document,
           logger: this.window.console || console,
-          assets: {
-            recommendedButton: yt_recommended_n_default,
-            updatesButton: update_notes_n_default,
-            socialsButton: socal_icon_n_default,
-            youtubeIcon: youtube_icon_default,
-            discordIcon: discord_icon_default,
-            facebookIcon: facebook_icon_default,
-            instagramIcon: instagram_icon_default
-          }
+          assets: menuAssets,
+          frontPageUi: hostMode === "frontpage"
         })
-      ];
+      );
       for (const feature of this.features) {
         feature.start();
       }

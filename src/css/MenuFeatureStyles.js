@@ -537,7 +537,7 @@ html.${className} app-skins .blobio-custom-skin-tab.active {
 html.${className} app-skins .blobio-custom-skin-panel {
   display: none !important;
   padding: 10px !important;
-  background: rgba(2, 18, 12, 0.36) !important;
+  background: transparent !important;
 }
 
 html.${className} app-skins.blobio-custom-skin-active .skins-container:not(.blobio-custom-skin-panel) {
@@ -620,6 +620,53 @@ html.${className} .blobio-custom-skin-actions button {
   font-weight: 800;
   text-shadow: 0 0 6px rgba(118, 255, 154, 0.62);
   box-shadow: 0 0 12px rgba(79, 255, 130, 0.2), inset 0 0 8px rgba(79, 255, 130, 0.12);
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+
+html.${className} .blobio-custom-skin-actions button:hover {
+  transform: scale(1.04);
+  box-shadow: 0 0 18px rgba(99, 255, 142, 0.38), inset 0 0 10px rgba(99, 255, 142, 0.18);
+}
+
+html.${className} .blobio-custom-skin-actions .blobio-custom-skin-action-remove {
+  border-color: rgba(255, 116, 116, 0.72);
+  background: rgba(102, 10, 16, 0.92);
+  color: #fff;
+  text-shadow: 0 0 6px rgba(60, 0, 0, 0.95), 0 0 10px rgba(255, 42, 42, 0.55);
+  box-shadow: 0 0 13px rgba(255, 49, 49, 0.28), inset 0 0 8px rgba(255, 89, 89, 0.18);
+}
+
+html.${className} .blobio-custom-skin-actions .blobio-custom-skin-action-remove:hover {
+  box-shadow: 0 0 20px rgba(255, 62, 62, 0.42), inset 0 0 10px rgba(255, 89, 89, 0.22);
+}
+
+html.${className} app-skins .blobio-custom-skin-notice-host {
+  position: relative;
+}
+
+html.${className} app-skins .blobio-custom-skin-notice {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 90%;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.2;
+  pointer-events: none;
+  text-align: center;
+  white-space: nowrap;
+}
+
+html.${className} app-skins .blobio-custom-skin-notice.is-success {
+  color: #dfffe6;
+  text-shadow: 0 0 8px rgba(118, 255, 154, 0.76), 0 0 18px rgba(79, 255, 130, 0.34);
+}
+
+html.${className} app-skins .blobio-custom-skin-notice.is-error {
+  color: #ffaaa8;
+  text-shadow: 0 0 8px rgba(148, 18, 18, 0.78), 0 0 18px rgba(255, 42, 42, 0.38);
 }
 
 html.${className} .blobio-watermark-host {

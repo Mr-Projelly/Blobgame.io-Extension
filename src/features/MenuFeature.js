@@ -1,9 +1,10 @@
 import { buildMenuCss } from '../css/MenuFeatureStyles.js';
+import { createBlobioStorage } from '../storage/BlobioStorage.js';
 
 const DEFAULT_CLASS_NAME = 'blobio-menu-enabled';
 const DEFAULT_STYLE_ID = 'blobio-menu-style';
 const DEFAULT_TOOLBAR_CLASS = 'blobio-menu-toolbar';
-const DEFAULT_EXTENSION_VERSION = '0.1.17';
+const DEFAULT_EXTENSION_VERSION = '0.1.18';
 const HIDDEN_CLASS = 'blobio-original-hidden';
 const PARTNER_LINK_MATCH = /iogames\.space|iogames\.live|io-games\.zone|silvergames\.com|crazygames\.com/i;
 const FAILED_VIRAL_FRAME_MATCH = /viral\.iogames\.space/i;
@@ -21,6 +22,7 @@ const CUSTOM_SKIN_DEFAULT_URL = 'https://i.imgur.com/OZz80VZ.jpeg';
 const CUSTOM_SKIN_NAME = 'BlobioCustomSkin';
 const CUSTOM_SKIN_TYPE = 'free';
 const DIRECT_IMGUR_IMAGE_MATCH = /^https:\/\/i\.imgur\.com\/[a-z0-9]+\.(?:png|jpe?g|gif|webp)(?:\?.*)?$/i;
+const CUSTOM_SKIN_NOTICE_DURATION = 2200;
 
 const DEFAULT_VIDEO = {
   title: 'Featured Blob.io Video',
@@ -93,14 +95,6 @@ const SOCIALS = [
   },
 ];
 
-function getDefaultStorage(document) {
-  try {
-    return document?.defaultView?.localStorage || globalThis.localStorage || null;
-  } catch {
-    return null;
-  }
-}
-
 export class MenuFeature {
   constructor({
     document = globalThis.document,
@@ -108,8 +102,9 @@ export class MenuFeature {
     logger = console,
     className = DEFAULT_CLASS_NAME,
     styleId = DEFAULT_STYLE_ID,
-    storage = getDefaultStorage(document),
+    storage = createBlobioStorage(document),
     version = DEFAULT_EXTENSION_VERSION,
+    frontPageUi = true,
   } = {}) {
     this.document = document;
     this.assets = assets;
@@ -118,6 +113,7 @@ export class MenuFeature {
     this.styleId = styleId;
     this.storage = storage;
     this.version = version;
+    this.frontPageUi = frontPageUi;
     this.started = false;
     this.styleNode = null;
     this.toolbar = null;
@@ -130,6 +126,7 @@ export class MenuFeature {
     this.settingsListeners = [];
     this.customSkinListeners = [];
     this.customSkinSelectedUrl = null;
+    this.customSkinNoticeTimer = null;
     this.documentClickHandler = null;
     this.keydownHandler = null;
   }
@@ -144,9 +141,14 @@ export class MenuFeature {
       return false;
     }
 
+    this.installCustomSkinRuntimeHook();
+    if (!this.frontPageUi) {
+      this.started = true;
+      return true;
+    }
+
     this.ensureStyle();
     this.applyPageClass();
-    this.installCustomSkinRuntimeHook();
     this.installToolbar();
     this.hideOriginalSections();
     this.installPolicyDock();
@@ -199,6 +201,7 @@ export class MenuFeature {
     this.footerModalHost?.remove();
     this.footerModalHost = null;
     this.panelBodies.clear();
+    this.clearCustomSkinNoticeTimer();
     this.cleanupExtensionSettings();
     this.cleanupCustomSkinUi();
 
@@ -1142,10 +1145,12 @@ export class MenuFeature {
 
     const useButton = this.document.createElement('button');
     useButton.type = 'button';
+    useButton.classList.add('blobio-custom-skin-action-use');
     useButton.textContent = 'Use';
 
     const removeButton = this.document.createElement('button');
     removeButton.type = 'button';
+    removeButton.classList.add('blobio-custom-skin-action-remove');
     removeButton.textContent = 'Remove';
 
     controls.append(input, error);
@@ -1175,6 +1180,7 @@ export class MenuFeature {
       const url = panel.dataset.selectedSkinUrl || '';
       if (this.useCustomSkinUrl(url)) {
         this.renderCustomSkinGallery(panel);
+        this.showCustomSkinNotice(panel, 'Skin is now applied', 'success');
       }
     });
 
@@ -1189,6 +1195,7 @@ export class MenuFeature {
       this.customSkinSelectedUrl = null;
       panel.dataset.selectedSkinUrl = '';
       this.renderCustomSkinGallery(panel);
+      this.showCustomSkinNotice(panel, 'Skin was removed', 'error');
     });
 
     return panel;
@@ -1279,6 +1286,59 @@ export class MenuFeature {
     }
   }
 
+  showCustomSkinNotice(panel, message, type) {
+    const skins = this.findAncestor(panel, 'APP-SKINS');
+    const label = skins?.querySelector?.('.label');
+    if (!label) {
+      return;
+    }
+
+    this.clearCustomSkinNoticeTimer();
+
+    let notice = label.querySelector?.('.blobio-custom-skin-notice');
+    if (!notice) {
+      notice = this.document.createElement('div');
+      notice.classList.add('blobio-custom-skin-notice');
+      label.appendChild(notice);
+    }
+
+    label.classList?.add('blobio-custom-skin-notice-host');
+    notice.classList.remove('is-success', 'is-error');
+    notice.classList.add(type === 'error' ? 'is-error' : 'is-success');
+    notice.textContent = message;
+
+    const setTimer = this.document.defaultView?.setTimeout || globalThis.setTimeout;
+    this.customSkinNoticeTimer = setTimer(() => {
+      notice.remove();
+      label.classList?.remove('blobio-custom-skin-notice-host');
+      this.customSkinNoticeTimer = null;
+    }, CUSTOM_SKIN_NOTICE_DURATION);
+  }
+
+  clearCustomSkinNoticeTimer() {
+    if (this.customSkinNoticeTimer === null) {
+      return;
+    }
+
+    const clearTimer = this.document.defaultView?.clearTimeout || globalThis.clearTimeout;
+    clearTimer(this.customSkinNoticeTimer);
+    this.customSkinNoticeTimer = null;
+  }
+
+  findAncestor(node, tagName) {
+    let current = node;
+
+    while (current) {
+      if (current.tagName === tagName) {
+        return current;
+      }
+
+      current = current.parentElement;
+    }
+
+    return null;
+  }
+
   activateCustomSkinPanel(skins) {
     const tabs = skins.querySelector?.('.left')?.querySelector?.('ul');
     const customTab = skins.querySelector?.('.blobio-custom-skin-tab');
@@ -1302,6 +1362,8 @@ export class MenuFeature {
   }
 
   cleanupCustomSkinUi() {
+    this.clearCustomSkinNoticeTimer();
+
     for (const { node, type, handler } of this.customSkinListeners) {
       node.removeEventListener?.(type, handler);
     }
@@ -1315,6 +1377,14 @@ export class MenuFeature {
 
     for (const node of this.document.querySelectorAll?.('.blobio-custom-skin-tab, .blobio-custom-skin-panel') || []) {
       node.remove();
+    }
+
+    for (const notice of this.document.querySelectorAll?.('.blobio-custom-skin-notice') || []) {
+      notice.remove();
+    }
+
+    for (const host of this.document.querySelectorAll?.('.blobio-custom-skin-notice-host') || []) {
+      host.classList?.remove('blobio-custom-skin-notice-host');
     }
   }
 
@@ -1350,6 +1420,19 @@ export class MenuFeature {
         const nextValue = String(name).toLowerCase() === 'src' && typeof resolve === 'function' ? resolve(value) : value;
         return originalSetAttribute.call(this, name, nextValue);
       };
+    }
+
+    const xhrPrototype = win.XMLHttpRequest?.prototype;
+    if (xhrPrototype && !win.__blobioCustomSkinXhrHookInstalled) {
+      const originalOpen = xhrPrototype.open;
+      if (typeof originalOpen === 'function') {
+        xhrPrototype.open = function openCustomSkinRequest(method, url, ...rest) {
+          const resolve = win.__blobioCustomSkinResolve;
+          const nextUrl = typeof resolve === 'function' ? resolve(url) : url;
+          return originalOpen.call(this, method, nextUrl, ...rest);
+        };
+        win.__blobioCustomSkinXhrHookInstalled = true;
+      }
     }
 
     win.__blobioCustomSkinHookInstalled = true;

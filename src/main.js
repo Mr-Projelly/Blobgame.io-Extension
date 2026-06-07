@@ -8,6 +8,7 @@ import youtubeIconUrl from '../assets/youtube_icon.png';
 import recommendedButtonUrl from '../assets/yt_recommended_n.png';
 import { BackgroundFeature } from './features/BackgroundFeature.js';
 import { MenuFeature } from './features/MenuFeature.js';
+import { getBlobioHostMode } from './hostRules.js';
 
 const INSTANCE_KEY = '__blobioExtension';
 
@@ -33,26 +34,38 @@ class BlobioExtension {
       return false;
     }
 
-    this.features = [
-      new BackgroundFeature({
+    const hostMode = getBlobioHostMode(this.window.location);
+    if (hostMode === 'off') {
+      this.started = true;
+      return true;
+    }
+
+    const menuAssets = {
+      recommendedButton: recommendedButtonUrl,
+      updatesButton: updatesButtonUrl,
+      socialsButton: socialsButtonUrl,
+      youtubeIcon: youtubeIconUrl,
+      discordIcon: discordIconUrl,
+      facebookIcon: facebookIconUrl,
+      instagramIcon: instagramIconUrl,
+    };
+
+    if (hostMode === 'frontpage') {
+      this.features.push(new BackgroundFeature({
         document,
         backgroundUrl,
         logger: this.window.console || console,
-      }),
+      }));
+    }
+
+    this.features.push(
       new MenuFeature({
         document,
         logger: this.window.console || console,
-        assets: {
-          recommendedButton: recommendedButtonUrl,
-          updatesButton: updatesButtonUrl,
-          socialsButton: socialsButtonUrl,
-          youtubeIcon: youtubeIconUrl,
-          discordIcon: discordIconUrl,
-          facebookIcon: facebookIconUrl,
-          instagramIcon: instagramIconUrl,
-        },
+        assets: menuAssets,
+        frontPageUi: hostMode === 'frontpage',
       }),
-    ];
+    );
 
     for (const feature of this.features) {
       feature.start();
