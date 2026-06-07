@@ -518,6 +518,110 @@ html.${className} app-settings .blobio-extension-setting-row label[for="config-s
   text-shadow: 0 0 6px rgba(118, 255, 154, 0.62);
 }
 
+html.${className} app-settings .blobio-extension-setting-row label[for="config-switch-custom-imgur-skin"] {
+  color: #dfffe6;
+  text-shadow: 0 0 6px rgba(118, 255, 154, 0.62);
+}
+
+html.${className} app-skins .blobio-custom-skin-tab {
+  color: #dfffe6;
+  font-weight: 800;
+  text-shadow: 0 0 7px rgba(118, 255, 154, 0.72), 0 0 16px rgba(79, 255, 130, 0.28);
+}
+
+html.${className} app-skins .blobio-custom-skin-tab.active {
+  color: #ffffff;
+  text-shadow: 0 0 10px rgba(190, 255, 204, 0.94), 0 0 22px rgba(99, 255, 142, 0.48);
+}
+
+html.${className} app-skins .blobio-custom-skin-panel {
+  display: none !important;
+  padding: 10px !important;
+  background: rgba(2, 18, 12, 0.36) !important;
+}
+
+html.${className} app-skins.blobio-custom-skin-active .skins-container:not(.blobio-custom-skin-panel) {
+  display: none !important;
+}
+
+html.${className} app-skins.blobio-custom-skin-active .blobio-custom-skin-panel {
+  display: block !important;
+}
+
+html.${className} .blobio-custom-skin-controls {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+html.${className} .blobio-custom-skin-input {
+  width: min(440px, 100%);
+  min-height: 32px;
+  margin: 0 auto;
+  padding: 6px 10px;
+  border: 1px solid rgba(142, 255, 174, 0.46);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.54);
+  color: #dfffe6;
+  font-weight: 700;
+  text-align: center;
+  text-shadow: 0 0 6px rgba(118, 255, 154, 0.62);
+  box-shadow: inset 0 0 8px rgba(91, 255, 132, 0.14);
+}
+
+html.${className} .blobio-custom-skin-input::placeholder {
+  color: rgba(223, 255, 230, 0.72);
+}
+
+html.${className} .blobio-custom-skin-error {
+  min-height: 14px;
+  color: #ffaaa8;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  text-shadow: 0 0 6px rgba(148, 18, 18, 0.72);
+}
+
+html.${className} .blobio-custom-skin-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+}
+
+html.${className} .blobio-custom-skin {
+  cursor: pointer;
+  border-radius: 8px;
+  transition: box-shadow 160ms ease, transform 160ms ease;
+}
+
+html.${className} .blobio-custom-skin.is-selected {
+  box-shadow: 0 0 18px rgba(99, 255, 142, 0.5), inset 0 0 10px rgba(99, 255, 142, 0.2);
+  transform: translateY(-1px);
+}
+
+html.${className} .blobio-custom-skin-actions {
+  display: none;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+html.${className} .blobio-custom-skin-actions.is-visible {
+  display: flex;
+}
+
+html.${className} .blobio-custom-skin-actions button {
+  min-width: 84px;
+  min-height: 30px;
+  border: 1px solid rgba(142, 255, 174, 0.48);
+  border-radius: 8px;
+  background: rgba(3, 44, 23, 0.58);
+  color: #dfffe6;
+  font-weight: 800;
+  text-shadow: 0 0 6px rgba(118, 255, 154, 0.62);
+  box-shadow: 0 0 12px rgba(79, 255, 130, 0.2), inset 0 0 8px rgba(79, 255, 130, 0.12);
+}
+
 html.${className} .blobio-watermark-host {
   position: relative;
 }

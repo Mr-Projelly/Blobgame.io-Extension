@@ -672,6 +672,110 @@ html.${className} app-settings .blobio-extension-setting-row label[for="config-s
   text-shadow: 0 0 6px rgba(118, 255, 154, 0.62);
 }
 
+html.${className} app-settings .blobio-extension-setting-row label[for="config-switch-custom-imgur-skin"] {
+  color: #dfffe6;
+  text-shadow: 0 0 6px rgba(118, 255, 154, 0.62);
+}
+
+html.${className} app-skins .blobio-custom-skin-tab {
+  color: #dfffe6;
+  font-weight: 800;
+  text-shadow: 0 0 7px rgba(118, 255, 154, 0.72), 0 0 16px rgba(79, 255, 130, 0.28);
+}
+
+html.${className} app-skins .blobio-custom-skin-tab.active {
+  color: #ffffff;
+  text-shadow: 0 0 10px rgba(190, 255, 204, 0.94), 0 0 22px rgba(99, 255, 142, 0.48);
+}
+
+html.${className} app-skins .blobio-custom-skin-panel {
+  display: none !important;
+  padding: 10px !important;
+  background: rgba(2, 18, 12, 0.36) !important;
+}
+
+html.${className} app-skins.blobio-custom-skin-active .skins-container:not(.blobio-custom-skin-panel) {
+  display: none !important;
+}
+
+html.${className} app-skins.blobio-custom-skin-active .blobio-custom-skin-panel {
+  display: block !important;
+}
+
+html.${className} .blobio-custom-skin-controls {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+html.${className} .blobio-custom-skin-input {
+  width: min(440px, 100%);
+  min-height: 32px;
+  margin: 0 auto;
+  padding: 6px 10px;
+  border: 1px solid rgba(142, 255, 174, 0.46);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.54);
+  color: #dfffe6;
+  font-weight: 700;
+  text-align: center;
+  text-shadow: 0 0 6px rgba(118, 255, 154, 0.62);
+  box-shadow: inset 0 0 8px rgba(91, 255, 132, 0.14);
+}
+
+html.${className} .blobio-custom-skin-input::placeholder {
+  color: rgba(223, 255, 230, 0.72);
+}
+
+html.${className} .blobio-custom-skin-error {
+  min-height: 14px;
+  color: #ffaaa8;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  text-shadow: 0 0 6px rgba(148, 18, 18, 0.72);
+}
+
+html.${className} .blobio-custom-skin-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+}
+
+html.${className} .blobio-custom-skin {
+  cursor: pointer;
+  border-radius: 8px;
+  transition: box-shadow 160ms ease, transform 160ms ease;
+}
+
+html.${className} .blobio-custom-skin.is-selected {
+  box-shadow: 0 0 18px rgba(99, 255, 142, 0.5), inset 0 0 10px rgba(99, 255, 142, 0.2);
+  transform: translateY(-1px);
+}
+
+html.${className} .blobio-custom-skin-actions {
+  display: none;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+html.${className} .blobio-custom-skin-actions.is-visible {
+  display: flex;
+}
+
+html.${className} .blobio-custom-skin-actions button {
+  min-width: 84px;
+  min-height: 30px;
+  border: 1px solid rgba(142, 255, 174, 0.48);
+  border-radius: 8px;
+  background: rgba(3, 44, 23, 0.58);
+  color: #dfffe6;
+  font-weight: 800;
+  text-shadow: 0 0 6px rgba(118, 255, 154, 0.62);
+  box-shadow: 0 0 12px rgba(79, 255, 130, 0.2), inset 0 0 8px rgba(79, 255, 130, 0.12);
+}
+
 html.${className} .blobio-watermark-host {
   position: relative;
 }
@@ -801,14 +905,24 @@ html.${className} .blobio-watermark-extension::after {
   var DEFAULT_CLASS_NAME2 = "blobio-menu-enabled";
   var DEFAULT_STYLE_ID2 = "blobio-menu-style";
   var DEFAULT_TOOLBAR_CLASS = "blobio-menu-toolbar";
-  var DEFAULT_EXTENSION_VERSION = "0.1.16";
+  var DEFAULT_EXTENSION_VERSION = "0.1.17";
   var HIDDEN_CLASS = "blobio-original-hidden";
   var PARTNER_LINK_MATCH = /iogames\.space|iogames\.live|io-games\.zone|silvergames\.com|crazygames\.com/i;
   var FAILED_VIRAL_FRAME_MATCH = /viral\.iogames\.space/i;
   var OTHER_GAME_NAMES = ["Viper", "Hexa"];
   var WATERMARK_STORAGE_KEY = "blobio.watermark.enabled";
+  var WATERMARK_RIGHT_NUDGE = 60;
   var WATERMARK_EXTRA_WIDTH = 96;
   var WATERMARK_INPUT_GAP = 6;
+  var CUSTOM_SKIN_ENABLED_KEY = "blobio.customSkin.enabled";
+  var CUSTOM_SKIN_GALLERY_KEY = "blobio.customSkin.gallery";
+  var CUSTOM_SKIN_ACTIVE_KEY = "blobio.customSkin.activeUrl";
+  var CUSTOM_SKIN_PREVIOUS_KEY = "blobio.customSkin.previousSkin";
+  var CUSTOM_SKIN_LOCAL_NAME_KEY = "blobio.customSkin.localName";
+  var CUSTOM_SKIN_DEFAULT_URL = "https://i.imgur.com/OZz80VZ.jpeg";
+  var CUSTOM_SKIN_NAME = "BlobioCustomSkin";
+  var CUSTOM_SKIN_TYPE = "free";
+  var DIRECT_IMGUR_IMAGE_MATCH = /^https:\/\/i\.imgur\.com\/[a-z0-9]+\.(?:png|jpe?g|gif|webp)(?:\?.*)?$/i;
   var DEFAULT_VIDEO = {
     title: "Featured Blob.io Video",
     url: "https://www.youtube.com/watch?v=GOlXDLWeGMo"
@@ -911,6 +1025,8 @@ html.${className} .blobio-watermark-extension::after {
       this.hiddenOriginalNodes = /* @__PURE__ */ new Set();
       this.policyDock = null;
       this.settingsListeners = [];
+      this.customSkinListeners = [];
+      this.customSkinSelectedUrl = null;
       this.documentClickHandler = null;
       this.keydownHandler = null;
     }
@@ -924,10 +1040,12 @@ html.${className} .blobio-watermark-extension::after {
       }
       this.ensureStyle();
       this.applyPageClass();
+      this.installCustomSkinRuntimeHook();
       this.installToolbar();
       this.hideOriginalSections();
       this.installPolicyDock();
       this.installExtensionSettings();
+      this.installCustomSkinUi();
       this.syncWatermark();
       this.syncUsernameAnimation();
       this.watchPage();
@@ -967,6 +1085,7 @@ html.${className} .blobio-watermark-extension::after {
       this.footerModalHost = null;
       this.panelBodies.clear();
       this.cleanupExtensionSettings();
+      this.cleanupCustomSkinUi();
       for (const node of this.hiddenOriginalNodes) {
         node.classList?.remove(HIDDEN_CLASS);
       }
@@ -1030,6 +1149,7 @@ html.${className} .blobio-watermark-extension::after {
         this.hideOriginalSections();
         this.installPolicyDock();
         this.installExtensionSettings();
+        this.installCustomSkinUi();
         this.syncWatermark();
         this.syncUsernameAnimation();
       }, 0);
@@ -1353,7 +1473,7 @@ html.${className} .blobio-watermark-extension::after {
           panel = this.createExtensionSettingsPanel();
           content.appendChild(panel);
         }
-        this.syncWatermarkCheckbox(panel);
+        this.syncExtensionSettingsCheckboxes(panel);
         if (tab.dataset.blobioExtensionListener !== "true") {
           tab.dataset.blobioExtensionListener = "true";
           this.addSettingsListener(tab, "click", (event) => {
@@ -1386,6 +1506,29 @@ html.${className} .blobio-watermark-extension::after {
       const panel = this.document.createElement("div");
       panel.classList.add("grid-container", "blobio-extension-settings-panel");
       panel.setAttribute("_ngcontent-c3", "");
+      panel.append(
+        this.createExtensionSwitchRow({
+          id: "config-switch-watermark",
+          label: "WaterMark",
+          checked: this.isWatermarkEnabled(),
+          onChange: (enabled) => {
+            this.setWatermarkEnabled(enabled);
+            this.syncWatermark();
+          }
+        }),
+        this.createExtensionSwitchRow({
+          id: "config-switch-custom-imgur-skin",
+          label: "Custom Imgur Skin",
+          checked: this.isCustomSkinEnabled(),
+          onChange: (enabled) => {
+            this.setCustomSkinEnabled(enabled);
+            this.installCustomSkinUi();
+          }
+        })
+      );
+      return panel;
+    }
+    createExtensionSwitchRow({ id, label, checked, onChange }) {
       const row = this.document.createElement("div");
       row.classList.add("grid-item", "blobio-extension-setting-row");
       row.setAttribute("_ngcontent-c3", "");
@@ -1393,9 +1536,9 @@ html.${className} .blobio-watermark-extension::after {
       switchLabel.classList.add("switch");
       switchLabel.setAttribute("_ngcontent-c3", "");
       const checkbox = this.document.createElement("input");
-      checkbox.id = "config-switch-watermark";
+      checkbox.id = id;
       checkbox.type = "checkbox";
-      checkbox.checked = this.isWatermarkEnabled();
+      checkbox.checked = checked;
       checkbox.classList.add("ng-untouched", "ng-pristine", "ng-valid");
       checkbox.setAttribute("_ngcontent-c3", "");
       checkbox.setAttribute("type", "checkbox");
@@ -1405,15 +1548,13 @@ html.${className} .blobio-watermark-extension::after {
       const textLabel = this.document.createElement("label");
       textLabel.setAttribute("_ngcontent-c3", "");
       textLabel.setAttribute("for", checkbox.id);
-      textLabel.textContent = "WaterMark";
+      textLabel.textContent = label;
       switchLabel.append(checkbox, slider);
       row.append(switchLabel, textLabel);
-      panel.appendChild(row);
       this.addSettingsListener(checkbox, "change", () => {
-        this.setWatermarkEnabled(Boolean(checkbox.checked));
-        this.syncWatermark();
+        onChange(Boolean(checkbox.checked));
       });
-      return panel;
+      return row;
     }
     activateExtensionSettings(settings) {
       const left = settings.querySelector?.(".left");
@@ -1428,10 +1569,14 @@ html.${className} .blobio-watermark-extension::after {
       settings.classList.remove("blobio-extension-settings-active");
       settings.querySelector?.(".blobio-extension-settings-tab")?.classList.remove("active");
     }
-    syncWatermarkCheckbox(panel) {
-      const checkbox = panel.querySelector?.("#config-switch-watermark");
-      if (checkbox) {
-        checkbox.checked = this.isWatermarkEnabled();
+    syncExtensionSettingsCheckboxes(panel) {
+      const watermark = panel.querySelector?.("#config-switch-watermark");
+      if (watermark) {
+        watermark.checked = this.isWatermarkEnabled();
+      }
+      const customSkin = panel.querySelector?.("#config-switch-custom-imgur-skin");
+      if (customSkin) {
+        customSkin.checked = this.isCustomSkinEnabled();
       }
     }
     addSettingsListener(node, type, handler) {
@@ -1453,10 +1598,11 @@ html.${className} .blobio-watermark-extension::after {
     }
     isWatermarkEnabled() {
       try {
-        return this.storage?.getItem?.(WATERMARK_STORAGE_KEY) === "1";
+        const value = this.storage?.getItem?.(WATERMARK_STORAGE_KEY);
+        return value === null ? true : value === "1";
       } catch (error) {
         this.logger.warn("[Blobio] Could not read WaterMark setting.", error);
-        return false;
+        return true;
       }
     }
     setWatermarkEnabled(enabled) {
@@ -1464,6 +1610,452 @@ html.${className} .blobio-watermark-extension::after {
         this.storage?.setItem?.(WATERMARK_STORAGE_KEY, enabled ? "1" : "0");
       } catch (error) {
         this.logger.warn("[Blobio] Could not save WaterMark setting.", error);
+      }
+    }
+    isCustomSkinEnabled() {
+      try {
+        return this.storage?.getItem?.(CUSTOM_SKIN_ENABLED_KEY) === "1";
+      } catch (error) {
+        this.logger.warn("[Blobio] Could not read Custom Imgur Skin setting.", error);
+        return false;
+      }
+    }
+    setCustomSkinEnabled(enabled) {
+      try {
+        this.storage?.setItem?.(CUSTOM_SKIN_ENABLED_KEY, enabled ? "1" : "0");
+        if (!enabled) {
+          this.clearCustomSkinUse();
+        }
+      } catch (error) {
+        this.logger.warn("[Blobio] Could not save Custom Imgur Skin setting.", error);
+      }
+    }
+    getCustomSkinGallery() {
+      try {
+        const raw = this.storage?.getItem?.(CUSTOM_SKIN_GALLERY_KEY);
+        if (raw === null) {
+          return [CUSTOM_SKIN_DEFAULT_URL];
+        }
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) {
+          return [CUSTOM_SKIN_DEFAULT_URL];
+        }
+        return this.uniqueValidImgurUrls(parsed);
+      } catch (error) {
+        this.logger.warn("[Blobio] Could not read Custom Imgur Skin gallery.", error);
+        return [CUSTOM_SKIN_DEFAULT_URL];
+      }
+    }
+    saveCustomSkinGallery(urls) {
+      try {
+        this.storage?.setItem?.(CUSTOM_SKIN_GALLERY_KEY, JSON.stringify(this.uniqueValidImgurUrls(urls)));
+      } catch (error) {
+        this.logger.warn("[Blobio] Could not save Custom Imgur Skin gallery.", error);
+      }
+    }
+    addCustomSkinUrl(url) {
+      const cleanUrl = String(url || "").trim();
+      if (!this.isValidImgurSkinUrl(cleanUrl)) {
+        return false;
+      }
+      const gallery = this.getCustomSkinGallery();
+      if (!gallery.includes(cleanUrl)) {
+        gallery.push(cleanUrl);
+        this.saveCustomSkinGallery(gallery);
+      }
+      return true;
+    }
+    removeCustomSkinUrl(url) {
+      const gallery = this.getCustomSkinGallery().filter((item) => item !== url);
+      this.saveCustomSkinGallery(gallery);
+      if (this.getActiveCustomSkinUrl() === url) {
+        this.clearCustomSkinUse();
+      }
+    }
+    uniqueValidImgurUrls(urls) {
+      const seen = /* @__PURE__ */ new Set();
+      const valid = [];
+      for (const url of urls) {
+        const cleanUrl = String(url || "").trim();
+        if (!this.isValidImgurSkinUrl(cleanUrl) || seen.has(cleanUrl)) {
+          continue;
+        }
+        seen.add(cleanUrl);
+        valid.push(cleanUrl);
+      }
+      return valid;
+    }
+    isValidImgurSkinUrl(url) {
+      return DIRECT_IMGUR_IMAGE_MATCH.test(String(url || "").trim());
+    }
+    getActiveCustomSkinUrl() {
+      try {
+        const url = this.storage?.getItem?.(CUSTOM_SKIN_ACTIVE_KEY) || "";
+        return this.isValidImgurSkinUrl(url) ? url : "";
+      } catch (error) {
+        this.logger.warn("[Blobio] Could not read active Custom Imgur Skin.", error);
+        return "";
+      }
+    }
+    getCustomSkinLocalName() {
+      try {
+        const existing = this.storage?.getItem?.(CUSTOM_SKIN_LOCAL_NAME_KEY) || "";
+        if (/^BlobioCustomSkin_[a-z0-9]{8,}$/i.test(existing)) {
+          return existing;
+        }
+        const random = Math.random().toString(36).slice(2, 10);
+        const localName = `${CUSTOM_SKIN_NAME}_${random || Date.now().toString(36)}`;
+        this.storage?.setItem?.(CUSTOM_SKIN_LOCAL_NAME_KEY, localName);
+        return localName;
+      } catch (error) {
+        this.logger.warn("[Blobio] Could not create local Custom Imgur Skin name.", error);
+        return `${CUSTOM_SKIN_NAME}_localonly`;
+      }
+    }
+    useCustomSkinUrl(url) {
+      if (!this.isValidImgurSkinUrl(url)) {
+        return false;
+      }
+      try {
+        const localSkinName = this.getCustomSkinLocalName();
+        const currentSkin = this.storage?.getItem?.("config-skin") || "";
+        const currentType = this.storage?.getItem?.("config-skin-type") || "";
+        if (currentSkin !== localSkinName) {
+          this.storage?.setItem?.(CUSTOM_SKIN_PREVIOUS_KEY, JSON.stringify({ name: currentSkin, type: currentType || CUSTOM_SKIN_TYPE }));
+        }
+        this.storage?.setItem?.(CUSTOM_SKIN_ENABLED_KEY, "1");
+        this.storage?.setItem?.(CUSTOM_SKIN_ACTIVE_KEY, url);
+        this.storage?.setItem?.("config-skin", localSkinName);
+        this.storage?.setItem?.("config-skin-type", CUSTOM_SKIN_TYPE);
+        this.updateChooseSkinPreview(url);
+        return true;
+      } catch (error) {
+        this.logger.warn("[Blobio] Could not apply Custom Imgur Skin.", error);
+        return false;
+      }
+    }
+    clearCustomSkinUse() {
+      try {
+        const localSkinName = this.getCustomSkinLocalName();
+        const currentSkin = this.storage?.getItem?.("config-skin") || "";
+        const previous = this.getPreviousSkinConfig();
+        this.storage?.removeItem?.(CUSTOM_SKIN_ACTIVE_KEY);
+        if (currentSkin === localSkinName) {
+          if (previous?.name) {
+            this.storage?.setItem?.("config-skin", previous.name);
+            this.storage?.setItem?.("config-skin-type", previous.type || CUSTOM_SKIN_TYPE);
+            this.updateChooseSkinPreview(`https://client.blobgame.io/skins/${previous.type || CUSTOM_SKIN_TYPE}/${previous.name}.png`);
+          } else {
+            this.storage?.removeItem?.("config-skin");
+            this.storage?.removeItem?.("config-skin-type");
+          }
+        }
+      } catch (error) {
+        this.logger.warn("[Blobio] Could not clear Custom Imgur Skin.", error);
+      }
+    }
+    getPreviousSkinConfig() {
+      try {
+        const raw = this.storage?.getItem?.(CUSTOM_SKIN_PREVIOUS_KEY);
+        if (!raw) {
+          return null;
+        }
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed.name !== "string") {
+          return null;
+        }
+        return {
+          name: parsed.name,
+          type: typeof parsed.type === "string" && parsed.type ? parsed.type : CUSTOM_SKIN_TYPE
+        };
+      } catch {
+        return null;
+      }
+    }
+    updateChooseSkinPreview(url) {
+      const button = this.document.querySelector?.(".choose-skin-btn");
+      const image = button?.querySelector?.("img");
+      if (image) {
+        image.setAttribute("src", url);
+      }
+    }
+    installCustomSkinUi() {
+      if (!this.isCustomSkinEnabled()) {
+        this.cleanupCustomSkinUi();
+        return;
+      }
+      for (const skins of this.document.querySelectorAll?.("app-skins") || []) {
+        if (this.isInsideOwnUi(skins)) {
+          continue;
+        }
+        this.installCustomSkinTab(skins);
+      }
+    }
+    installCustomSkinTab(skins) {
+      const left = skins.querySelector?.(".left");
+      const tabs = left?.querySelector?.("ul");
+      const right = skins.querySelector?.(".right");
+      const host = right?.querySelector?.(".inner-container") || right;
+      if (!tabs || !host) {
+        return;
+      }
+      let tab = skins.querySelector?.(".blobio-custom-skin-tab");
+      if (!tab) {
+        tab = this.document.createElement("li");
+        tab.classList.add("blobio-custom-skin-tab");
+        tab.setAttribute("_ngcontent-c2", "");
+        tab.textContent = "Custom Skin";
+        const youtubeTab = Array.from(tabs.children || []).find((item) => /youtube/i.test(item.textContent || ""));
+        const referenceNode = youtubeTab ? tabs.children[Array.from(tabs.children || []).indexOf(youtubeTab) + 1] || null : null;
+        tabs.insertBefore(tab, referenceNode);
+      }
+      let panel = skins.querySelector?.(".blobio-custom-skin-panel");
+      if (!panel) {
+        panel = this.createCustomSkinPanel();
+        host.appendChild(panel);
+      }
+      this.renderCustomSkinGallery(panel);
+      if (tab.dataset.blobioCustomSkinListener !== "true") {
+        tab.dataset.blobioCustomSkinListener = "true";
+        this.addCustomSkinListener(tab, "click", (event) => {
+          event.stopPropagation?.();
+          this.activateCustomSkinPanel(skins);
+        });
+      }
+      for (const item of tabs.children || []) {
+        if (item === tab) {
+          continue;
+        }
+        if (item.dataset.blobioCustomSkinCloseListener !== "true") {
+          item.dataset.blobioCustomSkinCloseListener = "true";
+          this.addCustomSkinListener(item, "click", () => {
+            this.deactivateCustomSkinPanel(skins);
+          });
+        }
+      }
+    }
+    createCustomSkinPanel() {
+      const panel = this.document.createElement("div");
+      panel.classList.add("skins-container", "scroll", "blobio-custom-skin-panel");
+      panel.setAttribute("_ngcontent-c2", "");
+      const controls = this.document.createElement("div");
+      controls.classList.add("blobio-custom-skin-controls");
+      const input = this.document.createElement("input");
+      input.classList.add("blobio-custom-skin-input");
+      input.type = "url";
+      input.setAttribute("placeholder", "Paste Skin URL here...");
+      input.setAttribute("aria-label", "Custom Imgur skin URL");
+      const error = this.document.createElement("div");
+      error.classList.add("blobio-custom-skin-error");
+      const grid = this.document.createElement("div");
+      grid.classList.add("blobio-custom-skin-grid");
+      const actions = this.document.createElement("div");
+      actions.classList.add("blobio-custom-skin-actions");
+      const useButton = this.document.createElement("button");
+      useButton.type = "button";
+      useButton.textContent = "Use";
+      const removeButton = this.document.createElement("button");
+      removeButton.type = "button";
+      removeButton.textContent = "Remove";
+      controls.append(input, error);
+      actions.append(useButton, removeButton);
+      panel.append(controls, grid, actions);
+      this.addCustomSkinListener(input, "keydown", (event) => {
+        if (event.key !== "Enter") {
+          return;
+        }
+        event.preventDefault?.();
+        this.tryAddCustomSkinFromInput(panel, input, error);
+      });
+      this.addCustomSkinListener(input, "change", () => {
+        this.tryAddCustomSkinFromInput(panel, input, error);
+      });
+      this.addCustomSkinListener(input, "paste", () => {
+        const setTimer = this.document.defaultView?.setTimeout || globalThis.setTimeout;
+        setTimer(() => this.tryAddCustomSkinFromInput(panel, input, error), 0);
+      });
+      this.addCustomSkinListener(useButton, "click", (event) => {
+        event.stopPropagation?.();
+        const url = panel.dataset.selectedSkinUrl || "";
+        if (this.useCustomSkinUrl(url)) {
+          this.renderCustomSkinGallery(panel);
+        }
+      });
+      this.addCustomSkinListener(removeButton, "click", (event) => {
+        event.stopPropagation?.();
+        const url = panel.dataset.selectedSkinUrl || "";
+        if (!url) {
+          return;
+        }
+        this.removeCustomSkinUrl(url);
+        this.customSkinSelectedUrl = null;
+        panel.dataset.selectedSkinUrl = "";
+        this.renderCustomSkinGallery(panel);
+      });
+      return panel;
+    }
+    tryAddCustomSkinFromInput(panel, input, error) {
+      const url = String(input.value || "").trim();
+      if (!url) {
+        error.textContent = "";
+        return;
+      }
+      if (!this.isValidImgurSkinUrl(url)) {
+        error.textContent = "Only direct i.imgur.com image links are accepted.";
+        return;
+      }
+      this.addCustomSkinUrl(url);
+      this.customSkinSelectedUrl = url;
+      input.value = "";
+      error.textContent = "";
+      this.renderCustomSkinGallery(panel);
+    }
+    renderCustomSkinGallery(panel) {
+      const grid = panel.querySelector?.(".blobio-custom-skin-grid");
+      const actions = panel.querySelector?.(".blobio-custom-skin-actions");
+      if (!grid || !actions) {
+        return;
+      }
+      const gallery = this.getCustomSkinGallery();
+      const selectedUrl = gallery.includes(this.customSkinSelectedUrl) ? this.customSkinSelectedUrl : gallery.includes(this.getActiveCustomSkinUrl()) ? this.getActiveCustomSkinUrl() : "";
+      this.clearElement(grid);
+      gallery.forEach((url, index) => {
+        const card = this.document.createElement("div");
+        card.classList.add("skin", "blobio-custom-skin");
+        card.dataset.skinUrl = url;
+        card.setAttribute("_ngcontent-c2", "");
+        const image = this.document.createElement("img");
+        image.setAttribute("_ngcontent-c2", "");
+        image.setAttribute("src", url);
+        image.setAttribute("alt", "");
+        const title = this.document.createElement("div");
+        title.classList.add("title");
+        title.setAttribute("_ngcontent-c2", "");
+        title.textContent = index === 0 && url === CUSTOM_SKIN_DEFAULT_URL ? "Default Custom" : `Custom ${index + 1}`;
+        card.append(image, title);
+        card.addEventListener?.("click", () => {
+          this.selectCustomSkinCard(panel, url);
+        });
+        grid.appendChild(card);
+      });
+      this.selectCustomSkinCard(panel, selectedUrl);
+    }
+    selectCustomSkinCard(panel, url) {
+      const selectedUrl = this.isValidImgurSkinUrl(url) ? url : "";
+      this.customSkinSelectedUrl = selectedUrl || null;
+      panel.dataset.selectedSkinUrl = selectedUrl;
+      for (const card of panel.querySelectorAll?.(".blobio-custom-skin") || []) {
+        if (card.dataset.skinUrl === selectedUrl) {
+          card.classList?.add("is-selected");
+        } else {
+          card.classList?.remove("is-selected");
+        }
+      }
+      const actions = panel.querySelector?.(".blobio-custom-skin-actions");
+      if (actions) {
+        if (selectedUrl) {
+          actions.classList.add("is-visible");
+        } else {
+          actions.classList.remove("is-visible");
+        }
+      }
+    }
+    activateCustomSkinPanel(skins) {
+      const tabs = skins.querySelector?.(".left")?.querySelector?.("ul");
+      const customTab = skins.querySelector?.(".blobio-custom-skin-tab");
+      for (const item of tabs?.children || []) {
+        item.classList?.remove("active");
+      }
+      skins.classList.add("blobio-custom-skin-active");
+      customTab?.classList.add("active");
+    }
+    deactivateCustomSkinPanel(skins) {
+      skins.classList.remove("blobio-custom-skin-active");
+      skins.querySelector?.(".blobio-custom-skin-tab")?.classList.remove("active");
+    }
+    addCustomSkinListener(node, type, handler) {
+      node.addEventListener?.(type, handler);
+      this.customSkinListeners.push({ node, type, handler });
+    }
+    cleanupCustomSkinUi() {
+      for (const { node, type, handler } of this.customSkinListeners) {
+        node.removeEventListener?.(type, handler);
+      }
+      this.customSkinListeners = [];
+      this.customSkinSelectedUrl = null;
+      for (const skins of this.document.querySelectorAll?.("app-skins") || []) {
+        skins.classList?.remove("blobio-custom-skin-active");
+      }
+      for (const node of this.document.querySelectorAll?.(".blobio-custom-skin-tab, .blobio-custom-skin-panel") || []) {
+        node.remove();
+      }
+    }
+    installCustomSkinRuntimeHook() {
+      const win = this.document.defaultView || globalThis;
+      const imagePrototype = win.HTMLImageElement?.prototype;
+      if (!imagePrototype) {
+        return;
+      }
+      win.__blobioCustomSkinResolve = (url) => this.resolveCustomSkinImageUrl(url);
+      if (win.__blobioCustomSkinHookInstalled) {
+        return;
+      }
+      const srcDescriptor = this.findPropertyDescriptor(imagePrototype, "src");
+      if (srcDescriptor?.get && srcDescriptor?.set) {
+        Object.defineProperty(imagePrototype, "src", {
+          configurable: true,
+          enumerable: srcDescriptor.enumerable,
+          get: srcDescriptor.get,
+          set(value) {
+            const resolve = win.__blobioCustomSkinResolve;
+            srcDescriptor.set.call(this, typeof resolve === "function" ? resolve(value) : value);
+          }
+        });
+      }
+      const originalSetAttribute = imagePrototype.setAttribute || win.Element?.prototype?.setAttribute;
+      if (typeof originalSetAttribute === "function") {
+        imagePrototype.setAttribute = function setCustomSkinAttribute(name, value) {
+          const resolve = win.__blobioCustomSkinResolve;
+          const nextValue = String(name).toLowerCase() === "src" && typeof resolve === "function" ? resolve(value) : value;
+          return originalSetAttribute.call(this, name, nextValue);
+        };
+      }
+      win.__blobioCustomSkinHookInstalled = true;
+    }
+    findPropertyDescriptor(prototype, propertyName) {
+      let current = prototype;
+      while (current) {
+        const descriptor = Object.getOwnPropertyDescriptor(current, propertyName);
+        if (descriptor) {
+          return descriptor;
+        }
+        current = Object.getPrototypeOf(current);
+      }
+      return null;
+    }
+    resolveCustomSkinImageUrl(url) {
+      const originalUrl = String(url || "");
+      if (!this.isCustomSkinEnabled()) {
+        return originalUrl;
+      }
+      const activeUrl = this.getActiveCustomSkinUrl();
+      if (!activeUrl) {
+        return originalUrl;
+      }
+      const localSkinName = this.getCustomSkinLocalName();
+      const escapedName = localSkinName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const customSkinPath = new RegExp(`/skins/${CUSTOM_SKIN_TYPE}/${escapedName}\\.png$`, "i");
+      if (customSkinPath.test(this.getUrlPath(originalUrl))) {
+        return activeUrl;
+      }
+      return originalUrl;
+    }
+    getUrlPath(url) {
+      try {
+        const baseUrl = this.document.defaultView?.location?.href || "https://client.blobgame.io/";
+        return new URL(url, baseUrl).pathname;
+      } catch {
+        return String(url || "");
       }
     }
     syncWatermark() {
@@ -1495,7 +2087,7 @@ html.${className} .blobio-watermark-extension::after {
         this.setStyleProperty(watermark, "--blobio-watermark-width", "100%");
         return;
       }
-      const left = Math.round(inputRect.left - hostRect.left - WATERMARK_EXTRA_WIDTH / 2);
+      const left = Math.round(inputRect.left - hostRect.left - WATERMARK_EXTRA_WIDTH / 2 + WATERMARK_RIGHT_NUDGE);
       const top = Math.round(inputRect.top - hostRect.top - WATERMARK_INPUT_GAP);
       const width = Math.round(inputRect.width + WATERMARK_EXTRA_WIDTH);
       this.setStyleProperty(watermark, "--blobio-watermark-left", `${left}px`);
@@ -1880,7 +2472,7 @@ html.${className} .blobio-watermark-extension::after {
       let current = node?.classList ? node : node?.parentElement;
       while (current) {
         const classList = current.classList;
-        if (classList?.contains(DEFAULT_TOOLBAR_CLASS) || classList?.contains("blobio-menu-panel") || classList?.contains("blobio-footer-dock") || classList?.contains("blobio-footer-modal-host") || classList?.contains("blobio-watermark") || classList?.contains("blobio-extension-settings-tab") || classList?.contains("blobio-extension-settings-panel")) {
+        if (classList?.contains(DEFAULT_TOOLBAR_CLASS) || classList?.contains("blobio-menu-panel") || classList?.contains("blobio-footer-dock") || classList?.contains("blobio-footer-modal-host") || classList?.contains("blobio-watermark") || classList?.contains("blobio-extension-settings-tab") || classList?.contains("blobio-extension-settings-panel") || classList?.contains("blobio-custom-skin-tab") || classList?.contains("blobio-custom-skin-panel") || classList?.contains("blobio-custom-skin")) {
           return true;
         }
         current = current.parentElement;

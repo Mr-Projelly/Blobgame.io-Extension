@@ -122,6 +122,72 @@ function addSettingsModal(document) {
   return settings;
 }
 
+function addSkinModal(document) {
+  const skins = document.createElement('app-skins');
+
+  const body = document.createElement('div');
+  body.classList.add('body');
+
+  const left = document.createElement('div');
+  left.classList.add('left');
+  const tabs = document.createElement('ul');
+
+  for (const label of ['Free', 'Premium', 'YouTube']) {
+    const tab = document.createElement('li');
+    tab.textContent = label;
+    if (label === 'Free') {
+      tab.classList.add('active');
+    }
+    tabs.appendChild(tab);
+  }
+
+  const right = document.createElement('div');
+  right.classList.add('right');
+  const inner = document.createElement('div');
+  inner.classList.add('inner-container');
+  const originalContainer = document.createElement('div');
+  originalContainer.classList.add('skins-container', 'scroll');
+
+  const skin = document.createElement('div');
+  skin.classList.add('skin');
+  const image = document.createElement('img');
+  image.setAttribute('src', 'https://client.blobgame.io/skins/free/alien_.png');
+  const title = document.createElement('div');
+  title.classList.add('title');
+  title.textContent = 'Alien';
+  skin.append(image, title);
+  originalContainer.appendChild(skin);
+
+  inner.appendChild(originalContainer);
+  right.appendChild(inner);
+  left.appendChild(tabs);
+  body.append(left, right);
+  skins.appendChild(body);
+  document.body.appendChild(skins);
+
+  return { skins, tabs, originalContainer };
+}
+
+function addChooseSkinButton(document) {
+  const inputs = document.querySelector('.inputs-container') || document.createElement('div');
+  inputs.classList.add('inputs-container');
+
+  if (!inputs.parentNode) {
+    document.body.appendChild(inputs);
+  }
+
+  const button = document.createElement('button');
+  button.classList.add('choose-skin-btn');
+
+  const image = document.createElement('img');
+  image.classList.add('skin-img');
+  image.setAttribute('src', 'https://client.blobgame.io/skins/free/1cat.png');
+
+  button.appendChild(image);
+  inputs.appendChild(button);
+  return { button, image };
+}
+
 function addUsername(document, text = 'SkyView') {
   const username = document.createElement('div');
   username.classList.add('fleft', 'username');
@@ -727,34 +793,37 @@ test('MenuFeature splits logged-in username into staggered animated letters', ()
   feature.destroy();
 });
 
-test('MenuFeature adds an Extension settings category with a WaterMark toggle', () => {
+test('MenuFeature adds Extension settings with default WaterMark and Custom Imgur Skin options', () => {
   const document = createFakeDocument();
   addReplayButton(document);
   const settings = addSettingsModal(document);
   const nameInput = addNameInput(document);
   setWatermarkRects(nameInput);
-  const storage = createMemoryStorage({ 'blobio.watermark.enabled': '1' });
+  const storage = createMemoryStorage();
 
-  const feature = new MenuFeature({ document, assets, storage, version: '0.1.16' });
+  const feature = new MenuFeature({ document, assets, storage, version: '0.1.17' });
   feature.start();
 
   const style = document.getElementById('blobio-menu-style').textContent;
   const tab = settings.querySelector('.blobio-extension-settings-tab');
   const panel = settings.querySelector('.blobio-extension-settings-panel');
-  const checkbox = document.getElementById('config-switch-watermark');
+  const watermarkCheckbox = document.getElementById('config-switch-watermark');
+  const customSkinCheckbox = document.getElementById('config-switch-custom-imgur-skin');
   const watermark = document.querySelector('.blobio-watermark');
 
   assert.notEqual(tab, null);
   assert.equal(tab.textContent, 'Extension');
   assert.notEqual(panel, null);
-  assert.notEqual(checkbox, null);
-  assert.equal(checkbox.checked, true);
+  assert.notEqual(watermarkCheckbox, null);
+  assert.notEqual(customSkinCheckbox, null);
+  assert.equal(watermarkCheckbox.checked, true);
+  assert.equal(customSkinCheckbox.checked, false);
   assert.equal(panel.classList.contains('blobio-extension-settings-panel'), true);
-  assert.equal(watermark.textContent, 'Blob-Extension v0.1.16');
+  assert.equal(watermark.textContent, 'Blob-Extension v0.1.17');
   assert.equal(watermark.parentNode, nameInput.parentNode);
   assert.equal(watermark.parentNode.children.indexOf(watermark) > watermark.parentNode.children.indexOf(nameInput), true);
   assert.equal(watermark.parentNode.classList.contains('blobio-watermark-host'), true);
-  assert.equal(watermark.style['--blobio-watermark-left'], '-18px');
+  assert.equal(watermark.style['--blobio-watermark-left'], '42px');
   assert.equal(watermark.style['--blobio-watermark-top'], '12px');
   assert.equal(watermark.style['--blobio-watermark-width'], '246px');
   assert.match(style, /\.blobio-extension-settings-tab\s*{[\s\S]*color: #dfffe6;/);
@@ -772,6 +841,7 @@ test('MenuFeature adds an Extension settings category with a WaterMark toggle', 
   assert.equal(settings.classList.contains('blobio-extension-settings-active'), true);
   assert.equal(tab.classList.contains('active'), true);
   assert.match(panel.textContent, /WaterMark/);
+  assert.match(panel.textContent, /Custom Imgur Skin/);
 
   settings.querySelector('.left li').click();
 
@@ -793,18 +863,24 @@ test('MenuFeature persists the WaterMark toggle and removes the badge when disab
   setWatermarkRects(nameInput);
   const storage = createMemoryStorage();
 
-  const feature = new MenuFeature({ document, assets, storage, version: '0.1.16' });
+  const feature = new MenuFeature({ document, assets, storage, version: '0.1.17' });
   feature.start();
 
   const checkbox = document.getElementById('config-switch-watermark');
-  assert.equal(checkbox.checked, false);
+  assert.equal(checkbox.checked, true);
+  assert.equal(document.querySelector('.blobio-watermark').textContent, 'Blob-Extension v0.1.17');
+
+  checkbox.checked = false;
+  checkbox.dispatchEvent({ type: 'change', target: checkbox });
+
+  assert.equal(storage.getItem('blobio.watermark.enabled'), '0');
   assert.equal(document.querySelector('.blobio-watermark'), null);
 
   checkbox.checked = true;
   checkbox.dispatchEvent({ type: 'change', target: checkbox });
 
   assert.equal(storage.getItem('blobio.watermark.enabled'), '1');
-  assert.equal(document.querySelector('.blobio-watermark').textContent, 'Blob-Extension v0.1.16');
+  assert.equal(document.querySelector('.blobio-watermark').textContent, 'Blob-Extension v0.1.17');
 
   feature.syncWatermark();
   feature.syncWatermark();
@@ -817,13 +893,176 @@ test('MenuFeature persists the WaterMark toggle and removes the badge when disab
   assert.doesNotThrow(() => feature.syncWatermark());
   nameInput.parentNode.children = children;
 
-  checkbox.checked = false;
-  checkbox.dispatchEvent({ type: 'change', target: checkbox });
+  feature.destroy();
+});
 
-  assert.equal(storage.getItem('blobio.watermark.enabled'), '0');
-  assert.equal(document.querySelector('.blobio-watermark'), null);
+test('MenuFeature adds a Custom Skin tab under YouTube when Custom Imgur Skin is enabled', () => {
+  const document = createFakeDocument();
+  addReplayButton(document);
+  const { skins, tabs, originalContainer } = addSkinModal(document);
+  const storage = createMemoryStorage({ 'blobio.customSkin.enabled': '1' });
+
+  const feature = new MenuFeature({ document, assets, storage });
+  feature.start();
+
+  const style = document.getElementById('blobio-menu-style').textContent;
+  const tabItems = Array.from(tabs.children);
+  const youtubeTab = tabItems.find((tab) => tab.textContent === 'YouTube');
+  const customTab = skins.querySelector('.blobio-custom-skin-tab');
+  const panel = skins.querySelector('.blobio-custom-skin-panel');
+
+  assert.notEqual(customTab, null);
+  assert.notEqual(panel, null);
+  assert.equal(tabs.children.indexOf(customTab), tabs.children.indexOf(youtubeTab) + 1);
+  assert.equal(customTab.textContent, 'Custom Skin');
+  assert.equal(panel.querySelector('input').getAttribute('placeholder'), 'Paste Skin URL here...');
+  assert.equal(panel.querySelector('.blobio-custom-skin img').getAttribute('src'), 'https://i.imgur.com/OZz80VZ.jpeg');
+  assert.equal(originalContainer.classList.contains('blobio-custom-skin-panel'), false);
+  assert.match(style, /app-skins \.blobio-custom-skin-tab\s*{[\s\S]*color: #dfffe6;/);
+  assert.match(style, /\.blobio-custom-skin-grid\s*{[\s\S]*grid-template-columns: repeat\(6, minmax\(0, 1fr\)\);/);
+  assert.match(style, /\.blobio-custom-skin\.is-selected\s*{[\s\S]*box-shadow: 0 0 18px rgba\(99, 255, 142, 0\.5\)/);
+  assert.match(style, /\.blobio-custom-skin-actions\s*{[\s\S]*justify-content: center;/);
+
+  customTab.click();
+
+  assert.equal(skins.classList.contains('blobio-custom-skin-active'), true);
+  assert.equal(customTab.classList.contains('active'), true);
+
+  tabs.children[0].click();
+
+  assert.equal(skins.classList.contains('blobio-custom-skin-active'), false);
+  assert.equal(customTab.classList.contains('active'), false);
 
   feature.destroy();
+});
+
+test('MenuFeature accepts only direct Imgur images and can use or remove a custom skin', () => {
+  const document = createFakeDocument();
+  addReplayButton(document);
+  addNameInput(document);
+  addChooseSkinButton(document);
+  const { skins } = addSkinModal(document);
+  const storage = createMemoryStorage({
+    'blobio.customSkin.enabled': '1',
+    'config-skin': 'alien_',
+    'config-skin-type': 'free',
+  });
+
+  const feature = new MenuFeature({ document, assets, storage });
+  feature.start();
+
+  skins.querySelector('.blobio-custom-skin-tab').click();
+  const panel = skins.querySelector('.blobio-custom-skin-panel');
+  const input = panel.querySelector('input');
+
+  input.value = 'https://imgur.com/gallery/not-direct';
+  input.dispatchEvent({ type: 'change', target: input });
+
+  assert.match(panel.textContent, /Only direct i\.imgur\.com image links are accepted/);
+  assert.equal(panel.querySelectorAll('.blobio-custom-skin').length, 1);
+
+  const customUrl = 'https://i.imgur.com/AbCd123.png';
+  input.value = customUrl;
+  input.dispatchEvent({
+    type: 'keydown',
+    key: 'Enter',
+    target: input,
+    preventDefault() {},
+  });
+
+  const storedGallery = JSON.parse(storage.getItem('blobio.customSkin.gallery'));
+  const cards = panel.querySelectorAll('.blobio-custom-skin');
+  const customCard = cards.find((card) => card.querySelector('img').getAttribute('src') === customUrl);
+
+  assert.deepEqual(storedGallery, ['https://i.imgur.com/OZz80VZ.jpeg', customUrl]);
+  assert.notEqual(customCard, undefined);
+  assert.equal(input.value, '');
+
+  customCard.click();
+
+  const actions = panel.querySelector('.blobio-custom-skin-actions');
+  const actionButtons = actions.querySelectorAll('button');
+  const useButton = actionButtons.find((button) => button.textContent === 'Use');
+  const removeButton = actionButtons.find((button) => button.textContent === 'Remove');
+
+  assert.equal(customCard.classList.contains('is-selected'), true);
+  assert.equal(actions.classList.contains('is-visible'), true);
+
+  useButton.click();
+
+  const localSkinName = storage.getItem('blobio.customSkin.localName');
+
+  assert.equal(storage.getItem('blobio.customSkin.activeUrl'), customUrl);
+  assert.match(localSkinName, /^BlobioCustomSkin_[a-z0-9]{8,}$/i);
+  assert.equal(storage.getItem('config-skin'), localSkinName);
+  assert.equal(storage.getItem('config-skin-type'), 'free');
+  assert.equal(JSON.parse(storage.getItem('blobio.customSkin.previousSkin')).name, 'alien_');
+  assert.equal(document.querySelector('.choose-skin-btn img').getAttribute('src'), customUrl);
+
+  removeButton.click();
+
+  assert.equal(storage.getItem('blobio.customSkin.activeUrl'), null);
+  assert.equal(storage.getItem('config-skin'), 'alien_');
+  assert.equal(storage.getItem('config-skin-type'), 'free');
+  assert.deepEqual(JSON.parse(storage.getItem('blobio.customSkin.gallery')), ['https://i.imgur.com/OZz80VZ.jpeg']);
+  assert.equal(panel.querySelectorAll('.blobio-custom-skin').length, 1);
+
+  feature.destroy();
+});
+
+test('MenuFeature resolves the fake local custom skin path to the active Imgur skin', () => {
+  const document = createFakeDocument();
+  const storage = createMemoryStorage({
+    'blobio.customSkin.enabled': '1',
+    'blobio.customSkin.activeUrl': 'https://i.imgur.com/OZz80VZ.jpeg',
+    'blobio.customSkin.localName': 'BlobioCustomSkin_testuser',
+  });
+  const feature = new MenuFeature({ document, storage });
+
+  assert.equal(
+    feature.resolveCustomSkinImageUrl('https://client.blobgame.io/skins/free/BlobioCustomSkin_testuser.png'),
+    'https://i.imgur.com/OZz80VZ.jpeg',
+  );
+  assert.equal(
+    feature.resolveCustomSkinImageUrl('/skins/free/BlobioCustomSkin_testuser.png'),
+    'https://i.imgur.com/OZz80VZ.jpeg',
+  );
+  assert.equal(
+    feature.resolveCustomSkinImageUrl('https://client.blobgame.io/skins/free/BlobioCustomSkin_someoneelse.png'),
+    'https://client.blobgame.io/skins/free/BlobioCustomSkin_someoneelse.png',
+  );
+  assert.equal(
+    feature.resolveCustomSkinImageUrl('https://client.blobgame.io/skins/free/alien_.png'),
+    'https://client.blobgame.io/skins/free/alien_.png',
+  );
+
+  storage.setItem('blobio.customSkin.enabled', '0');
+
+  assert.equal(
+    feature.resolveCustomSkinImageUrl('https://client.blobgame.io/skins/free/BlobioCustomSkin_testuser.png'),
+    'https://client.blobgame.io/skins/free/BlobioCustomSkin_testuser.png',
+  );
+});
+
+test('MenuFeature restores the previous skin when Custom Imgur Skin is disabled', () => {
+  const document = createFakeDocument();
+  addReplayButton(document);
+  const storage = createMemoryStorage({
+    'blobio.customSkin.enabled': '1',
+    'blobio.customSkin.activeUrl': 'https://i.imgur.com/OZz80VZ.jpeg',
+    'blobio.customSkin.localName': 'BlobioCustomSkin_testuser',
+    'blobio.customSkin.previousSkin': JSON.stringify({ name: 'alien_', type: 'free' }),
+    'config-skin': 'BlobioCustomSkin_testuser',
+    'config-skin-type': 'free',
+  });
+  const feature = new MenuFeature({ document, storage });
+
+  feature.setCustomSkinEnabled(false);
+
+  assert.equal(storage.getItem('blobio.customSkin.enabled'), '0');
+  assert.equal(storage.getItem('blobio.customSkin.activeUrl'), null);
+  assert.equal(storage.getItem('config-skin'), 'alien_');
+  assert.equal(storage.getItem('config-skin-type'), 'free');
 });
 
 test('MenuFeature ignores mutations from extension-owned watermark and settings nodes', () => {
@@ -834,7 +1073,7 @@ test('MenuFeature ignores mutations from extension-owned watermark and settings 
   setWatermarkRects(nameInput);
   const storage = createMemoryStorage({ 'blobio.watermark.enabled': '1' });
 
-  const feature = new MenuFeature({ document, assets, storage, version: '0.1.16' });
+  const feature = new MenuFeature({ document, assets, storage, version: '0.1.17' });
   feature.start();
 
   const watermark = document.querySelector('.blobio-watermark');
