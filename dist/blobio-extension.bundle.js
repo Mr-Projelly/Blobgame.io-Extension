@@ -29,13 +29,13 @@
   var DEFAULT_STYLE_ID = "blobio-background-style";
   var BackgroundFeature = class {
     constructor({
-      document = globalThis.document,
+      document: document2 = globalThis.document,
       backgroundUrl,
       logger = console,
       className = DEFAULT_CLASS_NAME,
       styleId = DEFAULT_STYLE_ID
     } = {}) {
-      this.document = document;
+      this.document = document2;
       this.backgroundUrl = backgroundUrl;
       this.logger = logger;
       this.className = className;
@@ -239,7 +239,10 @@ html.${className} #game-wrapper .custom-select-display {
 
 html.${className} #game-wrapper .custom-select {
   position: relative !important;
-  z-index: 2147482400 !important;
+}
+
+html.${className} #game-wrapper .blobio-menu-layered-select {
+  z-index: 1 !important;
 }
 
 html.${className} #game-wrapper .custom-select-option {
@@ -258,11 +261,14 @@ html.${className} .progress-bar-title {
 
 html.${className} #game-wrapper .custom-select-options {
   position: absolute !important;
-  z-index: 2147482600 !important;
   border: 1px solid rgba(142, 255, 174, 0.42) !important;
   border-radius: 8px !important;
   background: rgba(3, 44, 23, 0.92) !important;
   box-shadow: 0 0 13px rgba(79, 255, 130, 0.24), inset 0 0 10px rgba(79, 255, 130, 0.12) !important;
+}
+
+html.${className} #game-wrapper .blobio-menu-layered-select .custom-select-options {
+  z-index: 2 !important;
 }
 
 html.${className} #game-wrapper .custom-select-option.selected,
@@ -273,6 +279,18 @@ html.${className} #game-wrapper .custom-select-option:hover {
 html.${className} #ip-container {
   position: relative !important;
   z-index: 1 !important;
+}
+
+html.${className} app-settings,
+html.${className} app-skins,
+html.${className} app-profile,
+html.${className} app-shop,
+html.${className} .modal,
+html.${className} .popup,
+html.${className} .dialog,
+html.${className} .cdk-overlay-container {
+  position: relative !important;
+  z-index: 20 !important;
 }
 
 html.${className} #ip-container table {
@@ -795,8 +813,13 @@ html.${className} app-skins .blobio-custom-skin-tab.active {
 
 html.${className} app-skins .blobio-custom-skin-panel {
   display: none !important;
-  padding: 10px !important;
-  background: transparent !important;
+  padding: 12px !important;
+  margin-top: -8px !important;
+  border: 1px solid rgba(142, 255, 174, 0.34) !important;
+  border-radius: 10px !important;
+  background: rgba(2, 32, 18, 0.86) !important;
+  color: #dfffe6 !important;
+  box-shadow: inset 0 0 22px rgba(79, 255, 130, 0.12), 0 0 18px rgba(79, 255, 130, 0.16) !important;
 }
 
 html.${className} app-skins.blobio-custom-skin-active .skins-container:not(.blobio-custom-skin-panel) {
@@ -810,17 +833,17 @@ html.${className} app-skins.blobio-custom-skin-active .blobio-custom-skin-panel 
 html.${className} .blobio-custom-skin-controls {
   display: grid;
   gap: 6px;
-  margin-bottom: 12px;
+  margin: -2px 0 10px;
 }
 
 html.${className} .blobio-custom-skin-input {
   width: min(440px, 100%);
-  min-height: 32px;
+  min-height: 30px;
   margin: 0 auto;
-  padding: 6px 10px;
+  padding: 5px 10px;
   border: 1px solid rgba(142, 255, 174, 0.46);
   border-radius: 8px;
-  background: rgba(0, 0, 0, 0.54);
+  background: rgba(0, 0, 0, 0.58);
   color: #dfffe6;
   font-weight: 700;
   text-align: center;
@@ -849,7 +872,11 @@ html.${className} .blobio-custom-skin-grid {
 
 html.${className} .blobio-custom-skin {
   cursor: pointer;
+  border: 1px solid rgba(142, 255, 174, 0.24);
   border-radius: 8px;
+  background: rgba(4, 42, 23, 0.82);
+  color: #dfffe6;
+  box-shadow: 0 0 14px rgba(79, 255, 130, 0.12), inset 0 0 10px rgba(79, 255, 130, 0.08);
   transition: box-shadow 160ms ease, transform 160ms ease;
 }
 
@@ -906,13 +933,13 @@ html.${className} app-skins .blobio-custom-skin-notice-host {
 html.${className} app-skins .blobio-custom-skin-notice {
   position: absolute;
   left: 50%;
-  top: 0;
-  transform: translateX(-50%);
+  top: -8px;
+  transform: translate(-50%, -100%);
   width: max-content;
   max-width: 90%;
-  padding: 5px 12px;
+  padding: 4px 11px;
   border-radius: 8px;
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 800;
   line-height: 1.2;
   pointer-events: none;
@@ -1063,18 +1090,18 @@ html.${className} .blobio-watermark-extension::after {
 
   // src/storage/BlobioStorage.js
   var SHARED_KEY_PREFIX = "blobio.customSkin.";
-  function getWindow(document) {
-    return document?.defaultView || globalThis;
+  function getWindow(document2) {
+    return document2?.defaultView || globalThis;
   }
-  function getLocalStorage(document) {
+  function getLocalStorage(document2) {
     try {
-      return getWindow(document)?.localStorage || globalThis.localStorage || null;
+      return getWindow(document2)?.localStorage || globalThis.localStorage || null;
     } catch {
       return null;
     }
   }
-  function getGmApi(document) {
-    const win = getWindow(document);
+  function getGmApi(document2) {
+    const win = getWindow(document2);
     return {
       getValue: win?.GM_getValue || globalThis.GM_getValue,
       setValue: win?.GM_setValue || globalThis.GM_setValue,
@@ -1084,35 +1111,35 @@ html.${className} .blobio-watermark-extension::after {
   function isSharedKey(key) {
     return String(key || "").startsWith(SHARED_KEY_PREFIX);
   }
-  function createBlobioStorage(document = globalThis.document) {
-    const localStorage = getLocalStorage(document);
-    const gmApi = getGmApi(document);
+  function createBlobioStorage(document2 = globalThis.document) {
+    const localStorage2 = getLocalStorage(document2);
+    const gmApi = getGmApi(document2);
     return {
       getItem(key) {
         if (isSharedKey(key) && typeof gmApi.getValue === "function") {
           const value = gmApi.getValue(key, void 0);
           if (value !== void 0 && value !== null) {
             const nextValue = String(value);
-            if (localStorage?.getItem?.(key) !== nextValue) {
-              localStorage?.setItem?.(key, nextValue);
+            if (localStorage2?.getItem?.(key) !== nextValue) {
+              localStorage2?.setItem?.(key, nextValue);
             }
             return nextValue;
           }
         }
-        return localStorage?.getItem?.(key) ?? null;
+        return localStorage2?.getItem?.(key) ?? null;
       },
       setItem(key, value) {
         const nextValue = String(value);
         if (isSharedKey(key) && typeof gmApi.setValue === "function") {
           gmApi.setValue(key, nextValue);
         }
-        localStorage?.setItem?.(key, nextValue);
+        localStorage2?.setItem?.(key, nextValue);
       },
       removeItem(key) {
         if (isSharedKey(key) && typeof gmApi.deleteValue === "function") {
           gmApi.deleteValue(key);
         }
-        localStorage?.removeItem?.(key);
+        localStorage2?.removeItem?.(key);
       }
     };
   }
@@ -1143,9 +1170,10 @@ html.${className} .blobio-watermark-extension::after {
   var DIRECT_IMGUR_IMAGE_MATCH = /^https:\/\/i\.imgur\.com\/[a-z0-9]+\.(?:png|jpe?g|gif|webp)(?:\?.*)?$/i;
   var CUSTOM_SKIN_NOTICE_DURATION = 2200;
   var MAIN_MENU_ALIGNMENT_CLASS = "blobio-main-menu-align-target";
+  var MAIN_MENU_LAYERED_SELECT_CLASS = "blobio-menu-layered-select";
   var EXTENSION_OPTION_TOOLTIPS = {
     watermark: "This option will display the Extension name text, alongside its current version.",
-    customSkin: "This option lets you apply one of your saved direct i.imgur.com images as your local skin. Requires login and at least one owned skin."
+    customSkin: "Use saved direct i.imgur.com images as a local client-side skin overlay. No login or owned in-game skin is required; only you see it."
   };
   var DEFAULT_VIDEO = {
     title: "Featured Blob.io Video",
@@ -1217,16 +1245,16 @@ html.${className} .blobio-watermark-extension::after {
   ];
   var MenuFeature = class {
     constructor({
-      document = globalThis.document,
+      document: document2 = globalThis.document,
       assets = {},
       logger = console,
       className = DEFAULT_CLASS_NAME2,
       styleId = DEFAULT_STYLE_ID2,
-      storage = createBlobioStorage(document),
+      storage = createBlobioStorage(document2),
       version = DEFAULT_EXTENSION_VERSION,
       frontPageUi = true
     } = {}) {
-      this.document = document;
+      this.document = document2;
       this.assets = assets;
       this.logger = logger;
       this.className = className;
@@ -1248,6 +1276,7 @@ html.${className} .blobio-watermark-extension::after {
       this.customSkinListeners = [];
       this.customSkinSelectedUrl = null;
       this.customSkinNoticeTimer = null;
+      this.mainMenuLayeredSelectTargets = /* @__PURE__ */ new Set();
       this.extensionTooltip = null;
       this.documentClickHandler = null;
       this.keydownHandler = null;
@@ -1261,7 +1290,6 @@ html.${className} .blobio-watermark-extension::after {
         return false;
       }
       this.syncCustomSkinRuntimeConfig();
-      this.installCustomSkinRuntimeHook();
       if (!this.frontPageUi) {
         this.started = true;
         return true;
@@ -1364,6 +1392,7 @@ html.${className} .blobio-watermark-extension::after {
         "#ip-container"
       ];
       const nextTargets = /* @__PURE__ */ new Set();
+      const nextLayeredSelects = /* @__PURE__ */ new Set();
       for (const selector of selectors) {
         for (const node of this.document.querySelectorAll?.(selector) || []) {
           if (this.isInsideOwnUi(node)) {
@@ -1373,18 +1402,33 @@ html.${className} .blobio-watermark-extension::after {
           nextTargets.add(node);
         }
       }
+      const gameSelects = Array.from(this.document.querySelectorAll?.("#game-wrapper .custom-select") || []).filter((node) => !this.isInsideOwnUi(node));
+      for (const node of gameSelects.slice(0, 2)) {
+        node.classList?.add(MAIN_MENU_LAYERED_SELECT_CLASS);
+        nextLayeredSelects.add(node);
+      }
       for (const node of this.mainMenuAlignmentTargets) {
         if (!nextTargets.has(node)) {
           node.classList?.remove(MAIN_MENU_ALIGNMENT_CLASS);
         }
       }
       this.mainMenuAlignmentTargets = nextTargets;
+      for (const node of this.mainMenuLayeredSelectTargets) {
+        if (!nextLayeredSelects.has(node)) {
+          node.classList?.remove(MAIN_MENU_LAYERED_SELECT_CLASS);
+        }
+      }
+      this.mainMenuLayeredSelectTargets = nextLayeredSelects;
     }
     clearMainMenuAlignment() {
       for (const node of this.mainMenuAlignmentTargets) {
         node.classList?.remove(MAIN_MENU_ALIGNMENT_CLASS);
       }
       this.mainMenuAlignmentTargets.clear();
+      for (const node of this.mainMenuLayeredSelectTargets) {
+        node.classList?.remove(MAIN_MENU_LAYERED_SELECT_CLASS);
+      }
+      this.mainMenuLayeredSelectTargets.clear();
     }
     watchPage() {
       const MutationObserver = this.document.defaultView?.MutationObserver || globalThis.MutationObserver;
@@ -1962,11 +2006,7 @@ html.${className} .blobio-watermark-extension::after {
       }
     }
     isLoggedInForCustomSkin() {
-      try {
-        return Boolean(this.storage?.getItem?.("access-token"));
-      } catch {
-        return false;
-      }
+      return true;
     }
     getAccessTokenUserId() {
       try {
@@ -1983,12 +2023,9 @@ html.${className} .blobio-watermark-extension::after {
       }
     }
     syncCustomSkinAvailability() {
-      if (this.isCustomSkinEnabled() && !this.isLoggedInForCustomSkin()) {
-        this.setCustomSkinEnabled(false);
-      }
     }
     setCustomSkinEnabled(enabled) {
-      const nextEnabled = Boolean(enabled && this.isLoggedInForCustomSkin());
+      const nextEnabled = Boolean(enabled);
       try {
         this.storage?.setItem?.(CUSTOM_SKIN_ENABLED_KEY, nextEnabled ? "1" : "0");
         if (!nextEnabled) {
@@ -2199,10 +2236,6 @@ html.${className} .blobio-watermark-extension::after {
       if (!this.isValidImgurSkinUrl(url)) {
         return { ok: false, reason: "invalid-url" };
       }
-      if (!this.isLoggedInForCustomSkin()) {
-        this.setCustomSkinEnabled(false);
-        return { ok: false, reason: "logged-out" };
-      }
       try {
         this.storage?.setItem?.(CUSTOM_SKIN_ENABLED_KEY, "1");
         this.storage?.setItem?.(CUSTOM_SKIN_ACTIVE_KEY, url);
@@ -2354,7 +2387,7 @@ html.${className} .blobio-watermark-extension::after {
           this.renderCustomSkinGallery(panel);
           this.showCustomSkinNotice(panel, "Skin is now applied", "success");
         } else if (result.reason === "logged-out") {
-          this.showCustomSkinNotice(panel, "Log in to use Custom Skin.", "error");
+          this.showCustomSkinNotice(panel, "Custom Skin could not be applied.", "error");
         }
       });
       this.addCustomSkinListener(removeButton, "click", (event) => {
@@ -2520,16 +2553,59 @@ html.${className} .blobio-watermark-extension::after {
       const win = this.document.defaultView || globalThis;
       const storage = this.storage;
       const logger = this.logger;
-      win.__blobioCustomSkinDebugLog = (message, detail) => {
+      const debugEvents = win.__blobioCustomSkinDebugEvents || [];
+      win.__blobioCustomSkinDebugEvents = debugEvents;
+      const redact = (value) => String(value || "").replace(/([?&]token=)[^&]+/gi, "$1<redacted>").replace(/"token"\s*:\s*"[^"]+"/gi, '"token":"<redacted>"').replace(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g, "<redacted-jwt>");
+      const sanitize = (value, depth = 0) => {
+        if (value === null || value === void 0) {
+          return value;
+        }
+        if (typeof value === "string" || value instanceof String) {
+          return redact(value);
+        }
+        if (typeof value === "number" || typeof value === "boolean") {
+          return value;
+        }
+        if (depth >= 2) {
+          return "[truncated]";
+        }
+        if (Array.isArray(value)) {
+          return value.slice(0, 12).map((item) => sanitize(item, depth + 1));
+        }
+        if (typeof value === "object") {
+          const result = {};
+          for (const key of Object.keys(value).slice(0, 24)) {
+            result[key] = /token|authorization|cookie/i.test(key) ? "<redacted>" : sanitize(value[key], depth + 1);
+          }
+          return result;
+        }
+        return redact(value);
+      };
+      win.__blobioCustomSkinDebugDump = () => [...win.__blobioCustomSkinDebugEvents];
+      win.__blobioCustomSkinDebugLog = (message, detail, stage = "debug") => {
         try {
+          const event = {
+            time: (/* @__PURE__ */ new Date()).toISOString(),
+            stage,
+            message,
+            detail: sanitize(detail)
+          };
+          win.__blobioCustomSkinDebugEvents.push(event);
+          while (win.__blobioCustomSkinDebugEvents.length > 250) {
+            win.__blobioCustomSkinDebugEvents.shift();
+          }
           if (storage?.getItem?.("blobio.customSkin.debug") !== "1") {
             return;
           }
           const log = win.console?.debug || logger?.debug || logger?.log;
-          log?.call(win.console || logger, "[Blobio]", message, detail || "");
+          log?.call(win.console || logger, "[Blobio]", message, event.detail || "");
         } catch {
         }
       };
+      win.__blobioCustomSkinDebugLog("Bundle custom skin runtime installed.", {
+        activeUrl: this.getActiveCustomSkinUrl(),
+        enabled: this.isCustomSkinEnabled()
+      }, "bootstrap");
       win.__blobioCustomSkinRuntimeState = () => {
         const activeUrl = this.getActiveCustomSkinUrl();
         if (!this.isCustomSkinEnabled() || !activeUrl) {
@@ -2580,7 +2656,7 @@ html.${className} .blobio-watermark-extension::after {
         const originalOpen = xhrPrototype.open;
         if (typeof originalOpen === "function") {
           xhrPrototype.open = function openCustomSkinDebugRequest(method, url, ...rest) {
-            win.__blobioCustomSkinDebugLog?.("XHR open", { method, url: redact(url) });
+            win.__blobioCustomSkinDebugLog?.("XHR open", { method, url: redact(url) }, "network");
             return originalOpen.call(this, method, url, ...rest);
           };
           win.__blobioCustomSkinXhrHookInstalled = true;
@@ -2590,7 +2666,7 @@ html.${className} .blobio-watermark-extension::after {
         const originalFetch = win.fetch;
         win.fetch = function fetchCustomSkinDebug(input, init) {
           const url = typeof input === "string" || input instanceof String ? String(input) : input?.url;
-          win.__blobioCustomSkinDebugLog?.("fetch", { url: redact(url || "") });
+          win.__blobioCustomSkinDebugLog?.("fetch", { url: redact(url || "") }, "network");
           return originalFetch.call(this, input, init);
         };
         win.__blobioCustomSkinFetchHookInstalled = true;
@@ -2598,20 +2674,20 @@ html.${className} .blobio-watermark-extension::after {
       if (typeof win.WebSocket === "function" && !win.__blobioCustomSkinWebSocketHookInstalled) {
         const NativeWebSocket = win.WebSocket;
         const WrappedWebSocket = function BlobioDebugWebSocket(url, protocols) {
-          win.__blobioCustomSkinDebugLog?.("WebSocket open", { url: redact(url), protocols });
+          win.__blobioCustomSkinDebugLog?.("WebSocket open", { url: redact(url), protocols }, "network");
           const socket = new NativeWebSocket(url, protocols);
           const nativeSend = socket.send;
           if (typeof nativeSend === "function") {
             socket.send = function sendBlobioDebugPacket(data) {
               const length = typeof data === "string" ? data.length : data?.byteLength ?? data?.size ?? 0;
-              win.__blobioCustomSkinDebugLog?.("WebSocket send", { length });
+              win.__blobioCustomSkinDebugLog?.("WebSocket send", { length }, "network");
               return nativeSend.call(this, data);
             };
           }
           socket.addEventListener?.("message", (event) => {
             const data = event?.data;
             const length = typeof data === "string" ? data.length : data?.byteLength ?? data?.size ?? 0;
-            win.__blobioCustomSkinDebugLog?.("WebSocket message", { length });
+            win.__blobioCustomSkinDebugLog?.("WebSocket message", { length }, "network");
           });
           return socket;
         };
@@ -2680,8 +2756,9 @@ html.${className} .blobio-watermark-extension::after {
         if (loadedUrl !== state.activeUrl) {
           loadedUrl = state.activeUrl;
           image.crossOrigin = "anonymous";
-          image.onload = () => win.__blobioCustomSkinDebugLog?.("Custom skin image loaded.", loadedUrl);
-          image.onerror = () => win.__blobioCustomSkinDebugLog?.("Custom skin image failed to load.", loadedUrl);
+          win.__blobioCustomSkinDebugLog?.("Custom skin image load started.", { url: loadedUrl }, "image");
+          image.onload = () => win.__blobioCustomSkinDebugLog?.("Custom skin image loaded.", { url: loadedUrl, width: image.naturalWidth, height: image.naturalHeight }, "image");
+          image.onerror = () => win.__blobioCustomSkinDebugLog?.("Custom skin image failed to load.", { url: loadedUrl }, "image");
           image.src = loadedUrl;
         }
         ctx.clearRect(0, 0, overlay.width, overlay.height);
@@ -2712,7 +2789,7 @@ html.${className} .blobio-watermark-extension::after {
           win.__blobioCustomSkinDebugLog?.("Custom skin overlay frame.", {
             cells: win.__blobioCustomSkinCells?.size || 0,
             drawn
-          });
+          }, "overlay-frame");
         }
       };
       appendOverlay();
@@ -3228,6 +3305,880 @@ html.${className} .blobio-watermark-extension::after {
     }
   };
 
+  // src/features/CustomSkinOverlayFeature.js
+  var CUSTOM_SKIN_ENABLED_KEY2 = "blobio.customSkin.enabled";
+  var CUSTOM_SKIN_ACTIVE_KEY2 = "blobio.customSkin.activeUrl";
+  var DIRECT_IMGUR_IMAGE_MATCH2 = /^https:\/\/i\.imgur\.com\/[a-z0-9]+\.(?:png|jpe?g|gif|webp)(?:\?.*)?$/i;
+  var RUNTIME_HOST = "custom.client.blobgame.io";
+  function isValidImgurSkinUrl(url) {
+    return DIRECT_IMGUR_IMAGE_MATCH2.test(String(url || "").trim());
+  }
+  var CustomSkinOverlayFeature = class {
+    constructor({
+      document: document2 = globalThis.document,
+      storage = createBlobioStorage(document2),
+      logger = console
+    } = {}) {
+      this.document = document2;
+      this.storage = storage;
+      this.logger = logger;
+      this.started = false;
+      this.scriptNode = null;
+    }
+    start() {
+      if (this.started) {
+        return true;
+      }
+      const win = this.document?.defaultView || globalThis;
+      if (String(win.location?.hostname || "").toLowerCase() !== RUNTIME_HOST) {
+        this.started = true;
+        return true;
+      }
+      if (!this.document?.documentElement) {
+        this.logger.warn("[Blobio] Custom skin overlay could not start: document is not ready.");
+        return false;
+      }
+      this.injectPageOverlay();
+      this.started = true;
+      return true;
+    }
+    destroy() {
+      this.scriptNode?.remove?.();
+      this.scriptNode = null;
+      this.started = false;
+    }
+    getBootstrapState() {
+      let enabled = false;
+      let activeUrl = "";
+      let debug = false;
+      try {
+        enabled = this.storage?.getItem?.(CUSTOM_SKIN_ENABLED_KEY2) === "1";
+        activeUrl = this.storage?.getItem?.(CUSTOM_SKIN_ACTIVE_KEY2) || "";
+        debug = this.storage?.getItem?.("blobio.customSkin.debug") === "1";
+      } catch {
+      }
+      if (!enabled || !isValidImgurSkinUrl(activeUrl)) {
+        return {
+          enabled: false,
+          activeUrl: "",
+          debug
+        };
+      }
+      return {
+        enabled: true,
+        activeUrl,
+        debug
+      };
+    }
+    injectPageOverlay() {
+      const state = this.getBootstrapState();
+      const script = this.document.createElement("script");
+      script.dataset.blobioCustomSkinOverlay = "true";
+      script.textContent = `;(${pageOverlayMain.toString()})(${JSON.stringify(state)});`;
+      (this.document.documentElement || this.document.head || this.document.body)?.appendChild?.(script);
+      script.remove();
+      this.scriptNode = script;
+    }
+  };
+  function pageOverlayMain(initialState) {
+    "use strict";
+    const LOG_PREFIX = "[BlobioSkinOverlay]";
+    const CUSTOM_SKIN_ENABLED_KEY3 = "blobio.customSkin.enabled";
+    const CUSTOM_SKIN_ACTIVE_KEY3 = "blobio.customSkin.activeUrl";
+    const DIRECT_IMGUR_IMAGE_MATCH3 = /^https:\/\/i\.imgur\.com\/[a-z0-9]+\.(?:png|jpe?g|gif|webp)(?:\?.*)?$/i;
+    const OWN_ID_LIMIT = 128;
+    const NODE_LIMIT = 5e3;
+    const DEBUG_LIMIT = 700;
+    if (window.__blobioCustomSkinOverlayV3) {
+      window.__blobioCustomSkinOverlayV3.refresh?.(initialState);
+      return;
+    }
+    const state = {
+      enabled: false,
+      activeUrl: "",
+      debug: Boolean(initialState && initialState.debug),
+      image: null,
+      imageUrl: "",
+      imageReady: false,
+      overlay: null,
+      ctx: null,
+      mainCanvas: null,
+      nodes: /* @__PURE__ */ new Map(),
+      ownIds: /* @__PURE__ */ new Set(),
+      camera: { x: 0, y: 0, scale: 1, source: "average" },
+      lastOwnCenter: null,
+      frame: 0,
+      drawn: 0,
+      sockets: 0,
+      wsMessages: 0,
+      addNodePackets: 0,
+      updatePackets: 0,
+      updateParseErrors: 0,
+      opCounts: {},
+      earlyPackets: [],
+      ownNodeMissFrames: 0,
+      frameScanCount: 0,
+      lastPacketSummary: null,
+      debugEvents: [],
+      frameHooks: [],
+      startedAt: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    function refresh(nextState) {
+      const activeUrl = readActiveUrl(nextState);
+      const enabled = readEnabled(nextState) && DIRECT_IMGUR_IMAGE_MATCH3.test(activeUrl);
+      state.debug = Boolean(nextState && nextState.debug) || localStorage.getItem("blobio.customSkin.debug") === "1";
+      state.enabled = enabled;
+      state.activeUrl = enabled ? activeUrl : "";
+      if (!state.enabled) {
+        state.imageReady = false;
+        state.imageUrl = "";
+        log("overlay disabled", {}, "state");
+        return;
+      }
+      ensureImage();
+      ensureOverlay();
+      log("overlay state refreshed", { activeUrl: state.activeUrl }, "state");
+    }
+    function readEnabled(nextState) {
+      if (nextState && Object.prototype.hasOwnProperty.call(nextState, "enabled")) {
+        return Boolean(nextState.enabled);
+      }
+      try {
+        return localStorage.getItem(CUSTOM_SKIN_ENABLED_KEY3) === "1";
+      } catch {
+        return false;
+      }
+    }
+    function readActiveUrl(nextState) {
+      if (nextState && typeof nextState.activeUrl === "string") {
+        return nextState.activeUrl.trim();
+      }
+      try {
+        return String(localStorage.getItem(CUSTOM_SKIN_ACTIVE_KEY3) || "").trim();
+      } catch {
+        return "";
+      }
+    }
+    function log(message, detail = {}, stage = "debug") {
+      const event = {
+        time: (/* @__PURE__ */ new Date()).toISOString(),
+        stage,
+        message,
+        detail: sanitize(detail)
+      };
+      state.debugEvents.push(event);
+      while (state.debugEvents.length > DEBUG_LIMIT) state.debugEvents.shift();
+      if (state.debug) {
+        console.debug(LOG_PREFIX, message, event.detail || "");
+      }
+    }
+    function sanitize(value, depth = 0) {
+      if (value == null) return value;
+      if (typeof value === "string") return value.replace(/([?&]token=)[^&]+/gi, "$1<redacted>").slice(0, 600);
+      if (typeof value === "number" || typeof value === "boolean") return value;
+      if (depth > 2) return "[truncated]";
+      if (Array.isArray(value)) return value.slice(0, 30).map((item) => sanitize(item, depth + 1));
+      if (typeof value === "object") {
+        const out = {};
+        for (const key of Object.keys(value).slice(0, 40)) {
+          out[key] = /token|authorization|cookie|session|jwt|access/i.test(key) ? "<redacted>" : sanitize(value[key], depth + 1);
+        }
+        return out;
+      }
+      return String(value);
+    }
+    function ensureImage() {
+      if (!state.enabled || !state.activeUrl || state.imageUrl === state.activeUrl) {
+        return;
+      }
+      const img = new Image();
+      state.image = img;
+      state.imageUrl = state.activeUrl;
+      state.imageReady = false;
+      img.onload = () => {
+        state.imageReady = true;
+        log("custom skin image loaded", {
+          url: state.imageUrl,
+          width: img.naturalWidth,
+          height: img.naturalHeight
+        }, "image");
+      };
+      img.onerror = () => {
+        state.imageReady = false;
+        log("custom skin image failed to load", { url: state.imageUrl }, "image");
+      };
+      img.src = state.activeUrl;
+      log("custom skin image load started", { url: state.activeUrl }, "image");
+    }
+    function ensureOverlay() {
+      if (state.overlay && state.overlay.isConnected) {
+        return;
+      }
+      const overlay = document.createElement("canvas");
+      overlay.id = "blobio-custom-skin-overlay";
+      overlay.style.cssText = [
+        "position:fixed",
+        "left:0",
+        "top:0",
+        "width:100vw",
+        "height:100vh",
+        "pointer-events:none",
+        "z-index:2147481200",
+        "display:block"
+      ].join(";");
+      state.overlay = overlay;
+      state.ctx = overlay.getContext("2d");
+      (document.body || document.documentElement)?.appendChild?.(overlay);
+      log("overlay canvas installed", {}, "overlay");
+    }
+    function findMainCanvas() {
+      const canvases = Array.from(document.querySelectorAll("canvas"));
+      let best = null;
+      let bestArea = 0;
+      for (const canvas of canvases) {
+        if (canvas === state.overlay) continue;
+        const rect = canvas.getBoundingClientRect?.();
+        const width = rect?.width || canvas.clientWidth || canvas.width || 0;
+        const height = rect?.height || canvas.clientHeight || canvas.height || 0;
+        const area = width * height;
+        if (area > bestArea && width >= 240 && height >= 180) {
+          best = canvas;
+          bestArea = area;
+        }
+      }
+      state.mainCanvas = best || state.mainCanvas;
+      return state.mainCanvas;
+    }
+    function renderLoop() {
+      const raf = window.requestAnimationFrame || ((callback) => setTimeout(callback, 16));
+      raf(renderLoop);
+      refresh();
+      ensureImage();
+      ensureOverlay();
+      const overlay = state.overlay;
+      const ctx = state.ctx;
+      if (!overlay || !ctx) return;
+      const cssWidth = window.innerWidth || document.documentElement?.clientWidth || 0;
+      const cssHeight = window.innerHeight || document.documentElement?.clientHeight || 0;
+      const dpr = Math.max(1, Math.min(2.5, window.devicePixelRatio || 1));
+      const pxWidth = Math.max(1, Math.round(cssWidth * dpr));
+      const pxHeight = Math.max(1, Math.round(cssHeight * dpr));
+      if (overlay.width !== pxWidth) overlay.width = pxWidth;
+      if (overlay.height !== pxHeight) overlay.height = pxHeight;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, cssWidth, cssHeight);
+      if (!state.enabled || !state.imageReady || !state.image) {
+        state.drawn = 0;
+        return;
+      }
+      const canvas = findMainCanvas();
+      const rect = canvas?.getBoundingClientRect?.() || { left: 0, top: 0, width: cssWidth, height: cssHeight };
+      updateCameraFromOwnCells();
+      if (!state.ownIds.size) {
+        state.ownNodeMissFrames += 1;
+      }
+      let drawn = 0;
+      for (const id of state.ownIds) {
+        const node = state.nodes.get(id);
+        if (!node || node.removed) continue;
+        const screen = worldToScreen(node.x, node.y, rect);
+        const radius = Math.max(4, Math.abs(node.size * state.camera.scale));
+        if (!isFinite(screen.x) || !isFinite(screen.y) || !isFinite(radius)) continue;
+        if (screen.x + radius < rect.left || screen.y + radius < rect.top || screen.x - radius > rect.left + rect.width || screen.y - radius > rect.top + rect.height) continue;
+        drawSkinCircle(ctx, state.image, screen.x, screen.y, radius);
+        drawn += 1;
+      }
+      state.drawn = drawn;
+      state.frame += 1;
+      if (state.debug && state.frame % 60 === 0) {
+        log("overlay frame", {
+          drawn,
+          ownIds: state.ownIds.size,
+          nodes: state.nodes.size,
+          camera: state.camera
+        }, "overlay-frame");
+      }
+    }
+    function drawSkinCircle(ctx, image, x, y, radius) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.drawImage(image, x - radius, y - radius, radius * 2, radius * 2);
+      ctx.restore();
+    }
+    function updateCameraFromOwnCells() {
+      const live = [];
+      for (const id of state.ownIds) {
+        const node = state.nodes.get(id);
+        if (node && !node.removed) live.push(node);
+      }
+      if (!live.length) return;
+      let totalWeight = 0;
+      let x = 0;
+      let y = 0;
+      let totalSize = 0;
+      for (const node of live) {
+        const weight = Math.max(1, node.size * node.size);
+        x += node.x * weight;
+        y += node.y * weight;
+        totalWeight += weight;
+        totalSize += node.size;
+      }
+      if (totalWeight > 0 && state.camera.source !== "server-position") {
+        state.camera.x = x / totalWeight;
+        state.camera.y = y / totalWeight;
+        state.camera.source = "own-cell-average";
+      }
+      if (!state.camera.scale || state.camera.scale <= 0 || state.camera.source !== "server-position") {
+        state.camera.scale = Math.max(0.18, Math.min(1.35, Math.pow(Math.min(64 / Math.max(totalSize, 1), 1), 0.38)));
+      }
+      state.lastOwnCenter = { x: state.camera.x, y: state.camera.y, totalSize };
+    }
+    function worldToScreen(x, y, canvasRect) {
+      return {
+        x: canvasRect.left + canvasRect.width / 2 + (x - state.camera.x) * state.camera.scale,
+        y: canvasRect.top + canvasRect.height / 2 + (y - state.camera.y) * state.camera.scale
+      };
+    }
+    function installSocketHooks() {
+      hookWindow(window, "top");
+      installFrameWatchers(window);
+      const scan = () => {
+        state.frameScanCount += 1;
+        scanFrames(window, "scan", 0);
+      };
+      scan();
+      for (const delay of [0, 1, 2, 5, 10, 20, 35, 50, 75, 100, 150, 200, 300, 500, 750, 1e3, 1500, 2e3]) {
+        setTimeout(scan, delay);
+      }
+      const fastScanStarted = Date.now();
+      const fastScan = setInterval(() => {
+        scan();
+        if (Date.now() - fastScanStarted > 2e4) {
+          clearInterval(fastScan);
+        }
+      }, 10);
+      setInterval(scan, 250);
+    }
+    function hookWindow(win, label) {
+      if (!win || !win.WebSocket) return;
+      const NativeWebSocket = win.WebSocket;
+      if (!NativeWebSocket.__blobioSkinOverlayConstructorHooked) {
+        let WrappedWebSocket = function(url, protocols) {
+          const socket = protocols !== void 0 ? new NativeWebSocket(url, protocols) : new NativeWebSocket(url);
+          hookSocket(socket, label, String(url || ""));
+          return socket;
+        };
+        try {
+          WrappedWebSocket.prototype = NativeWebSocket.prototype;
+          Object.setPrototypeOf(WrappedWebSocket, NativeWebSocket);
+          for (const key of Object.getOwnPropertyNames(NativeWebSocket)) {
+            if (!(key in WrappedWebSocket)) {
+              Object.defineProperty(WrappedWebSocket, key, Object.getOwnPropertyDescriptor(NativeWebSocket, key));
+            }
+          }
+          WrappedWebSocket.__blobioSkinOverlayConstructorHooked = true;
+          win.WebSocket = WrappedWebSocket;
+          recordFrameHook(label, "WebSocket constructor hooked");
+        } catch (error) {
+          recordFrameHook(label, `WebSocket constructor hook failed: ${String(error)}`);
+        }
+      }
+      const proto = NativeWebSocket.prototype;
+      if (proto && !proto.__blobioSkinOverlaySendHooked) {
+        proto.__blobioSkinOverlaySendHooked = true;
+        const nativeSend = proto.send;
+        proto.send = function overlaySend(data) {
+          hookSocket(this, label, safeSocketUrl(this));
+          return nativeSend.call(this, data);
+        };
+        recordFrameHook(label, "WebSocket.prototype.send hooked");
+      }
+      if (proto && !proto.__blobioSkinOverlayAddListenerHooked) {
+        proto.__blobioSkinOverlayAddListenerHooked = true;
+        const nativeAddEventListener = proto.addEventListener;
+        proto.addEventListener = function overlayAddEventListener(type, listener, options) {
+          hookSocket(this, label, safeSocketUrl(this));
+          return nativeAddEventListener.call(this, type, listener, options);
+        };
+        recordFrameHook(label, "WebSocket.prototype.addEventListener hooked");
+      }
+    }
+    function hookSocket(socket, label, url) {
+      if (!socket || socket.__blobioSkinOverlaySocket) return;
+      socket.__blobioSkinOverlaySocket = true;
+      state.sockets += 1;
+      try {
+        socket.binaryType = "arraybuffer";
+      } catch {
+      }
+      const onMessage = (event) => {
+        state.wsMessages += 1;
+        handleSocketMessage(event.data, { label, url: safeSocketUrl(socket) || url });
+      };
+      try {
+        socket.addEventListener?.("message", onMessage, true);
+      } catch {
+      }
+      log("WebSocket observed", { label, url: redact(url), sockets: state.sockets }, "network");
+    }
+    function safeSocketUrl(socket) {
+      try {
+        return String(socket.url || "");
+      } catch {
+        return "";
+      }
+    }
+    function installFrameWatchers(win) {
+      if (!win?.document || win.document.__blobioSkinOverlayFrameWatchers) return;
+      win.document.__blobioSkinOverlayFrameWatchers = true;
+      try {
+        const observer = new win.MutationObserver((mutations) => {
+          for (const mutation of mutations) {
+            for (const node of mutation.addedNodes || []) {
+              watchInsertedFrame(node, "mutation");
+            }
+          }
+          scanFrames(window, "mutation", 0);
+        });
+        observer.observe(win.document.documentElement || win.document, { childList: true, subtree: true });
+        recordFrameHook("observer", "MutationObserver installed");
+      } catch {
+      }
+      try {
+        const nativeCreateElement = win.Document?.prototype?.createElement;
+        if (nativeCreateElement && !win.Document.prototype.__blobioSkinOverlayCreateHooked) {
+          win.Document.prototype.__blobioSkinOverlayCreateHooked = true;
+          win.Document.prototype.createElement = function createElementOverlayHook(tagName, options) {
+            const node = nativeCreateElement.call(this, tagName, options);
+            if (/^(iframe|frame)$/i.test(String(tagName || ""))) {
+              watchFrameElement(node, "createElement");
+              for (const delay of [0, 1, 5, 10, 20, 50, 100]) {
+                setTimeout(() => scanFrames(window, "createElement", 0), delay);
+              }
+            }
+            return node;
+          };
+          recordFrameHook("document", "createElement hook installed");
+        }
+      } catch {
+      }
+      try {
+        const proto = win.Node?.prototype;
+        if (proto && !proto.__blobioSkinOverlayInsertHooked) {
+          proto.__blobioSkinOverlayInsertHooked = true;
+          const nativeAppendChild = proto.appendChild;
+          const nativeInsertBefore = proto.insertBefore;
+          if (typeof nativeAppendChild === "function") {
+            proto.appendChild = function appendChildOverlayHook(node) {
+              const result = nativeAppendChild.call(this, node);
+              watchInsertedFrame(node, "appendChild");
+              return result;
+            };
+          }
+          if (typeof nativeInsertBefore === "function") {
+            proto.insertBefore = function insertBeforeOverlayHook(node, before) {
+              const result = nativeInsertBefore.call(this, node, before);
+              watchInsertedFrame(node, "insertBefore");
+              return result;
+            };
+          }
+          recordFrameHook("node", "frame insertion hooks installed");
+        }
+      } catch {
+      }
+    }
+    function watchInsertedFrame(node, reason) {
+      if (!node || node.nodeType !== 1) return;
+      try {
+        if (/^(IFRAME|FRAME)$/i.test(node.tagName || "")) {
+          watchFrameElement(node, reason);
+        }
+        for (const frame of node.querySelectorAll?.("iframe,frame") || []) {
+          watchFrameElement(frame, `${reason}.descendant`);
+        }
+      } catch {
+      }
+    }
+    function watchFrameElement(frame, reason) {
+      if (!frame || frame.__blobioSkinOverlayWatched) return;
+      frame.__blobioSkinOverlayWatched = true;
+      const hookFrame = () => {
+        try {
+          if (frame.contentWindow) {
+            hookWindow(frame.contentWindow, `frame:${reason}`);
+            installFrameWatchers(frame.contentWindow);
+            scanFrames(frame.contentWindow, `frame:${reason}`, 0);
+          }
+        } catch {
+        }
+      };
+      hookFrame();
+      try {
+        frame.addEventListener?.("load", hookFrame, true);
+      } catch {
+      }
+      for (const delay of [0, 1, 2, 5, 10, 20, 50, 100, 250, 500]) {
+        setTimeout(hookFrame, delay);
+      }
+      recordFrameHook("frame", `watching ${reason}`);
+    }
+    function scanFrames(rootWin, label, depth) {
+      if (!rootWin || depth > 4) return;
+      try {
+        hookWindow(rootWin, label);
+        installFrameWatchers(rootWin);
+      } catch {
+      }
+      try {
+        for (let i = 0; i < rootWin.frames.length; i += 1) {
+          const frameWin = rootWin.frames[i];
+          hookWindow(frameWin, `${label}.frames[${i}]`);
+          installFrameWatchers(frameWin);
+          scanFrames(frameWin, `${label}.frames[${i}]`, depth + 1);
+        }
+      } catch {
+      }
+      try {
+        for (const frame of rootWin.document?.querySelectorAll?.("iframe,frame") || []) {
+          watchFrameElement(frame, `${label}.dom`);
+          if (frame.contentWindow) {
+            hookWindow(frame.contentWindow, `${label}.iframe`);
+            scanFrames(frame.contentWindow, `${label}.iframe`, depth + 1);
+          }
+        }
+      } catch {
+      }
+    }
+    function recordFrameHook(label, note) {
+      state.frameHooks.push({ time: (/* @__PURE__ */ new Date()).toISOString(), label, note });
+      while (state.frameHooks.length > 120) state.frameHooks.shift();
+    }
+    function handleSocketMessage(data, meta) {
+      const packet = toUint8Array(data);
+      if (!packet || packet.length === 0) return;
+      const opcode = packet[0];
+      state.opCounts[opcode] = (state.opCounts[opcode] || 0) + 1;
+      if (state.earlyPackets.length < 160) {
+        state.earlyPackets.push({
+          time: (/* @__PURE__ */ new Date()).toISOString(),
+          opcode,
+          length: packet.length,
+          first8: Array.from(packet.slice(0, Math.min(8, packet.length))),
+          meta: sanitize(meta)
+        });
+      }
+      if (opcode === 32) {
+        parseAddNode(packet, meta);
+        return;
+      }
+      if (opcode === 16) {
+        parseUpdateNodes(packet, meta);
+        return;
+      }
+      if (opcode === 17) {
+        parseUpdatePosition(packet);
+        return;
+      }
+      if (opcode === 18 || opcode === 20) {
+        state.nodes.clear();
+        state.ownIds.clear();
+        state.camera.source = "average";
+        log("clear nodes packet", { opcode }, "packet");
+      }
+    }
+    function toUint8Array(data) {
+      try {
+        const tag = Object.prototype.toString.call(data);
+        if (data instanceof ArrayBuffer || tag === "[object ArrayBuffer]") {
+          return new Uint8Array(data);
+        }
+        if (ArrayBuffer.isView(data) || /\[object (?:Uint8|Int8|Uint16|Int16|Uint32|Int32|Float32|Float64|BigInt64|BigUint64|DataView|Uint8Clamped)Array\]/.test(tag) || tag === "[object DataView]") {
+          return new Uint8Array(data.buffer, data.byteOffset || 0, data.byteLength || 0);
+        }
+      } catch {
+      }
+      return null;
+    }
+    function parseAddNode(packet, meta) {
+      if (packet.length < 5) return;
+      const view = new DataView(packet.buffer, packet.byteOffset, packet.byteLength);
+      const id = view.getUint32(1, true) >>> 0;
+      if (!id) return;
+      state.ownIds.add(id);
+      while (state.ownIds.size > OWN_ID_LIMIT) {
+        state.ownIds.delete(state.ownIds.values().next().value);
+      }
+      state.addNodePackets += 1;
+      log("own node added", { id, ownIds: state.ownIds.size, meta }, "packet");
+    }
+    function parseUpdatePosition(packet) {
+      if (packet.length < 13) return;
+      const view = new DataView(packet.buffer, packet.byteOffset, packet.byteLength);
+      const x = view.getFloat32(1, true);
+      const y = view.getFloat32(5, true);
+      const scale = view.getFloat32(9, true);
+      if (Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(scale) && scale > 0 && scale < 10) {
+        state.camera = { x, y, scale, source: "server-position" };
+      }
+    }
+    function parseUpdateNodes(packet, meta) {
+      const parsed = [parseUpdateNodesProtocol6(packet), parseUpdateNodesProtocol5(packet), parseUpdateNodesProtocol4(packet)].filter((item) => item && item.ok).sort((a, b) => scoreParse(b) - scoreParse(a))[0];
+      if (!parsed) {
+        state.updateParseErrors += 1;
+        if (state.debug) log("update packet parse failed", { length: packet.length, meta }, "packet-error");
+        return;
+      }
+      applyUpdateParse(parsed);
+      state.updatePackets += 1;
+      state.lastPacketSummary = {
+        protocol: parsed.protocol,
+        records: parsed.records.length,
+        removed: parsed.removed.length,
+        ownRecords: parsed.records.filter((record) => state.ownIds.has(record.id)).length,
+        length: packet.length
+      };
+    }
+    function scoreParse(parsed) {
+      let score = parsed.records.length * 2 + parsed.removed.length;
+      for (const record of parsed.records) {
+        if (state.ownIds.has(record.id)) score += 100;
+        if (Math.abs(record.x) < 1e5 && Math.abs(record.y) < 1e5 && record.size > 0 && record.size < 1e4) score += 1;
+      }
+      if (parsed.offset === parsed.length) score += 4;
+      return score;
+    }
+    function applyUpdateParse(parsed) {
+      for (const record of parsed.records) {
+        if (!record.id) continue;
+        state.nodes.set(record.id, {
+          id: record.id,
+          x: record.x,
+          y: record.y,
+          size: record.size,
+          color: record.color || null,
+          flags: record.flags || 0,
+          updatedAt: performance.now()
+        });
+      }
+      for (const id of parsed.removed) {
+        state.nodes.delete(id);
+        state.ownIds.delete(id);
+      }
+      while (state.nodes.size > NODE_LIMIT) {
+        state.nodes.delete(state.nodes.keys().next().value);
+      }
+    }
+    function parseUpdateNodesProtocol6(packet) {
+      const view = new DataView(packet.buffer, packet.byteOffset, packet.byteLength);
+      let offset = 1;
+      if (packet.length < 7) return null;
+      const eatCount = view.getUint16(offset, true);
+      offset += 2 + eatCount * 8;
+      if (offset >= packet.length) return null;
+      const records = [];
+      let guard = 0;
+      while (offset + 4 <= packet.length && guard < 4096) {
+        guard += 1;
+        const id = view.getUint32(offset, true);
+        offset += 4;
+        if (id === 0) break;
+        if (offset + 11 > packet.length) return null;
+        const x = view.getInt32(offset, true);
+        offset += 4;
+        const y = view.getInt32(offset, true);
+        offset += 4;
+        const size = view.getUint16(offset, true);
+        offset += 2;
+        const flags = view.getUint8(offset);
+        offset += 1;
+        let color = null;
+        if (flags & 2) {
+          if (offset + 3 > packet.length) return null;
+          color = { r: packet[offset], g: packet[offset + 1], b: packet[offset + 2] };
+          offset += 3;
+        }
+        if (flags & 4) offset = skipUtf8Zero(packet, offset);
+        if (flags & 8) offset = skipUtf8Zero(packet, offset);
+        if (offset < 0) return null;
+        records.push({ id, x, y, size, flags, color });
+      }
+      const removed = readRemoveRecords(packet, offset, 6);
+      if (!removed) return null;
+      return { ok: true, protocol: 6, records, removed: removed.ids, offset: removed.offset, length: packet.length };
+    }
+    function parseUpdateNodesProtocol5(packet) {
+      const view = new DataView(packet.buffer, packet.byteOffset, packet.byteLength);
+      let offset = 1;
+      if (packet.length < 7) return null;
+      const eatCount = view.getUint16(offset, true);
+      offset += 2 + eatCount * 8;
+      if (offset >= packet.length) return null;
+      const records = [];
+      let guard = 0;
+      while (offset + 4 <= packet.length && guard < 4096) {
+        guard += 1;
+        const id = view.getUint32(offset, true);
+        offset += 4;
+        if (id === 0) break;
+        if (offset + 14 > packet.length) return null;
+        const x = view.getInt32(offset, true);
+        offset += 4;
+        const y = view.getInt32(offset, true);
+        offset += 4;
+        const size = view.getUint16(offset, true);
+        offset += 2;
+        const color = { r: packet[offset], g: packet[offset + 1], b: packet[offset + 2] };
+        offset += 3;
+        const flags = view.getUint8(offset);
+        offset += 1;
+        if (flags & 4) offset = skipUtf8Zero(packet, offset);
+        offset = skipUtf16Zero(packet, offset);
+        if (offset < 0) return null;
+        records.push({ id, x, y, size, flags, color });
+      }
+      const removed = readRemoveRecords(packet, offset, 5);
+      if (!removed) return null;
+      return { ok: true, protocol: 5, records, removed: removed.ids, offset: removed.offset, length: packet.length };
+    }
+    function parseUpdateNodesProtocol4(packet) {
+      const view = new DataView(packet.buffer, packet.byteOffset, packet.byteLength);
+      let offset = 1;
+      if (packet.length < 7) return null;
+      const eatCount = view.getUint16(offset, true);
+      offset += 2 + eatCount * 8;
+      if (offset >= packet.length) return null;
+      const records = [];
+      let guard = 0;
+      while (offset + 4 <= packet.length && guard < 4096) {
+        guard += 1;
+        const id = view.getUint32(offset, true);
+        offset += 4;
+        if (id === 0) break;
+        if (offset + 10 > packet.length) return null;
+        const x = view.getInt16(offset, true);
+        offset += 2;
+        const y = view.getInt16(offset, true);
+        offset += 2;
+        const size = view.getUint16(offset, true);
+        offset += 2;
+        const color = { r: packet[offset], g: packet[offset + 1], b: packet[offset + 2] };
+        offset += 3;
+        const flags = view.getUint8(offset);
+        offset += 1;
+        offset = skipUtf16Zero(packet, offset);
+        if (offset < 0) return null;
+        records.push({ id, x, y, size, flags, color });
+      }
+      const removed = readRemoveRecords(packet, offset, 4);
+      if (!removed) return null;
+      return { ok: true, protocol: 4, records, removed: removed.ids, offset: removed.offset, length: packet.length };
+    }
+    function skipUtf8Zero(packet, offset) {
+      while (offset < packet.length) {
+        if (packet[offset] === 0) return offset + 1;
+        offset += 1;
+      }
+      return -1;
+    }
+    function skipUtf16Zero(packet, offset) {
+      while (offset + 1 < packet.length) {
+        if (packet[offset] === 0 && packet[offset + 1] === 0) return offset + 2;
+        offset += 2;
+      }
+      return -1;
+    }
+    function readRemoveRecords(packet, offset, protocol) {
+      if (offset < 0 || offset >= packet.length) return { ids: [], offset };
+      const view = new DataView(packet.buffer, packet.byteOffset, packet.byteLength);
+      const countBytes = protocol >= 6 ? 2 : 4;
+      if (offset + countBytes > packet.length) return { ids: [], offset };
+      const count = protocol >= 6 ? view.getUint16(offset, true) : view.getUint32(offset, true);
+      offset += countBytes;
+      if (count > 1e4 || offset + count * 4 > packet.length) return null;
+      const ids = [];
+      for (let i = 0; i < count; i += 1) {
+        ids.push(view.getUint32(offset, true) >>> 0);
+        offset += 4;
+      }
+      return { ids, offset };
+    }
+    function redact(value) {
+      return String(value || "").replace(/([?&]token=)[^&]+/gi, "$1<redacted>").replace(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g, "<redacted-jwt>");
+    }
+    function downloadDebugDump() {
+      const dump = {
+        meta: {
+          version: "packet-overlay-v2",
+          createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+          href: location.href
+        },
+        state: {
+          enabled: state.enabled,
+          activeUrl: state.activeUrl,
+          imageReady: state.imageReady,
+          ownIds: Array.from(state.ownIds),
+          nodeCount: state.nodes.size,
+          camera: state.camera,
+          lastOwnCenter: state.lastOwnCenter,
+          drawn: state.drawn,
+          sockets: state.sockets,
+          wsMessages: state.wsMessages,
+          addNodePackets: state.addNodePackets,
+          updatePackets: state.updatePackets,
+          updateParseErrors: state.updateParseErrors,
+          opCounts: state.opCounts,
+          earlyPackets: state.earlyPackets,
+          ownNodeMissFrames: state.ownNodeMissFrames,
+          frameScanCount: state.frameScanCount,
+          lastPacketSummary: state.lastPacketSummary,
+          frameHooks: state.frameHooks
+        },
+        ownNodes: Array.from(state.ownIds).map((id) => state.nodes.get(id)).filter(Boolean),
+        recentEvents: state.debugEvents
+      };
+      const json = JSON.stringify(dump, null, 2);
+      const blob = new Blob([json], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `blobio-custom-skin-overlay-${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.json`;
+      a.style.display = "none";
+      document.documentElement.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+        a.remove();
+      }, 1e3);
+    }
+    window.__blobioCustomSkinOverlayV3 = {
+      state,
+      refresh,
+      dump: () => ({
+        enabled: state.enabled,
+        activeUrl: state.activeUrl,
+        ownIds: Array.from(state.ownIds),
+        nodes: state.nodes.size,
+        drawn: state.drawn,
+        opCounts: state.opCounts,
+        earlyPackets: state.earlyPackets,
+        camera: state.camera,
+        lastPacketSummary: state.lastPacketSummary,
+        events: state.debugEvents.slice()
+      }),
+      downloadDebugDump
+    };
+    window.addEventListener("keydown", (event) => {
+      if (event.key === "F9") {
+        downloadDebugDump();
+      }
+    }, true);
+    refresh(initialState);
+    installSocketHooks();
+    renderLoop();
+  }
+
   // src/hostRules.js
   function getBlobioHostMode(locationLike = globalThis.location) {
     const hostname = String(locationLike?.hostname || "").toLowerCase();
@@ -3252,12 +4203,12 @@ html.${className} .blobio-watermark-extension::after {
       if (this.started) {
         return true;
       }
-      const document = this.window.document;
-      if (!document) {
+      const document2 = this.window.document;
+      if (!document2) {
         this.window.console?.warn("[Blobio] Extension could not start: document is not ready.");
         return false;
       }
-      if (!document.documentElement) {
+      if (!document2.documentElement) {
         return false;
       }
       const hostMode = getBlobioHostMode(this.window.location);
@@ -3276,19 +4227,25 @@ html.${className} .blobio-watermark-extension::after {
       };
       if (hostMode === "frontpage") {
         this.features.push(new BackgroundFeature({
-          document,
+          document: document2,
           backgroundUrl: background_default,
           logger: this.window.console || console
         }));
       }
       this.features.push(
         new MenuFeature({
-          document,
+          document: document2,
           logger: this.window.console || console,
           assets: menuAssets,
           frontPageUi: hostMode === "frontpage"
         })
       );
+      if (hostMode === "runtime") {
+        this.features.push(new CustomSkinOverlayFeature({
+          document: document2,
+          logger: this.window.console || console
+        }));
+      }
       for (const feature of this.features) {
         feature.start();
       }

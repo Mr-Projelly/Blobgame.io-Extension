@@ -30,7 +30,7 @@ const MAIN_MENU_LAYERED_SELECT_CLASS = 'blobio-menu-layered-select';
 
 const EXTENSION_OPTION_TOOLTIPS = {
   watermark: 'This option will display the Extension name text, alongside its current version.',
-  customSkin: 'This option lets you apply one of your saved direct i.imgur.com images as a local overlay skin. Only you see it.',
+  customSkin: 'Use saved direct i.imgur.com images as a local client-side skin overlay. No login or owned in-game skin is required; only you see it.',
 };
 
 const DEFAULT_VIDEO = {

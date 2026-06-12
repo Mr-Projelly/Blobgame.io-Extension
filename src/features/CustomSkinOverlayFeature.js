@@ -99,8 +99,8 @@ function pageOverlayMain(initialState) {
   const NODE_LIMIT = 5000;
   const DEBUG_LIMIT = 700;
 
-  if (window.__blobioCustomSkinOverlayV2) {
-    window.__blobioCustomSkinOverlayV2.refresh?.(initialState);
+  if (window.__blobioCustomSkinOverlayV3) {
+    window.__blobioCustomSkinOverlayV3.refresh?.(initialState);
     return;
   }
 
@@ -125,6 +125,10 @@ function pageOverlayMain(initialState) {
     addNodePackets: 0,
     updatePackets: 0,
     updateParseErrors: 0,
+    opCounts: {},
+    earlyPackets: [],
+    ownNodeMissFrames: 0,
+    frameScanCount: 0,
     lastPacketSummary: null,
     debugEvents: [],
     frameHooks: [],
@@ -312,6 +316,10 @@ function pageOverlayMain(initialState) {
     const rect = canvas?.getBoundingClientRect?.() || { left: 0, top: 0, width: cssWidth, height: cssHeight };
     updateCameraFromOwnCells();
 
+    if (!state.ownIds.size) {
+      state.ownNodeMissFrames += 1;
+    }
+
     let drawn = 0;
     for (const id of state.ownIds) {
       const node = state.nodes.get(id);
@@ -395,47 +403,75 @@ function pageOverlayMain(initialState) {
     hookWindow(window, 'top');
     installFrameWatchers(window);
 
-    const scan = () => scanFrames(window, 'top', 0);
-    for (const delay of [0, 1, 5, 10, 20, 50, 100, 250, 500, 1000]) {
+    const scan = () => {
+      state.frameScanCount += 1;
+      scanFrames(window, 'scan', 0);
+    };
+
+    scan();
+
+    for (const delay of [0, 1, 2, 5, 10, 20, 35, 50, 75, 100, 150, 200, 300, 500, 750, 1000, 1500, 2000]) {
       setTimeout(scan, delay);
     }
-    setInterval(scan, 500);
+
+    const fastScanStarted = Date.now();
+    const fastScan = setInterval(() => {
+      scan();
+      if (Date.now() - fastScanStarted > 20000) {
+        clearInterval(fastScan);
+      }
+    }, 10);
+
+    setInterval(scan, 250);
   }
 
   function hookWindow(win, label) {
-    if (!win || !win.WebSocket || win.WebSocket.__blobioSkinOverlayHooked) return;
+    if (!win || !win.WebSocket) return;
 
     const NativeWebSocket = win.WebSocket;
-
-    function WrappedWebSocket(url, protocols) {
-      const socket = protocols !== undefined ? new NativeWebSocket(url, protocols) : new NativeWebSocket(url);
-      hookSocket(socket, label, String(url || ''));
-      return socket;
-    }
-
-    try {
-      WrappedWebSocket.prototype = NativeWebSocket.prototype;
-      Object.setPrototypeOf(WrappedWebSocket, NativeWebSocket);
-      for (const key of Object.getOwnPropertyNames(NativeWebSocket)) {
-        if (!(key in WrappedWebSocket)) {
-          Object.defineProperty(WrappedWebSocket, key, Object.getOwnPropertyDescriptor(NativeWebSocket, key));
-        }
+    if (!NativeWebSocket.__blobioSkinOverlayConstructorHooked) {
+      function WrappedWebSocket(url, protocols) {
+        const socket = protocols !== undefined ? new NativeWebSocket(url, protocols) : new NativeWebSocket(url);
+        hookSocket(socket, label, String(url || ''));
+        return socket;
       }
-      WrappedWebSocket.__blobioSkinOverlayHooked = true;
-      win.WebSocket = WrappedWebSocket;
-      recordFrameHook(label, 'WebSocket constructor hooked');
-    } catch (error) {
-      recordFrameHook(label, `WebSocket constructor hook failed: ${String(error)}`);
+
+      try {
+        WrappedWebSocket.prototype = NativeWebSocket.prototype;
+        Object.setPrototypeOf(WrappedWebSocket, NativeWebSocket);
+        for (const key of Object.getOwnPropertyNames(NativeWebSocket)) {
+          if (!(key in WrappedWebSocket)) {
+            Object.defineProperty(WrappedWebSocket, key, Object.getOwnPropertyDescriptor(NativeWebSocket, key));
+          }
+        }
+        WrappedWebSocket.__blobioSkinOverlayConstructorHooked = true;
+        win.WebSocket = WrappedWebSocket;
+        recordFrameHook(label, 'WebSocket constructor hooked');
+      } catch (error) {
+        recordFrameHook(label, `WebSocket constructor hook failed: ${String(error)}`);
+      }
     }
 
     const proto = NativeWebSocket.prototype;
-    if (!proto.__blobioSkinOverlaySendHooked) {
+
+    if (proto && !proto.__blobioSkinOverlaySendHooked) {
       proto.__blobioSkinOverlaySendHooked = true;
       const nativeSend = proto.send;
       proto.send = function overlaySend(data) {
         hookSocket(this, label, safeSocketUrl(this));
         return nativeSend.call(this, data);
       };
+      recordFrameHook(label, 'WebSocket.prototype.send hooked');
+    }
+
+    if (proto && !proto.__blobioSkinOverlayAddListenerHooked) {
+      proto.__blobioSkinOverlayAddListenerHooked = true;
+      const nativeAddEventListener = proto.addEventListener;
+      proto.addEventListener = function overlayAddEventListener(type, listener, options) {
+        hookSocket(this, label, safeSocketUrl(this));
+        return nativeAddEventListener.call(this, type, listener, options);
+      };
+      recordFrameHook(label, 'WebSocket.prototype.addEventListener hooked');
     }
   }
 
@@ -446,10 +482,14 @@ function pageOverlayMain(initialState) {
 
     try { socket.binaryType = 'arraybuffer'; } catch {}
 
-    socket.addEventListener?.('message', (event) => {
+    const onMessage = (event) => {
       state.wsMessages += 1;
-      handleSocketMessage(event.data, { label, url });
-    }, true);
+      handleSocketMessage(event.data, { label, url: safeSocketUrl(socket) || url });
+    };
+
+    try {
+      socket.addEventListener?.('message', onMessage, true);
+    } catch {}
 
     log('WebSocket observed', { label, url: redact(url), sockets: state.sockets }, 'network');
   }
@@ -463,8 +503,16 @@ function pageOverlayMain(initialState) {
     win.document.__blobioSkinOverlayFrameWatchers = true;
 
     try {
-      const observer = new win.MutationObserver(() => scanFrames(window, 'mutation', 0));
+      const observer = new win.MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+          for (const node of mutation.addedNodes || []) {
+            watchInsertedFrame(node, 'mutation');
+          }
+        }
+        scanFrames(window, 'mutation', 0);
+      });
       observer.observe(win.document.documentElement || win.document, { childList: true, subtree: true });
+      recordFrameHook('observer', 'MutationObserver installed');
     } catch {}
 
     try {
@@ -474,12 +522,77 @@ function pageOverlayMain(initialState) {
         win.Document.prototype.createElement = function createElementOverlayHook(tagName, options) {
           const node = nativeCreateElement.call(this, tagName, options);
           if (/^(iframe|frame)$/i.test(String(tagName || ''))) {
-            setTimeout(() => scanFrames(window, 'createElement', 0), 0);
+            watchFrameElement(node, 'createElement');
+            for (const delay of [0, 1, 5, 10, 20, 50, 100]) {
+              setTimeout(() => scanFrames(window, 'createElement', 0), delay);
+            }
           }
           return node;
         };
+        recordFrameHook('document', 'createElement hook installed');
       }
     } catch {}
+
+    try {
+      const proto = win.Node?.prototype;
+      if (proto && !proto.__blobioSkinOverlayInsertHooked) {
+        proto.__blobioSkinOverlayInsertHooked = true;
+        const nativeAppendChild = proto.appendChild;
+        const nativeInsertBefore = proto.insertBefore;
+        if (typeof nativeAppendChild === 'function') {
+          proto.appendChild = function appendChildOverlayHook(node) {
+            const result = nativeAppendChild.call(this, node);
+            watchInsertedFrame(node, 'appendChild');
+            return result;
+          };
+        }
+        if (typeof nativeInsertBefore === 'function') {
+          proto.insertBefore = function insertBeforeOverlayHook(node, before) {
+            const result = nativeInsertBefore.call(this, node, before);
+            watchInsertedFrame(node, 'insertBefore');
+            return result;
+          };
+        }
+        recordFrameHook('node', 'frame insertion hooks installed');
+      }
+    } catch {}
+  }
+
+  function watchInsertedFrame(node, reason) {
+    if (!node || node.nodeType !== 1) return;
+    try {
+      if (/^(IFRAME|FRAME)$/i.test(node.tagName || '')) {
+        watchFrameElement(node, reason);
+      }
+      for (const frame of node.querySelectorAll?.('iframe,frame') || []) {
+        watchFrameElement(frame, `${reason}.descendant`);
+      }
+    } catch {}
+  }
+
+  function watchFrameElement(frame, reason) {
+    if (!frame || frame.__blobioSkinOverlayWatched) return;
+    frame.__blobioSkinOverlayWatched = true;
+
+    const hookFrame = () => {
+      try {
+        if (frame.contentWindow) {
+          hookWindow(frame.contentWindow, `frame:${reason}`);
+          installFrameWatchers(frame.contentWindow);
+          scanFrames(frame.contentWindow, `frame:${reason}`, 0);
+        }
+      } catch {}
+    };
+
+    hookFrame();
+    try {
+      frame.addEventListener?.('load', hookFrame, true);
+    } catch {}
+
+    for (const delay of [0, 1, 2, 5, 10, 20, 50, 100, 250, 500]) {
+      setTimeout(hookFrame, delay);
+    }
+    recordFrameHook('frame', `watching ${reason}`);
   }
 
   function scanFrames(rootWin, label, depth) {
@@ -500,7 +613,7 @@ function pageOverlayMain(initialState) {
 
     try {
       for (const frame of rootWin.document?.querySelectorAll?.('iframe,frame') || []) {
-        frame.addEventListener?.('load', () => scanFrames(window, 'frame-load', 0), { once: true, capture: true });
+        watchFrameElement(frame, `${label}.dom`);
         if (frame.contentWindow) {
           hookWindow(frame.contentWindow, `${label}.iframe`);
           scanFrames(frame.contentWindow, `${label}.iframe`, depth + 1);
@@ -511,7 +624,7 @@ function pageOverlayMain(initialState) {
 
   function recordFrameHook(label, note) {
     state.frameHooks.push({ time: new Date().toISOString(), label, note });
-    while (state.frameHooks.length > 80) state.frameHooks.shift();
+    while (state.frameHooks.length > 120) state.frameHooks.shift();
   }
 
   function handleSocketMessage(data, meta) {
@@ -519,6 +632,16 @@ function pageOverlayMain(initialState) {
     if (!packet || packet.length === 0) return;
 
     const opcode = packet[0];
+    state.opCounts[opcode] = (state.opCounts[opcode] || 0) + 1;
+    if (state.earlyPackets.length < 160) {
+      state.earlyPackets.push({
+        time: new Date().toISOString(),
+        opcode,
+        length: packet.length,
+        first8: Array.from(packet.slice(0, Math.min(8, packet.length))),
+        meta: sanitize(meta),
+      });
+    }
     if (opcode === 0x20) {
       parseAddNode(packet, meta);
       return;
@@ -544,11 +667,12 @@ function pageOverlayMain(initialState) {
 
   function toUint8Array(data) {
     try {
-      if (data instanceof ArrayBuffer || Object.prototype.toString.call(data) === '[object ArrayBuffer]') {
+      const tag = Object.prototype.toString.call(data);
+      if (data instanceof ArrayBuffer || tag === '[object ArrayBuffer]') {
         return new Uint8Array(data);
       }
-      if (ArrayBuffer.isView(data)) {
-        return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+      if (ArrayBuffer.isView(data) || /\[object (?:Uint8|Int8|Uint16|Int16|Uint32|Int32|Float32|Float64|BigInt64|BigUint64|DataView|Uint8Clamped)Array\]/.test(tag) || tag === '[object DataView]') {
+        return new Uint8Array(data.buffer, data.byteOffset || 0, data.byteLength || 0);
       }
     } catch {}
 
@@ -771,7 +895,7 @@ function pageOverlayMain(initialState) {
   function downloadDebugDump() {
     const dump = {
       meta: {
-        version: 'packet-overlay-v1',
+        version: 'packet-overlay-v2',
         createdAt: new Date().toISOString(),
         href: location.href,
       },
@@ -789,6 +913,10 @@ function pageOverlayMain(initialState) {
         addNodePackets: state.addNodePackets,
         updatePackets: state.updatePackets,
         updateParseErrors: state.updateParseErrors,
+        opCounts: state.opCounts,
+        earlyPackets: state.earlyPackets,
+        ownNodeMissFrames: state.ownNodeMissFrames,
+        frameScanCount: state.frameScanCount,
         lastPacketSummary: state.lastPacketSummary,
         frameHooks: state.frameHooks,
       },
@@ -811,7 +939,7 @@ function pageOverlayMain(initialState) {
     }, 1000);
   }
 
-  window.__blobioCustomSkinOverlayV2 = {
+  window.__blobioCustomSkinOverlayV3 = {
     state,
     refresh,
     dump: () => ({
@@ -820,6 +948,8 @@ function pageOverlayMain(initialState) {
       ownIds: Array.from(state.ownIds),
       nodes: state.nodes.size,
       drawn: state.drawn,
+      opCounts: state.opCounts,
+      earlyPackets: state.earlyPackets,
       camera: state.camera,
       lastPacketSummary: state.lastPacketSummary,
       events: state.debugEvents.slice(),

@@ -85,7 +85,10 @@ html.${className} #game-wrapper .custom-select-display {
 
 html.${className} #game-wrapper .custom-select {
   position: relative !important;
-  z-index: 2147482400 !important;
+}
+
+html.${className} #game-wrapper .blobio-menu-layered-select {
+  z-index: 1 !important;
 }
 
 html.${className} #game-wrapper .custom-select-option {
@@ -104,11 +107,14 @@ html.${className} .progress-bar-title {
 
 html.${className} #game-wrapper .custom-select-options {
   position: absolute !important;
-  z-index: 2147482600 !important;
   border: 1px solid rgba(142, 255, 174, 0.42) !important;
   border-radius: 8px !important;
   background: rgba(3, 44, 23, 0.92) !important;
   box-shadow: 0 0 13px rgba(79, 255, 130, 0.24), inset 0 0 10px rgba(79, 255, 130, 0.12) !important;
+}
+
+html.${className} #game-wrapper .blobio-menu-layered-select .custom-select-options {
+  z-index: 2 !important;
 }
 
 html.${className} #game-wrapper .custom-select-option.selected,
@@ -119,6 +125,18 @@ html.${className} #game-wrapper .custom-select-option:hover {
 html.${className} #ip-container {
   position: relative !important;
   z-index: 1 !important;
+}
+
+html.${className} app-settings,
+html.${className} app-skins,
+html.${className} app-profile,
+html.${className} app-shop,
+html.${className} .modal,
+html.${className} .popup,
+html.${className} .dialog,
+html.${className} .cdk-overlay-container {
+  position: relative !important;
+  z-index: 20 !important;
 }
 
 html.${className} #ip-container table {
@@ -641,8 +659,13 @@ html.${className} app-skins .blobio-custom-skin-tab.active {
 
 html.${className} app-skins .blobio-custom-skin-panel {
   display: none !important;
-  padding: 10px !important;
-  background: transparent !important;
+  padding: 12px !important;
+  margin-top: -8px !important;
+  border: 1px solid rgba(142, 255, 174, 0.34) !important;
+  border-radius: 10px !important;
+  background: rgba(2, 32, 18, 0.86) !important;
+  color: #dfffe6 !important;
+  box-shadow: inset 0 0 22px rgba(79, 255, 130, 0.12), 0 0 18px rgba(79, 255, 130, 0.16) !important;
 }
 
 html.${className} app-skins.blobio-custom-skin-active .skins-container:not(.blobio-custom-skin-panel) {
@@ -656,17 +679,17 @@ html.${className} app-skins.blobio-custom-skin-active .blobio-custom-skin-panel 
 html.${className} .blobio-custom-skin-controls {
   display: grid;
   gap: 6px;
-  margin-bottom: 12px;
+  margin: -2px 0 10px;
 }
 
 html.${className} .blobio-custom-skin-input {
   width: min(440px, 100%);
-  min-height: 32px;
+  min-height: 30px;
   margin: 0 auto;
-  padding: 6px 10px;
+  padding: 5px 10px;
   border: 1px solid rgba(142, 255, 174, 0.46);
   border-radius: 8px;
-  background: rgba(0, 0, 0, 0.54);
+  background: rgba(0, 0, 0, 0.58);
   color: #dfffe6;
   font-weight: 700;
   text-align: center;
@@ -695,7 +718,11 @@ html.${className} .blobio-custom-skin-grid {
 
 html.${className} .blobio-custom-skin {
   cursor: pointer;
+  border: 1px solid rgba(142, 255, 174, 0.24);
   border-radius: 8px;
+  background: rgba(4, 42, 23, 0.82);
+  color: #dfffe6;
+  box-shadow: 0 0 14px rgba(79, 255, 130, 0.12), inset 0 0 10px rgba(79, 255, 130, 0.08);
   transition: box-shadow 160ms ease, transform 160ms ease;
 }
 
@@ -752,13 +779,13 @@ html.${className} app-skins .blobio-custom-skin-notice-host {
 html.${className} app-skins .blobio-custom-skin-notice {
   position: absolute;
   left: 50%;
-  top: 0;
-  transform: translateX(-50%);
+  top: -8px;
+  transform: translate(-50%, -100%);
   width: max-content;
   max-width: 90%;
-  padding: 5px 12px;
+  padding: 4px 11px;
   border-radius: 8px;
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 800;
   line-height: 1.2;
   pointer-events: none;
