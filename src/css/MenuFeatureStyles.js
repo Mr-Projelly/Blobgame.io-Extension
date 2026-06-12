@@ -21,7 +21,7 @@ html.${className} footer.footer * {
 }
 
 html.${className} .blobio-main-menu-align-target {
-  transform: translateX(-22px) !important;
+  transform: translateX(-40px) !important;
   transition: transform 160ms ease;
 }
 
@@ -83,6 +83,11 @@ html.${className} #game-wrapper .custom-select-display {
   background: rgba(3, 28, 17, 0.46) !important;
 }
 
+html.${className} #game-wrapper .custom-select {
+  position: relative !important;
+  z-index: 2147482400 !important;
+}
+
 html.${className} #game-wrapper .custom-select-option {
   background: rgba(3, 44, 23, 0.78) !important;
 }
@@ -98,6 +103,8 @@ html.${className} .progress-bar-title {
 }
 
 html.${className} #game-wrapper .custom-select-options {
+  position: absolute !important;
+  z-index: 2147482600 !important;
   border: 1px solid rgba(142, 255, 174, 0.42) !important;
   border-radius: 8px !important;
   background: rgba(3, 44, 23, 0.92) !important;
@@ -107,6 +114,11 @@ html.${className} #game-wrapper .custom-select-options {
 html.${className} #game-wrapper .custom-select-option.selected,
 html.${className} #game-wrapper .custom-select-option:hover {
   background: rgba(10, 69, 35, 0.7) !important;
+}
+
+html.${className} #ip-container {
+  position: relative !important;
+  z-index: 1 !important;
 }
 
 html.${className} #ip-container table {
@@ -536,6 +548,28 @@ html.${className} app-settings.blobio-extension-settings-active .inner-container
 
 html.${className} app-settings.blobio-extension-settings-active .content-container {
   background: transparent !important;
+}
+
+html.${className} app-settings.blobio-extension-settings-active .right,
+html.${className} app-settings.blobio-extension-settings-active .grid-container,
+html.${className} app-settings.blobio-extension-settings-active .grid-item {
+  background: rgba(2, 32, 18, 0.86) !important;
+  color: #dfffe6 !important;
+}
+
+html.${className} app-settings.blobio-extension-settings-active .title,
+html.${className} app-settings.blobio-extension-settings-active label {
+  color: #dfffe6 !important;
+  text-shadow: 0 0 6px rgba(118, 255, 154, 0.62) !important;
+}
+
+html.${className} app-settings.blobio-extension-settings-active input,
+html.${className} app-settings.blobio-extension-settings-active select,
+html.${className} app-settings.blobio-extension-settings-active textarea {
+  border: 1px solid rgba(142, 255, 174, 0.4) !important;
+  background: rgba(0, 0, 0, 0.58) !important;
+  color: #dfffe6 !important;
+  box-shadow: inset 0 0 8px rgba(91, 255, 132, 0.14) !important;
 }
 
 html.${className} app-settings.blobio-extension-settings-active .blobio-extension-settings-panel {

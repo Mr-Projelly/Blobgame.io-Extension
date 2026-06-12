@@ -50,8 +50,6 @@ test('Tampermonkey loader bootstraps the custom skin before fetching the bundle'
   const gmValues = new Map([
     ['blobio.customSkin.enabled', '1'],
     ['blobio.customSkin.activeUrl', 'https://i.imgur.com/OZz80VZ.jpeg'],
-    ['blobio.customSkin.localName', 'BlobioCustomSkin_testuser'],
-    ['blobio.customSkin.baseSkin', JSON.stringify({ name: 'owned_dragon', type: 'premium' })],
   ]);
   const localValues = new Map();
   const bundleRequests = [];
@@ -174,13 +172,15 @@ test('Tampermonkey loader bootstraps the custom skin before fetching the bundle'
 
   vm.runInNewContext(loader, context);
 
-  assert.equal(localValues.get('config-skin'), 'owned_dragon');
-  assert.equal(localValues.get('config-skin-type'), 'premium');
+  assert.equal(localValues.get('config-skin'), undefined);
+  assert.equal(localValues.get('config-skin-type'), undefined);
   assert.equal(bundleRequests.length, 1);
   assert.equal(injectedScripts.length, 1);
   assert.match(injectedScripts[0], /__blobioCustomSkinPageBootstrapInstalled/);
+  assert.match(injectedScripts[0], /installNetworkDebugHooks/);
+  assert.match(injectedScripts[0], /__blobioCustomSkinRegisterCell/);
   assert.match(injectedScripts[0], /patchGwtCacheSource/);
-  assert.doesNotMatch(injectedScripts[0], /config-username/);
+  assert.doesNotMatch(injectedScripts[0], /setLocalValue\('config-skin'/);
 
   const skinRequest = new context.XMLHttpRequest();
   skinRequest.open('GET', '/skins/premium/owned_dragon.png', true);
@@ -189,28 +189,26 @@ test('Tampermonkey loader bootstraps the custom skin before fetching the bundle'
   const otherSkinRequest = new context.XMLHttpRequest();
   otherSkinRequest.open('GET', '/skins/premium/other_owned.png', true);
 
-  assert.equal(skinRequest.openArgs[1], 'https://i.imgur.com/OZz80VZ.jpeg');
-  assert.equal(fakeSkinRequest.openArgs[1], 'https://i.imgur.com/OZz80VZ.jpeg');
+  assert.equal(skinRequest.openArgs[1], '/skins/premium/owned_dragon.png');
+  assert.equal(fakeSkinRequest.openArgs[1], '/skins/free/BlobioCustomSkin_testuser.png');
   assert.equal(otherSkinRequest.openArgs[1], '/skins/premium/other_owned.png');
 
   const manifestRequest = new context.XMLHttpRequest();
   manifestRequest.open('GET', '/assets/assets.txt', true);
   manifestRequest.send();
 
-  assert.match(manifestRequest.responseText, /i:skins\/free\/BlobioCustomSkin_testuser\.png:0:image\/png/);
-  assert.match(manifestRequest.responseText, /i:skins\/premium\/BlobioCustomSkin_testuser\.png:0:image\/png/);
+  assert.doesNotMatch(manifestRequest.responseText, /BlobioCustomSkin_testuser/);
 
   const response = await context.fetch('/assets/assets.txt');
   const text = await response.text();
-  assert.match(text, /i:skins\/free\/BlobioCustomSkin_testuser\.png:0:image\/png/);
-  assert.match(text, /i:skins\/premium\/BlobioCustomSkin_testuser\.png:0:image\/png/);
+  assert.doesNotMatch(text, /BlobioCustomSkin_testuser/);
 
   await context.fetch('/skins/free/BlobioCustomSkin_testuser.png', { cache: 'reload' });
   await context.fetch('/skins/premium/owned_dragon.png', { cache: 'reload' });
   await context.fetch('/skins/premium/other_owned.png');
 
-  assert.deepEqual(fetchCalls.at(-3), ['https://i.imgur.com/OZz80VZ.jpeg', { cache: 'reload' }]);
-  assert.deepEqual(fetchCalls.at(-2), ['https://i.imgur.com/OZz80VZ.jpeg', { cache: 'reload' }]);
+  assert.deepEqual(fetchCalls.at(-3), ['/skins/free/BlobioCustomSkin_testuser.png', { cache: 'reload' }]);
+  assert.deepEqual(fetchCalls.at(-2), ['/skins/premium/owned_dragon.png', { cache: 'reload' }]);
   assert.deepEqual(fetchCalls.at(-1), ['/skins/premium/other_owned.png', undefined]);
 });
 
@@ -219,8 +217,6 @@ test('Tampermonkey loader page bootstrap patches only the local custom skin in p
   const gmValues = new Map([
     ['blobio.customSkin.enabled', '1'],
     ['blobio.customSkin.activeUrl', 'https://i.imgur.com/OZz80VZ.jpeg'],
-    ['blobio.customSkin.localName', 'BlobioCustomSkin_testuser'],
-    ['blobio.customSkin.baseSkin', JSON.stringify({ name: 'owned_dragon', type: 'premium' })],
   ]);
   const localValues = new Map();
   const injectedScripts = [];
@@ -376,14 +372,11 @@ test('Tampermonkey loader page bootstrap patches only the local custom skin in p
 
   vm.runInNewContext(injectedScripts[0], pageContext);
 
-  assert.equal(pageLocalValues.get('config-skin'), 'owned_dragon');
-  assert.equal(pageLocalValues.get('config-skin-type'), 'premium');
+  assert.equal(pageLocalValues.get('config-skin'), undefined);
+  assert.equal(pageLocalValues.get('config-skin-type'), undefined);
   assert.equal(pageLocalValues.get('config-username'), 'SkyView');
   assert.equal(pageContext.__blobioCustomSkinRuntimeState().userId, '777');
-  assert.equal(
-    JSON.stringify(pageContext.__blobioCustomSkinRuntimeState().baseSkin),
-    JSON.stringify({ name: 'owned_dragon', type: 'premium' }),
-  );
+  assert.equal(pageContext.__blobioCustomSkinRuntimeState().activeUrl, 'https://i.imgur.com/OZz80VZ.jpeg');
   assert.equal(pageContext.__blobioCustomSkinIsLocalCell({ J: 777, B: 'Other' }), true);
   assert.equal(pageContext.__blobioCustomSkinIsLocalCell({ J: 1, B: 'SkyView' }), false);
   pageLocalValues.delete('access-token');
@@ -397,15 +390,15 @@ test('Tampermonkey loader page bootstrap patches only the local custom skin in p
   fakeMatchingRequest.open('GET', '/skins/free/BlobioCustomSkin_testuser.png', true);
   const otherRequest = new pageContext.XMLHttpRequest();
   otherRequest.open('GET', '/skins/premium/other_owned.png', true);
-  assert.equal(matchingRequest.openArgs[1], 'https://i.imgur.com/OZz80VZ.jpeg');
-  assert.equal(fakeMatchingRequest.openArgs[1], 'https://i.imgur.com/OZz80VZ.jpeg');
+  assert.equal(matchingRequest.openArgs[1], '/skins/premium/owned_dragon.png');
+  assert.equal(fakeMatchingRequest.openArgs[1], '/skins/free/BlobioCustomSkin_testuser.png');
   assert.equal(otherRequest.openArgs[1], '/skins/premium/other_owned.png');
 
   await pageContext.fetch('/skins/free/BlobioCustomSkin_testuser.png');
   await pageContext.fetch('/skins/premium/owned_dragon.png');
   await pageContext.fetch('/skins/premium/other_owned.png');
-  assert.deepEqual(pageFetchCalls.at(-3), ['https://i.imgur.com/OZz80VZ.jpeg', undefined]);
-  assert.deepEqual(pageFetchCalls.at(-2), ['https://i.imgur.com/OZz80VZ.jpeg', undefined]);
+  assert.deepEqual(pageFetchCalls.at(-3), ['/skins/free/BlobioCustomSkin_testuser.png', undefined]);
+  assert.deepEqual(pageFetchCalls.at(-2), ['/skins/premium/owned_dragon.png', undefined]);
   assert.deepEqual(pageFetchCalls.at(-1), ['/skins/premium/other_owned.png', undefined]);
 
   const gwtSource = [
@@ -420,12 +413,11 @@ test('Tampermonkey loader page bootstrap patches only the local custom skin in p
   const patched = pageContext.__blobioCustomSkinPatchGwtCacheSource(gwtSource);
   const patchedAgain = pageContext.__blobioCustomSkinPatchGwtCacheSource(patched);
 
-  assert.match(patched, /\|\|c==="BlobioCustomSkin_testuser"/);
   assert.match(patched, /__blobioCustomSkinIsLocalCell/);
-  assert.match(patched, /__blobioCustomSkinPatchUsable/);
-  assert.match(patched, /__blobioCustomSkinForceLocal/);
-  assert.match(patched, /i=_blobioState\.baseSkin\.name\|\|_blobioState\.localName/);
-  assert.match(patched, /i!=null&&\(__blobioForceSkin\|\|/);
+  assert.match(patched, /__blobioCustomSkinRegisterCell/);
+  assert.match(patched, /__blobioCustomSkinDrawOverlay/);
+  assert.doesNotMatch(patched, /__blobioCustomSkinPatchUsable/);
+  assert.doesNotMatch(patched, /__blobioCustomSkinForceLocal/);
   assert.doesNotMatch(patched, /_re\(Zxe\.A,b\)/);
   assert.match(patched, /__blobioGwtGame=this/);
   assert.equal(patchedAgain, patched);
