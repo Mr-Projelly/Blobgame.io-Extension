@@ -207,6 +207,31 @@ function addUsername(document, text = 'SkyView') {
   return username;
 }
 
+function addMainMenuAlignmentTargets(document) {
+  const logo = document.createElement('div');
+  logo.classList.add('logo');
+
+  const inputs = document.createElement('div');
+  inputs.classList.add('inputs-container');
+  const input = document.createElement('input');
+  input.id = 'nick';
+  inputs.appendChild(input);
+
+  const gameWrapper = document.createElement('div');
+  gameWrapper.id = 'game-wrapper';
+  const modeSelect = document.createElement('div');
+  modeSelect.classList.add('custom-select');
+  const regionSelect = document.createElement('div');
+  regionSelect.classList.add('custom-select');
+  gameWrapper.append(modeSelect, regionSelect);
+
+  const ipContainer = document.createElement('li');
+  ipContainer.id = 'ip-container';
+
+  document.body.append(logo, inputs, gameWrapper, ipContainer);
+  return { logo, inputs, modeSelect, regionSelect, ipContainer };
+}
+
 function addOriginalSocialLinks(document) {
   const social = document.createElement('div');
   social.classList.add('social');
@@ -609,6 +634,7 @@ test('MenuFeature combines policy links and other games into one bottom menu', (
   assert.equal(dockButtons.length, 1);
   assert.equal(dockButtons[0].textContent, 'Policy/Other Games');
   assert.equal(dockButtons[0].dataset.panel, 'policy-games');
+  assert.equal(policyDock.classList.contains('blobio-main-menu-align-target'), false);
   const footerDockCss = style.textContent.match(/\.blobio-footer-dock\s*{[^}]*}/)?.[0] || '';
   assert.match(style.textContent, /\.blobio-footer-dock\s*{[\s\S]*left: 50%;/);
   assert.match(style.textContent, /\.blobio-footer-dock\s*{[\s\S]*bottom: 10px;/);
@@ -695,12 +721,20 @@ test('MenuFeature keeps folded policy links visible after a page refresh pass', 
 test('MenuFeature CSS hides the inputs image and frames main menu fields with green glow', () => {
   const document = createFakeDocument();
   addReplayButton(document);
+  const alignmentTargets = addMainMenuAlignmentTargets(document);
 
   const feature = new MenuFeature({ document, assets });
   feature.start();
 
   const style = document.getElementById('blobio-menu-style').textContent;
 
+  assert.equal(alignmentTargets.logo.classList.contains('blobio-main-menu-align-target'), true);
+  assert.equal(alignmentTargets.inputs.classList.contains('blobio-main-menu-align-target'), true);
+  assert.equal(alignmentTargets.modeSelect.classList.contains('blobio-main-menu-align-target'), true);
+  assert.equal(alignmentTargets.regionSelect.classList.contains('blobio-main-menu-align-target'), true);
+  assert.equal(alignmentTargets.ipContainer.classList.contains('blobio-main-menu-align-target'), true);
+  assert.match(style, /\.blobio-main-menu-align-target\s*{[\s\S]*transform: translateX\(-14px\) !important;/);
+  assert.match(style, /\.blobio-main-menu-align-target\s*{[\s\S]*transition: transform 160ms ease;/);
   assert.match(style, /img\.inputs-background-img\s*{[\s\S]*display: none !important;/);
   assert.match(style, /\.inputs-container input\s*,[\s\S]*\.choose-skin-btn\s*,[\s\S]*#game-wrapper \.custom-select/);
   assert.match(style, /\.progress-bar\s*{[\s\S]*box-shadow:/);
@@ -916,8 +950,15 @@ test('MenuFeature adds a Custom Skin tab under YouTube when Custom Imgur Skin is
   assert.match(style, /\.blobio-custom-skin-actions button\s*{[\s\S]*transition: transform 150ms ease, box-shadow 150ms ease;/);
   assert.match(style, /\.blobio-custom-skin-actions button:hover\s*{[\s\S]*transform: scale\(1\.04\);/);
   assert.match(style, /\.blobio-custom-skin-action-remove\s*{[\s\S]*background: rgba\(102, 10, 16, 0\.92\)/);
+  assert.match(style, /\.blobio-custom-skin-notice\s*{[\s\S]*font-size: 17px;/);
+  assert.match(style, /\.blobio-custom-skin-notice\s*{[\s\S]*padding: 5px 12px;/);
+  assert.match(style, /\.blobio-custom-skin-notice\s*{[\s\S]*border-radius: 8px;/);
   assert.match(style, /\.blobio-custom-skin-notice\.is-success\s*{[\s\S]*color: #dfffe6;/);
+  assert.match(style, /\.blobio-custom-skin-notice\.is-success\s*{[\s\S]*background: rgba\(3, 44, 23, 0\.86\);/);
+  assert.match(style, /\.blobio-custom-skin-notice\.is-success\s*{[\s\S]*border: 1px solid rgba\(142, 255, 174, 0\.62\);/);
   assert.match(style, /\.blobio-custom-skin-notice\.is-error\s*{[\s\S]*color: #ffaaa8;/);
+  assert.match(style, /\.blobio-custom-skin-notice\.is-error\s*{[\s\S]*background: rgba\(102, 10, 16, 0\.9\);/);
+  assert.match(style, /\.blobio-custom-skin-notice\.is-error\s*{[\s\S]*border: 1px solid rgba\(255, 116, 116, 0\.72\);/);
 
   customTab.click();
 
@@ -1035,6 +1076,10 @@ test('MenuFeature resolves the fake local custom skin path to the active Imgur s
     'https://i.imgur.com/OZz80VZ.jpeg',
   );
   assert.equal(
+    feature.resolveCustomSkinImageUrl('/skins/premium/BlobioCustomSkin_testuser.png'),
+    'https://i.imgur.com/OZz80VZ.jpeg',
+  );
+  assert.equal(
     feature.resolveCustomSkinImageUrl('https://client.blobgame.io/skins/free/BlobioCustomSkin_someoneelse.png'),
     'https://client.blobgame.io/skins/free/BlobioCustomSkin_someoneelse.png',
   );
@@ -1095,6 +1140,8 @@ test('MenuFeature runtime hook rewrites only local custom skin XHR requests', ()
 
   const matching = new document.defaultView.XMLHttpRequest();
   matching.open('GET', '/skins/free/BlobioCustomSkin_testuser.png', true);
+  const premiumMatching = new document.defaultView.XMLHttpRequest();
+  premiumMatching.open('GET', '/skins/premium/BlobioCustomSkin_testuser.png', true);
   const otherUser = new document.defaultView.XMLHttpRequest();
   otherUser.open('GET', '/skins/free/BlobioCustomSkin_otheruser.png', true);
 
@@ -1102,6 +1149,7 @@ test('MenuFeature runtime hook rewrites only local custom skin XHR requests', ()
   assert.equal(document.getElementById('blobio-menu-style'), null);
   assert.equal(document.documentElement.classList.contains('blobio-menu-enabled'), false);
   assert.equal(matching.openArgs[1], 'https://i.imgur.com/OZz80VZ.jpeg');
+  assert.equal(premiumMatching.openArgs[1], 'https://i.imgur.com/OZz80VZ.jpeg');
   assert.equal(otherUser.openArgs[1], '/skins/free/BlobioCustomSkin_otheruser.png');
 });
 

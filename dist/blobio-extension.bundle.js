@@ -174,6 +174,11 @@ html.${className} footer.footer * {
   pointer-events: none !important;
 }
 
+html.${className} .blobio-main-menu-align-target {
+  transform: translateX(-14px) !important;
+  transition: transform 160ms ease;
+}
+
 html.${className} .aside.aside-2 {
   max-width: 260px !important;
   padding: 8px !important;
@@ -834,7 +839,9 @@ html.${className} app-skins .blobio-custom-skin-notice {
   transform: translateX(-50%);
   width: max-content;
   max-width: 90%;
-  font-size: 15px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  font-size: 17px;
   font-weight: 800;
   line-height: 1.2;
   pointer-events: none;
@@ -844,12 +851,18 @@ html.${className} app-skins .blobio-custom-skin-notice {
 
 html.${className} app-skins .blobio-custom-skin-notice.is-success {
   color: #dfffe6;
+  border: 1px solid rgba(142, 255, 174, 0.62);
+  background: rgba(3, 44, 23, 0.86);
   text-shadow: 0 0 8px rgba(118, 255, 154, 0.76), 0 0 18px rgba(79, 255, 130, 0.34);
+  box-shadow: 0 0 16px rgba(79, 255, 130, 0.26), inset 0 0 10px rgba(79, 255, 130, 0.12);
 }
 
 html.${className} app-skins .blobio-custom-skin-notice.is-error {
   color: #ffaaa8;
+  border: 1px solid rgba(255, 116, 116, 0.72);
+  background: rgba(102, 10, 16, 0.9);
   text-shadow: 0 0 8px rgba(148, 18, 18, 0.78), 0 0 18px rgba(255, 42, 42, 0.38);
+  box-shadow: 0 0 16px rgba(255, 49, 49, 0.3), inset 0 0 9px rgba(255, 89, 89, 0.18);
 }
 
 html.${className} .blobio-watermark-host {
@@ -1037,7 +1050,7 @@ html.${className} .blobio-watermark-extension::after {
   var DEFAULT_CLASS_NAME2 = "blobio-menu-enabled";
   var DEFAULT_STYLE_ID2 = "blobio-menu-style";
   var DEFAULT_TOOLBAR_CLASS = "blobio-menu-toolbar";
-  var DEFAULT_EXTENSION_VERSION = "0.1.20";
+  var DEFAULT_EXTENSION_VERSION = "0.1.21";
   var HIDDEN_CLASS = "blobio-original-hidden";
   var PARTNER_LINK_MATCH = /iogames\.space|iogames\.live|io-games\.zone|silvergames\.com|crazygames\.com/i;
   var FAILED_VIRAL_FRAME_MATCH = /viral\.iogames\.space/i;
@@ -1054,8 +1067,10 @@ html.${className} .blobio-watermark-extension::after {
   var CUSTOM_SKIN_DEFAULT_URL = "https://i.imgur.com/OZz80VZ.jpeg";
   var CUSTOM_SKIN_NAME = "BlobioCustomSkin";
   var CUSTOM_SKIN_TYPE = "free";
+  var CUSTOM_SKIN_TYPES = ["free", "premium"];
   var DIRECT_IMGUR_IMAGE_MATCH = /^https:\/\/i\.imgur\.com\/[a-z0-9]+\.(?:png|jpe?g|gif|webp)(?:\?.*)?$/i;
   var CUSTOM_SKIN_NOTICE_DURATION = 2200;
+  var MAIN_MENU_ALIGNMENT_CLASS = "blobio-main-menu-align-target";
   var DEFAULT_VIDEO = {
     title: "Featured Blob.io Video",
     url: "https://www.youtube.com/watch?v=GOlXDLWeGMo"
@@ -1151,6 +1166,7 @@ html.${className} .blobio-watermark-extension::after {
       this.refreshTimer = null;
       this.panelBodies = /* @__PURE__ */ new Map();
       this.hiddenOriginalNodes = /* @__PURE__ */ new Set();
+      this.mainMenuAlignmentTargets = /* @__PURE__ */ new Set();
       this.policyDock = null;
       this.settingsListeners = [];
       this.customSkinListeners = [];
@@ -1175,6 +1191,7 @@ html.${className} .blobio-watermark-extension::after {
       }
       this.ensureStyle();
       this.applyPageClass();
+      this.syncMainMenuAlignment();
       this.installToolbar();
       this.hideOriginalSections();
       this.installPolicyDock();
@@ -1225,6 +1242,7 @@ html.${className} .blobio-watermark-extension::after {
         node.classList?.remove(HIDDEN_CLASS);
       }
       this.hiddenOriginalNodes.clear();
+      this.clearMainMenuAlignment();
       const style = this.styleNode || this.document.getElementById?.(this.styleId);
       style?.remove();
       this.styleNode = null;
@@ -1256,6 +1274,40 @@ html.${className} .blobio-watermark-extension::after {
       this.document.documentElement.classList.add(this.className);
       this.document.body?.classList.add(this.className);
     }
+    syncMainMenuAlignment() {
+      if (!this.frontPageUi) {
+        return;
+      }
+      const selectors = [
+        ".logo",
+        ".main-logo",
+        ".inputs-container",
+        "#game-wrapper .custom-select",
+        "#ip-container"
+      ];
+      const nextTargets = /* @__PURE__ */ new Set();
+      for (const selector of selectors) {
+        for (const node of this.document.querySelectorAll?.(selector) || []) {
+          if (this.isInsideOwnUi(node)) {
+            continue;
+          }
+          node.classList?.add(MAIN_MENU_ALIGNMENT_CLASS);
+          nextTargets.add(node);
+        }
+      }
+      for (const node of this.mainMenuAlignmentTargets) {
+        if (!nextTargets.has(node)) {
+          node.classList?.remove(MAIN_MENU_ALIGNMENT_CLASS);
+        }
+      }
+      this.mainMenuAlignmentTargets = nextTargets;
+    }
+    clearMainMenuAlignment() {
+      for (const node of this.mainMenuAlignmentTargets) {
+        node.classList?.remove(MAIN_MENU_ALIGNMENT_CLASS);
+      }
+      this.mainMenuAlignmentTargets.clear();
+    }
     watchPage() {
       const MutationObserver = this.document.defaultView?.MutationObserver || globalThis.MutationObserver;
       if (!MutationObserver) {
@@ -1280,6 +1332,7 @@ html.${className} .blobio-watermark-extension::after {
           return;
         }
         this.applyPageClass();
+        this.syncMainMenuAlignment();
         this.installToolbar();
         this.hideOriginalSections();
         this.installPolicyDock();
@@ -2377,7 +2430,7 @@ html.${className} .blobio-watermark-extension::after {
       }
       const localSkinName = this.getCustomSkinLocalName();
       const escapedName = localSkinName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const customSkinPath = new RegExp(`/skins/${CUSTOM_SKIN_TYPE}/${escapedName}\\.png$`, "i");
+      const customSkinPath = new RegExp(`/skins/(?:${CUSTOM_SKIN_TYPES.join("|")})/${escapedName}\\.png$`, "i");
       if (customSkinPath.test(this.getUrlPath(originalUrl))) {
         return activeUrl;
       }
@@ -2393,13 +2446,17 @@ html.${className} .blobio-watermark-extension::after {
         return manifest;
       }
       const localSkinName = this.getCustomSkinLocalName();
-      const skinPath = `skins/${CUSTOM_SKIN_TYPE}/${localSkinName}.png`;
-      if (manifest.includes(skinPath)) {
-        return manifest;
-      }
-      const separator = manifest.endsWith("\n") || manifest.length === 0 ? "" : "\n";
-      return `${manifest}${separator}i:${skinPath}:0:image/png
+      let patchedManifest = manifest;
+      for (const type of CUSTOM_SKIN_TYPES) {
+        const skinPath = `skins/${type}/${localSkinName}.png`;
+        if (patchedManifest.includes(skinPath)) {
+          continue;
+        }
+        const separator = patchedManifest.endsWith("\n") || patchedManifest.length === 0 ? "" : "\n";
+        patchedManifest += `${separator}i:${skinPath}:0:image/png
 `;
+      }
+      return patchedManifest;
     }
     isCustomSkinAssetManifestUrl(url) {
       return /(?:^|\/)assets\/assets\.txt$/i.test(this.getUrlPath(url));

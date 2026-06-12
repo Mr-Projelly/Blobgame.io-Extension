@@ -20,6 +20,11 @@ html.${className} footer.footer * {
   pointer-events: none !important;
 }
 
+html.${className} .blobio-main-menu-align-target {
+  transform: translateX(-14px) !important;
+  transition: transform 160ms ease;
+}
+
 html.${className} .aside.aside-2 {
   max-width: 260px !important;
   padding: 8px !important;
@@ -680,7 +685,9 @@ html.${className} app-skins .blobio-custom-skin-notice {
   transform: translateX(-50%);
   width: max-content;
   max-width: 90%;
-  font-size: 15px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  font-size: 17px;
   font-weight: 800;
   line-height: 1.2;
   pointer-events: none;
@@ -690,12 +697,18 @@ html.${className} app-skins .blobio-custom-skin-notice {
 
 html.${className} app-skins .blobio-custom-skin-notice.is-success {
   color: #dfffe6;
+  border: 1px solid rgba(142, 255, 174, 0.62);
+  background: rgba(3, 44, 23, 0.86);
   text-shadow: 0 0 8px rgba(118, 255, 154, 0.76), 0 0 18px rgba(79, 255, 130, 0.34);
+  box-shadow: 0 0 16px rgba(79, 255, 130, 0.26), inset 0 0 10px rgba(79, 255, 130, 0.12);
 }
 
 html.${className} app-skins .blobio-custom-skin-notice.is-error {
   color: #ffaaa8;
+  border: 1px solid rgba(255, 116, 116, 0.72);
+  background: rgba(102, 10, 16, 0.9);
   text-shadow: 0 0 8px rgba(148, 18, 18, 0.78), 0 0 18px rgba(255, 42, 42, 0.38);
+  box-shadow: 0 0 16px rgba(255, 49, 49, 0.3), inset 0 0 9px rgba(255, 89, 89, 0.18);
 }
 
 html.${className} .blobio-watermark-host {

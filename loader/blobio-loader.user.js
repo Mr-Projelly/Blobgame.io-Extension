@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Blobio Web Script Loader
 // @namespace    https://github.com/SkyViewBlobio/Blobgame.io-Web-Script
-// @version      0.1.20
+// @version      0.1.21
 // @description  Loads the Blobio modular extension bundle from GitHub.
 // @match        *://blobgame.io/*
 // @match        *://custom.client.blobgame.io/*
@@ -25,12 +25,13 @@
   const CUSTOM_SKIN_PREVIOUS_KEY = 'blobio.customSkin.previousSkin';
   const CUSTOM_SKIN_LOCAL_NAME_KEY = 'blobio.customSkin.localName';
   const CUSTOM_SKIN_TYPE = 'free';
+  const CUSTOM_SKIN_TYPES = ['free', 'premium'];
   const CUSTOM_SKIN_NAME = 'BlobioCustomSkin';
   const DIRECT_IMGUR_IMAGE_MATCH = /^https:\/\/i\.imgur\.com\/[a-z0-9]+\.(?:png|jpe?g|gif|webp)(?:\?.*)?$/i;
   const CUSTOM_CLIENT_HOST = 'custom.client.blobgame.io';
   const BUNDLE_URLS = [
-    'https://raw.githubusercontent.com/SkyViewBlobio/Blobgame.io-Web-Script/main/dist/blobio-extension.bundle.js?v=0.1.20',
-    'https://cdn.jsdelivr.net/gh/SkyViewBlobio/Blobgame.io-Web-Script@main/dist/blobio-extension.bundle.js?v=0.1.20',
+    'https://raw.githubusercontent.com/SkyViewBlobio/Blobgame.io-Web-Script/main/dist/blobio-extension.bundle.js?v=0.1.21',
+    'https://cdn.jsdelivr.net/gh/SkyViewBlobio/Blobgame.io-Web-Script@main/dist/blobio-extension.bundle.js?v=0.1.21',
   ];
 
   function logError(message, detail) {
@@ -161,6 +162,7 @@
   const CUSTOM_SKIN_ACTIVE_KEY = ${JSON.stringify(CUSTOM_SKIN_ACTIVE_KEY)};
   const CUSTOM_SKIN_LOCAL_NAME_KEY = ${JSON.stringify(CUSTOM_SKIN_LOCAL_NAME_KEY)};
   const CUSTOM_SKIN_TYPE = ${JSON.stringify(CUSTOM_SKIN_TYPE)};
+  const CUSTOM_SKIN_TYPES = ${JSON.stringify(CUSTOM_SKIN_TYPES)};
   const DIRECT_IMGUR_IMAGE_MATCH = /^https:\\/\\/i\\.imgur\\.com\\/[a-z0-9]+\\.(?:png|jpe?g|gif|webp)(?:\\?.*)?$/i;
   const GWT_PATCH_MARKER = '__blobioCustomSkinGwtPatch';
 
@@ -216,6 +218,26 @@
     return { activeUrl, localName };
   }
 
+  function decodeBase64UrlJson(value) {
+    try {
+      const normalized = String(value || '').replace(/-/g, '+').replace(/_/g, '/');
+      const padded = normalized + '='.repeat((4 - normalized.length % 4) % 4);
+      const decoded = typeof atob === 'function'
+        ? atob(padded)
+        : '';
+      return decoded ? JSON.parse(decoded) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function getAccessTokenUserId() {
+    const token = getLocalValue('access-token') || '';
+    const payload = decodeBase64UrlJson(token.split('.')[1] || '');
+    const userId = payload?.userId ?? payload?.id ?? payload?.uid ?? '';
+    return userId === null || userId === undefined ? '' : String(userId);
+  }
+
   window.__blobioCustomSkinRuntimeState = function customSkinRuntimeState() {
     const state = getState();
     if (!state) {
@@ -225,8 +247,30 @@
     return {
       activeUrl: state.activeUrl,
       localName: state.localName,
+      userId: getAccessTokenUserId(),
       playerName: getLocalValue('config-' + 'username') || '',
     };
+  };
+
+  window.__blobioCustomSkinIsLocalCell = function customSkinIsLocalCell(cell) {
+    const state = window.__blobioCustomSkinRuntimeState?.();
+    if (!state || !cell) {
+      return false;
+    }
+
+    if (state.userId) {
+      const candidates = [cell.J, cell.pID, cell.userId, cell.u].filter((value) => value !== undefined && value !== null);
+      return candidates.some((value) => String(value) === state.userId);
+    }
+
+    const playerName = String(state.playerName || '').trim().toLowerCase();
+    const cellName = String(cell.B || cell.name || '').trim().toLowerCase();
+    return Boolean(playerName && cellName && playerName === cellName);
+  };
+
+  window.__blobioCustomSkinPatchUsable = function customSkinPatchUsable(_items, skinName, currentResult) {
+    const state = getState();
+    return Boolean(currentResult || (state && skinName === state.localName));
   };
 
   function syncConfig() {
@@ -267,7 +311,7 @@
     }
 
     const escapedName = state.localName.replace(/[-/\\\\^$*+?.()|[\\]{}]/g, '\\\\$&');
-    const skinPath = new RegExp('/skins/' + CUSTOM_SKIN_TYPE + '/' + escapedName + '\\\\.png$', 'i');
+    const skinPath = new RegExp('/skins/(?:' + CUSTOM_SKIN_TYPES.join('|') + ')/' + escapedName + '\\\\.png$', 'i');
     return skinPath.test(getUrlPath(originalUrl)) ? state.activeUrl : originalUrl;
   }
 
@@ -278,14 +322,19 @@
       return originalText;
     }
 
-    const skinPath = 'skins/' + CUSTOM_SKIN_TYPE + '/' + state.localName + '.png';
-    if (originalText.includes(skinPath)) {
-      return originalText;
+    let patchedText = originalText;
+    for (const type of CUSTOM_SKIN_TYPES) {
+      const skinPath = 'skins/' + type + '/' + state.localName + '.png';
+      if (patchedText.includes(skinPath)) {
+        continue;
+      }
+
+      const separator = patchedText.endsWith('\\n') || patchedText.length === 0 ? '' : '\\n';
+      patchedText += separator + 'i:' + skinPath + ':0:image/png\\n';
+      debug('Appending custom skin to asset manifest.', skinPath);
     }
 
-    const separator = originalText.endsWith('\\n') || originalText.length === 0 ? '' : '\\n';
-    debug('Appending custom skin to asset manifest.', skinPath);
-    return originalText + separator + 'i:' + skinPath + ':0:image/png\\n';
+    return patchedText;
   }
 
   function patchGwtCacheSource(source) {
@@ -298,31 +347,51 @@
     let patched = originalSource;
     let changed = false;
     const localName = JSON.stringify(state.localName);
-    const textureNeedle = "function fwe(a,b,c,d){var e,f;f=bv(a.a,c);";
-    const skinNeedle = "else if($re(a.b,c)){f=b==($Ae(),XAe)?";
-    const gameNeedle = "function Kxe(){Hb.call(this,'CONTEXT',0);";
+    const ownershipPattern = /\\b([$A-Za-z_][0-9A-Za-z_$]*\\(a\\.c,)([$A-Za-z_][0-9A-Za-z_$]*\\(e,a\\.c\\.r,b\\.lvl\\?parseInt\\(b\\.lvl\\):-1\\))(\\))/;
+    const skinAllowPattern = /else if\\(([$A-Za-z_][0-9A-Za-z_$]*\\(a\\.b,c\\))\\)\\{f=b==\\(/;
+    const constructorPattern = /function ([$A-Za-z_][0-9A-Za-z_$]*)\\(a,b,c,d,e,f,g,h,i,j\\)\\{var k,l,m,n,o,p;([\\s\\S]{0,3200}?h!=null&&\\(this\\.B=h\\);this\\.L=i;)/;
+    const constructorSkinBranchPattern = /i!=null&&\\(([$A-Za-z_][0-9A-Za-z_$]*)\\(\\),([$A-Za-z_][0-9A-Za-z_$]*)\\)\\?/;
+    const gamePattern = /(function [$A-Za-z_][0-9A-Za-z_$]*\\(\\)\\{Hb\\.call\\(this,'CONTEXT',0\\);)/;
 
-    if (patched.includes(textureNeedle)) {
+    if (ownershipPattern.test(patched)) {
       patched = patched.replace(
-        textureNeedle,
-        "function fwe(a,b,c,d){try{var _blobio=$wnd.__blobioCustomSkinRuntimeState&&$wnd.__blobioCustomSkinRuntimeState();if(_blobio&&b&&(b.p||_re(Zxe.A,b)||(b.B&&_blobio.playerName&&String(b.B).toLowerCase()===String(_blobio.playerName).toLowerCase()))){c=_blobio.localName;d=($Ae(),VAe)}}catch(_blobioError){}var e,f;f=bv(a.a,c);",
+        ownershipPattern,
+        '$1($wnd.__blobioCustomSkinPatchUsable?$wnd.__blobioCustomSkinPatchUsable(e,a.c.r,$2):$2)$3',
       );
       changed = true;
-      debug('Patched GWT texture loader for local custom skin.', state.localName);
+      debug('Patched GWT custom skin ownership gate.', state.localName);
     } else {
-      logError('Could not patch GWT texture loader. Custom skin may not render on local cells.');
+      logError('Could not patch GWT custom skin ownership gate. Custom skin may not be accepted.');
     }
 
-    if (patched.includes(skinNeedle)) {
-      patched = patched.replace(skinNeedle, "else if($re(a.b,c)||c===" + localName + "){f=b==($Ae(),XAe)?");
+    if (skinAllowPattern.test(patched)) {
+      patched = patched.replace(skinAllowPattern, "else if($1||c===" + localName + "){f=b==(");
       changed = true;
       debug('Patched GWT skin allow-list for custom skin.', state.localName);
     } else {
       logError('Could not patch GWT skin allow-list. Custom skin may not render.');
     }
 
-    if (patched.includes(gameNeedle)) {
-      patched = patched.replace(gameNeedle, gameNeedle + "try{$wnd.__blobioGwtGame=this}catch(e){}");
+    if (constructorPattern.test(patched)) {
+      patched = patched.replace(
+        constructorPattern,
+        "function $1(a,b,c,d,e,f,g,h,i,j){var k,l,m,n,o,p;$2try{var _blobioState=$wnd.__blobioCustomSkinRuntimeState&&$wnd.__blobioCustomSkinRuntimeState();var __blobioForceSkin=!!(_blobioState&&$wnd.__blobioCustomSkinIsLocalCell&&$wnd.__blobioCustomSkinIsLocalCell(this));var __blobioCustomSkinForceLocal=__blobioForceSkin;if(__blobioForceSkin){i=_blobioState.localName;this.L=i}}catch(_blobioError){}",
+      );
+      changed = true;
+      debug('Patched GWT cell constructor for local custom skin.', state.localName);
+    } else {
+      logError('Could not patch GWT cell constructor. Custom skin may not attach to local cells.');
+    }
+
+    if (constructorSkinBranchPattern.test(patched)) {
+      patched = patched.replace(constructorSkinBranchPattern, 'i!=null&&(__blobioForceSkin||($1(),$2))?');
+      changed = true;
+    } else {
+      logError('Could not patch GWT local skin render gate. Custom skin may not render.');
+    }
+
+    if (gamePattern.test(patched)) {
+      patched = patched.replace(gamePattern, "$1try{$wnd.__blobioGwtGame=this}catch(e){}");
       changed = true;
     }
 
@@ -629,7 +698,7 @@
     }
 
     const escapedName = state.localName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const skinPath = new RegExp(`/skins/${CUSTOM_SKIN_TYPE}/${escapedName}\\.png$`, 'i');
+    const skinPath = new RegExp(`/skins/(?:${CUSTOM_SKIN_TYPES.join('|')})/${escapedName}\\.png$`, 'i');
     return skinPath.test(getUrlPath(originalUrl)) ? state.activeUrl : originalUrl;
   }
 
@@ -640,13 +709,18 @@
       return originalText;
     }
 
-    const skinPath = `skins/${CUSTOM_SKIN_TYPE}/${state.localName}.png`;
-    if (originalText.includes(skinPath)) {
-      return originalText;
+    let patchedText = originalText;
+    for (const type of CUSTOM_SKIN_TYPES) {
+      const skinPath = `skins/${type}/${state.localName}.png`;
+      if (patchedText.includes(skinPath)) {
+        continue;
+      }
+
+      const separator = patchedText.endsWith('\n') || patchedText.length === 0 ? '' : '\n';
+      patchedText += `${separator}i:${skinPath}:0:image/png\n`;
     }
 
-    const separator = originalText.endsWith('\n') || originalText.length === 0 ? '' : '\n';
-    return `${originalText}${separator}i:${skinPath}:0:image/png\n`;
+    return patchedText;
   }
 
   function findPropertyDescriptor(prototype, propertyName) {

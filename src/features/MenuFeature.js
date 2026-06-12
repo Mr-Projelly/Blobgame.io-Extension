@@ -4,7 +4,7 @@ import { createBlobioStorage } from '../storage/BlobioStorage.js';
 const DEFAULT_CLASS_NAME = 'blobio-menu-enabled';
 const DEFAULT_STYLE_ID = 'blobio-menu-style';
 const DEFAULT_TOOLBAR_CLASS = 'blobio-menu-toolbar';
-const DEFAULT_EXTENSION_VERSION = '0.1.20';
+const DEFAULT_EXTENSION_VERSION = '0.1.21';
 const HIDDEN_CLASS = 'blobio-original-hidden';
 const PARTNER_LINK_MATCH = /iogames\.space|iogames\.live|io-games\.zone|silvergames\.com|crazygames\.com/i;
 const FAILED_VIRAL_FRAME_MATCH = /viral\.iogames\.space/i;
@@ -21,8 +21,10 @@ const CUSTOM_SKIN_LOCAL_NAME_KEY = 'blobio.customSkin.localName';
 const CUSTOM_SKIN_DEFAULT_URL = 'https://i.imgur.com/OZz80VZ.jpeg';
 const CUSTOM_SKIN_NAME = 'BlobioCustomSkin';
 const CUSTOM_SKIN_TYPE = 'free';
+const CUSTOM_SKIN_TYPES = ['free', 'premium'];
 const DIRECT_IMGUR_IMAGE_MATCH = /^https:\/\/i\.imgur\.com\/[a-z0-9]+\.(?:png|jpe?g|gif|webp)(?:\?.*)?$/i;
 const CUSTOM_SKIN_NOTICE_DURATION = 2200;
+const MAIN_MENU_ALIGNMENT_CLASS = 'blobio-main-menu-align-target';
 
 const DEFAULT_VIDEO = {
   title: 'Featured Blob.io Video',
@@ -122,6 +124,7 @@ export class MenuFeature {
     this.refreshTimer = null;
     this.panelBodies = new Map();
     this.hiddenOriginalNodes = new Set();
+    this.mainMenuAlignmentTargets = new Set();
     this.policyDock = null;
     this.settingsListeners = [];
     this.customSkinListeners = [];
@@ -150,6 +153,7 @@ export class MenuFeature {
 
     this.ensureStyle();
     this.applyPageClass();
+    this.syncMainMenuAlignment();
     this.installToolbar();
     this.hideOriginalSections();
     this.installPolicyDock();
@@ -211,6 +215,7 @@ export class MenuFeature {
     }
 
     this.hiddenOriginalNodes.clear();
+    this.clearMainMenuAlignment();
 
     const style = this.styleNode || this.document.getElementById?.(this.styleId);
     style?.remove();
@@ -250,6 +255,48 @@ export class MenuFeature {
     this.document.body?.classList.add(this.className);
   }
 
+  syncMainMenuAlignment() {
+    if (!this.frontPageUi) {
+      return;
+    }
+
+    const selectors = [
+      '.logo',
+      '.main-logo',
+      '.inputs-container',
+      '#game-wrapper .custom-select',
+      '#ip-container',
+    ];
+    const nextTargets = new Set();
+
+    for (const selector of selectors) {
+      for (const node of this.document.querySelectorAll?.(selector) || []) {
+        if (this.isInsideOwnUi(node)) {
+          continue;
+        }
+
+        node.classList?.add(MAIN_MENU_ALIGNMENT_CLASS);
+        nextTargets.add(node);
+      }
+    }
+
+    for (const node of this.mainMenuAlignmentTargets) {
+      if (!nextTargets.has(node)) {
+        node.classList?.remove(MAIN_MENU_ALIGNMENT_CLASS);
+      }
+    }
+
+    this.mainMenuAlignmentTargets = nextTargets;
+  }
+
+  clearMainMenuAlignment() {
+    for (const node of this.mainMenuAlignmentTargets) {
+      node.classList?.remove(MAIN_MENU_ALIGNMENT_CLASS);
+    }
+
+    this.mainMenuAlignmentTargets.clear();
+  }
+
   watchPage() {
     const MutationObserver = this.document.defaultView?.MutationObserver || globalThis.MutationObserver;
     if (!MutationObserver) {
@@ -280,6 +327,7 @@ export class MenuFeature {
       }
 
       this.applyPageClass();
+      this.syncMainMenuAlignment();
       this.installToolbar();
       this.hideOriginalSections();
       this.installPolicyDock();
@@ -1623,7 +1671,7 @@ export class MenuFeature {
 
     const localSkinName = this.getCustomSkinLocalName();
     const escapedName = localSkinName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const customSkinPath = new RegExp(`/skins/${CUSTOM_SKIN_TYPE}/${escapedName}\\.png$`, 'i');
+    const customSkinPath = new RegExp(`/skins/(?:${CUSTOM_SKIN_TYPES.join('|')})/${escapedName}\\.png$`, 'i');
 
     if (customSkinPath.test(this.getUrlPath(originalUrl))) {
       return activeUrl;
@@ -1644,13 +1692,18 @@ export class MenuFeature {
     }
 
     const localSkinName = this.getCustomSkinLocalName();
-    const skinPath = `skins/${CUSTOM_SKIN_TYPE}/${localSkinName}.png`;
-    if (manifest.includes(skinPath)) {
-      return manifest;
+    let patchedManifest = manifest;
+    for (const type of CUSTOM_SKIN_TYPES) {
+      const skinPath = `skins/${type}/${localSkinName}.png`;
+      if (patchedManifest.includes(skinPath)) {
+        continue;
+      }
+
+      const separator = patchedManifest.endsWith('\n') || patchedManifest.length === 0 ? '' : '\n';
+      patchedManifest += `${separator}i:${skinPath}:0:image/png\n`;
     }
 
-    const separator = manifest.endsWith('\n') || manifest.length === 0 ? '' : '\n';
-    return `${manifest}${separator}i:${skinPath}:0:image/png\n`;
+    return patchedManifest;
   }
 
   isCustomSkinAssetManifestUrl(url) {
