@@ -4008,7 +4008,7 @@ html.${className} .blobio-watermark-extension::after {
       script.dataset.blobioCustomSkinOverlayRefresh = "true";
       script.textContent = `;(() => {
   const state = ${JSON.stringify(nextState)};
-  window.__blobioCustomSkinOverlayV7?.refresh?.(state);
+  window.__blobioCustomSkinOverlayV8?.refresh?.(state);
 })();`;
       (this.document.documentElement || this.document.head || this.document.body)?.appendChild?.(script);
       script.remove();
@@ -4177,8 +4177,12 @@ html.${className} .blobio-watermark-extension::after {
     const OWN_ID_LIMIT = 128;
     const NODE_LIMIT = 5e3;
     const DEBUG_LIMIT = 700;
-    if (window.__blobioCustomSkinOverlayV7) {
-      window.__blobioCustomSkinOverlayV7.refresh?.(initialState);
+    const SCREEN_CIRCLE_LIMIT = 300;
+    const SCREEN_CIRCLE_MAX_AGE_MS = 180;
+    const CELL_BORDER_OVERDRAW = 1.08;
+    const MIN_CELL_SCREEN_RADIUS = 6;
+    if (window.__blobioCustomSkinOverlayV8) {
+      window.__blobioCustomSkinOverlayV8.refresh?.(initialState);
       return;
     }
     const state = {
@@ -4214,7 +4218,12 @@ html.${className} .blobio-watermark-extension::after {
       startedAt: (/* @__PURE__ */ new Date()).toISOString(),
       storageBridgeSeen: Boolean(window.__blobioSharedStorageBridge),
       urlSources: {},
-      chosenUrlSource: ""
+      chosenUrlSource: "",
+      recentScreenCircles: [],
+      screenCircleMatches: [],
+      screenCircleCandidates: 0,
+      renderMode: "world-transform",
+      canvasHooked: false
     };
     function refresh(nextState) {
       const sources = collectUrlSources(nextState);
@@ -4452,17 +4461,45 @@ html.${className} .blobio-watermark-extension::after {
       if (!state.ownIds.size) {
         state.ownNodeMissFrames += 1;
       }
+      const freshCircles = getFreshScreenCircles(rect);
+      state.screenCircleCandidates = freshCircles.length;
+      state.screenCircleMatches = [];
       let drawn = 0;
-      for (const id of state.ownIds) {
-        const node = state.nodes.get(id);
-        if (!node || node.removed) continue;
-        const screen = worldToScreen(node.x, node.y, rect);
-        const radius = Math.max(4, Math.abs(node.size * state.camera.scale));
-        if (!isFinite(screen.x) || !isFinite(screen.y) || !isFinite(radius)) continue;
-        if (screen.x + radius < rect.left || screen.y + radius < rect.top || screen.x - radius > rect.left + rect.width || screen.y - radius > rect.top + rect.height) continue;
-        drawSkinCircle(ctx, state.image, screen.x, screen.y, radius);
+      const usedCircles = /* @__PURE__ */ new Set();
+      const ownNodes = Array.from(state.ownIds).map((id) => state.nodes.get(id)).filter((node) => node && !node.removed);
+      for (const node of ownNodes) {
+        const matchedCircle = pickBestScreenCircleForNode(node, freshCircles, usedCircles, rect, ownNodes);
+        let screen;
+        let radius;
+        let mode;
+        if (matchedCircle) {
+          usedCircles.add(matchedCircle.index);
+          screen = { x: matchedCircle.x, y: matchedCircle.y };
+          radius = matchedCircle.r;
+          mode = "screen-circle";
+        } else {
+          screen = worldToScreen(node.x, node.y, rect);
+          radius = Math.max(4, Math.abs(node.size * state.camera.scale));
+          mode = "world-transform";
+        }
+        const drawRadius = Math.max(MIN_CELL_SCREEN_RADIUS, radius * CELL_BORDER_OVERDRAW);
+        if (!isFinite(screen.x) || !isFinite(screen.y) || !isFinite(drawRadius)) continue;
+        if (screen.x + drawRadius < rect.left || screen.y + drawRadius < rect.top || screen.x - drawRadius > rect.left + rect.width || screen.y - drawRadius > rect.top + rect.height) continue;
+        drawSkinCircle(ctx, state.image, screen.x, screen.y, drawRadius);
+        state.screenCircleMatches.push({
+          id: node.id,
+          mode,
+          x: Math.round(screen.x),
+          y: Math.round(screen.y),
+          r: Math.round(drawRadius),
+          rawR: Math.round(radius),
+          worldX: node.x,
+          worldY: node.y,
+          size: node.size
+        });
         drawn += 1;
       }
+      state.renderMode = state.screenCircleMatches.some((item) => item.mode === "screen-circle") ? "screen-circle" : "world-transform";
       state.drawn = drawn;
       state.frame += 1;
       if (state.debug && state.frame % 60 === 0) {
@@ -4470,7 +4507,10 @@ html.${className} .blobio-watermark-extension::after {
           drawn,
           ownIds: state.ownIds.size,
           nodes: state.nodes.size,
-          camera: state.camera
+          camera: state.camera,
+          renderMode: state.renderMode,
+          screenCircleCandidates: state.screenCircleCandidates,
+          screenCircleMatches: state.screenCircleMatches
         }, "overlay-frame");
       }
     }
@@ -4479,8 +4519,83 @@ html.${className} .blobio-watermark-extension::after {
       ctx.beginPath();
       ctx.arc(x, y, radius, 0, Math.PI * 2);
       ctx.clip();
-      ctx.drawImage(image, x - radius, y - radius, radius * 2, radius * 2);
+      drawImageCover(ctx, image, x - radius, y - radius, radius * 2, radius * 2);
       ctx.restore();
+    }
+    function drawImageCover(ctx, image, dx, dy, dWidth, dHeight) {
+      const sourceWidth = image.naturalWidth || image.videoWidth || image.width || dWidth;
+      const sourceHeight = image.naturalHeight || image.videoHeight || image.height || dHeight;
+      if (!sourceWidth || !sourceHeight) {
+        ctx.drawImage(image, dx, dy, dWidth, dHeight);
+        return;
+      }
+      const sourceRatio = sourceWidth / sourceHeight;
+      const destRatio = dWidth / dHeight;
+      let sx = 0;
+      let sy = 0;
+      let sWidth = sourceWidth;
+      let sHeight = sourceHeight;
+      if (sourceRatio > destRatio) {
+        sWidth = sourceHeight * destRatio;
+        sx = (sourceWidth - sWidth) / 2;
+      } else if (sourceRatio < destRatio) {
+        sHeight = sourceWidth / destRatio;
+        sy = (sourceHeight - sHeight) / 2;
+      }
+      ctx.drawImage(image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
+    }
+    function getFreshScreenCircles(canvasRect) {
+      const now = performance.now();
+      const maxR = Math.max(40, Math.min(canvasRect.width || window.innerWidth || 0, canvasRect.height || window.innerHeight || 0) * 0.42);
+      const circles = [];
+      for (let index = state.recentScreenCircles.length - 1; index >= 0; index -= 1) {
+        const circle = state.recentScreenCircles[index];
+        if (!circle || now - circle.t > SCREEN_CIRCLE_MAX_AGE_MS) continue;
+        if (!Number.isFinite(circle.x) || !Number.isFinite(circle.y) || !Number.isFinite(circle.r)) continue;
+        if (circle.r < MIN_CELL_SCREEN_RADIUS || circle.r > maxR) continue;
+        if (circle.x + circle.r < canvasRect.left || circle.y + circle.r < canvasRect.top || circle.x - circle.r > canvasRect.left + canvasRect.width || circle.y - circle.r > canvasRect.top + canvasRect.height) continue;
+        circles.push({ ...circle, index });
+      }
+      return dedupeCircles(circles).slice(0, 80);
+    }
+    function dedupeCircles(circles) {
+      const result = [];
+      for (const circle of circles.sort((a, b) => b.t - a.t)) {
+        const duplicate = result.some((other) => {
+          const dx = other.x - circle.x;
+          const dy = other.y - circle.y;
+          return Math.hypot(dx, dy) < Math.max(4, Math.min(other.r, circle.r) * 0.08) && Math.abs(other.r - circle.r) < Math.max(4, circle.r * 0.08);
+        });
+        if (!duplicate) result.push(circle);
+        if (result.length >= 120) break;
+      }
+      return result;
+    }
+    function pickBestScreenCircleForNode(node, circles, usedCircles, rect, ownNodes) {
+      if (!circles.length) return null;
+      const predicted = worldToScreen(node.x, node.y, rect);
+      const expectedRadius = Math.max(4, Math.abs(node.size * state.camera.scale));
+      const canvasCenter = {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2
+      };
+      let best = null;
+      let bestScore = Infinity;
+      for (const circle of circles) {
+        if (usedCircles.has(circle.index)) continue;
+        const toPredicted = Math.hypot(circle.x - predicted.x, circle.y - predicted.y);
+        const toCenter = Math.hypot(circle.x - canvasCenter.x, circle.y - canvasCenter.y);
+        const radiusRatio = expectedRadius > 0 ? Math.abs(Math.log(Math.max(circle.r, 1) / Math.max(expectedRadius, 1))) : 0;
+        const tooBigPenalty = circle.r > Math.min(rect.width, rect.height) * 0.35 ? 8 : 0;
+        const centerWeight = ownNodes.length === 1 ? toCenter / Math.max(60, circle.r * 2.5) : 0;
+        const predictedWeight = toPredicted / Math.max(30, circle.r * 2);
+        const score = centerWeight + predictedWeight + radiusRatio * 0.8 + tooBigPenalty;
+        if (score < bestScore) {
+          bestScore = score;
+          best = circle;
+        }
+      }
+      return bestScore < 7 ? best : null;
     }
     function updateCameraFromOwnCells() {
       const live = [];
@@ -4514,6 +4629,73 @@ html.${className} .blobio-watermark-extension::after {
       return {
         x: canvasRect.left + canvasRect.width / 2 + (x - state.camera.x) * state.camera.scale,
         y: canvasRect.top + canvasRect.height / 2 + (y - state.camera.y) * state.camera.scale
+      };
+    }
+    function installCanvasCircleTracker() {
+      if (state.canvasHooked) return;
+      const proto = window.CanvasRenderingContext2D && window.CanvasRenderingContext2D.prototype;
+      if (!proto || proto.__blobioSkinCircleTrackerV8) return;
+      proto.__blobioSkinCircleTrackerV8 = true;
+      state.canvasHooked = true;
+      const originalArc = proto.arc;
+      const originalFill = proto.fill;
+      const originalStroke = proto.stroke;
+      proto.arc = function blobioTrackedArc(x, y, radius, startAngle, endAngle, anticlockwise) {
+        try {
+          if (isLikelyCellArc(this, x, y, radius, startAngle, endAngle)) {
+            this.__blobioLastCellArc = normalizeArcToViewport(this.canvas, x, y, radius);
+          }
+        } catch {
+        }
+        return originalArc.call(this, x, y, radius, startAngle, endAngle, anticlockwise);
+      };
+      function recordAndCall(ctx, original, args) {
+        try {
+          const circle = ctx.__blobioLastCellArc;
+          if (circle) {
+            circle.t = performance.now();
+            state.recentScreenCircles.push(circle);
+            if (state.recentScreenCircles.length > SCREEN_CIRCLE_LIMIT) {
+              state.recentScreenCircles.splice(0, state.recentScreenCircles.length - SCREEN_CIRCLE_LIMIT);
+            }
+            ctx.__blobioLastCellArc = null;
+          }
+        } catch {
+        }
+        return original.apply(ctx, args);
+      }
+      proto.fill = function blobioTrackedFill(...args) {
+        return recordAndCall(this, originalFill, args);
+      };
+      proto.stroke = function blobioTrackedStroke(...args) {
+        return recordAndCall(this, originalStroke, args);
+      };
+      log("canvas circle tracker installed", {}, "canvas");
+    }
+    function isLikelyCellArc(ctx, x, y, radius, startAngle, endAngle) {
+      if (!ctx || !ctx.canvas) return false;
+      if (ctx.canvas === state.overlay) return false;
+      const canvas = ctx.canvas;
+      const rect = canvas.getBoundingClientRect?.();
+      const width = rect?.width || canvas.clientWidth || canvas.width || 0;
+      const height = rect?.height || canvas.clientHeight || canvas.height || 0;
+      if (width < 240 || height < 180) return false;
+      if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(radius)) return false;
+      if (radius < MIN_CELL_SCREEN_RADIUS) return false;
+      const span = Math.abs((endAngle || 0) - (startAngle || 0));
+      if (span < Math.PI * 1.6) return false;
+      return true;
+    }
+    function normalizeArcToViewport(canvas, x, y, radius) {
+      const rect = canvas.getBoundingClientRect?.() || { left: 0, top: 0, width: canvas.width || 0, height: canvas.height || 0 };
+      const scaleX = rect.width && canvas.width ? rect.width / canvas.width : 1;
+      const scaleY = rect.height && canvas.height ? rect.height / canvas.height : 1;
+      return {
+        x: rect.left + x * scaleX,
+        y: rect.top + y * scaleY,
+        r: Math.abs(radius) * ((Math.abs(scaleX) + Math.abs(scaleY)) / 2 || 1),
+        canvasWidth: Math.round(rect.width || 0),
+        canvasHeight: Math.round(rect.height || 0)
       };
     }
     function installSocketHooks() {
@@ -5108,7 +5290,7 @@ html.${className} .blobio-watermark-extension::after {
     function downloadDebugDump() {
       const dump = {
         meta: {
-          version: "packet-overlay-v7",
+          version: "packet-overlay-v8",
           createdAt: (/* @__PURE__ */ new Date()).toISOString(),
           href: location.href
         },
@@ -5124,6 +5306,10 @@ html.${className} .blobio-watermark-extension::after {
           camera: state.camera,
           lastOwnCenter: state.lastOwnCenter,
           drawn: state.drawn,
+          renderMode: state.renderMode,
+          screenCircleCandidates: state.screenCircleCandidates,
+          screenCircleMatches: state.screenCircleMatches,
+          recentScreenCircles: state.recentScreenCircles.slice(-30),
           sockets: state.sockets,
           wsMessages: state.wsMessages,
           addNodePackets: state.addNodePackets,
@@ -5155,7 +5341,7 @@ html.${className} .blobio-watermark-extension::after {
         a.remove();
       }, 1e3);
     }
-    window.__blobioCustomSkinOverlayV7 = {
+    window.__blobioCustomSkinOverlayV8 = {
       state,
       refresh,
       dump: () => ({
@@ -5166,6 +5352,9 @@ html.${className} .blobio-watermark-extension::after {
         ownIds: Array.from(state.ownIds),
         nodes: state.nodes.size,
         drawn: state.drawn,
+        renderMode: state.renderMode,
+        screenCircleCandidates: state.screenCircleCandidates,
+        screenCircleMatches: state.screenCircleMatches,
         ownListPackets: state.ownListPackets,
         shortOwnFallbackUpdates: state.shortOwnFallbackUpdates,
         opCounts: state.opCounts,
@@ -5190,6 +5379,7 @@ html.${className} .blobio-watermark-extension::after {
       if (String(message.key).startsWith("blobio.customSkin.")) refresh();
     }, false);
     refresh(initialState);
+    installCanvasCircleTracker();
     installSocketHooks();
     renderLoop();
   }
