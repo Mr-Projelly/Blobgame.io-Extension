@@ -83,7 +83,7 @@ export class CustomSkinOverlayFeature {
   injectPageOverlayRefresh(nextState) {
     const script = this.document.createElement('script');
     script.dataset.blobioCustomSkinOverlayRefresh = 'true';
-    script.textContent = `;(() => {\n  const state = ${JSON.stringify(nextState)};\n  window.__blobioCustomSkinOverlayV8?.refresh?.(state);\n})();`;
+    script.textContent = `;(() => {\n  const state = ${JSON.stringify(nextState)};\n  window.__blobioCustomSkinOverlayV9?.refresh?.(state);\n})();`;
     (this.document.documentElement || this.document.head || this.document.body)?.appendChild?.(script);
     script.remove();
   }
@@ -276,9 +276,12 @@ function pageOverlayMain(initialState) {
   const SCREEN_CIRCLE_MAX_AGE_MS = 180;
   const CELL_BORDER_OVERDRAW = 1.08;
   const MIN_CELL_SCREEN_RADIUS = 6;
+  const OWN_CLUSTER_MAX_AGE_MS = 650;
+  const OWN_CLUSTER_LIMIT = 32;
+  const OWN_CLUSTER_MIN_SIZE = 12;
 
-  if (window.__blobioCustomSkinOverlayV8) {
-    window.__blobioCustomSkinOverlayV8.refresh?.(initialState);
+  if (window.__blobioCustomSkinOverlayV9) {
+    window.__blobioCustomSkinOverlayV9.refresh?.(initialState);
     return;
   }
 
@@ -321,7 +324,11 @@ function pageOverlayMain(initialState) {
     screenCircleCandidates: 0,
     renderMode: 'world-transform',
     canvasHooked: false,
-  };
+    inferredOwnIds: new Set(),
+    ownRenderNodes: [],
+    ownClusterCandidates: [],
+    ownClusterMatches: [],
+    };
 
   function refresh(nextState) {
     const sources = collectUrlSources(nextState);
@@ -608,9 +615,8 @@ function pageOverlayMain(initialState) {
 
     let drawn = 0;
     const usedCircles = new Set();
-    const ownNodes = Array.from(state.ownIds)
-      .map((id) => state.nodes.get(id))
-      .filter((node) => node && !node.removed);
+    const ownNodes = buildOwnRenderNodes();
+    updateCameraFromRenderNodes(ownNodes);
 
     for (const node of ownNodes) {
       const matchedCircle = pickBestScreenCircleForNode(node, freshCircles, usedCircles, rect, ownNodes);
@@ -644,11 +650,15 @@ function pageOverlayMain(initialState) {
         worldX: node.x,
         worldY: node.y,
         size: node.size,
+        ownership: node.ownership || (state.ownIds.has(node.id) ? 'confirmed' : 'inferred'),
+        inferScore: node.inferScore ?? null,
       });
       drawn += 1;
     }
 
-    state.renderMode = state.screenCircleMatches.some((item) => item.mode === 'screen-circle') ? 'screen-circle' : 'world-transform';
+    state.renderMode = state.screenCircleMatches.some((item) => item.mode === 'screen-circle')
+      ? 'screen-circle'
+      : (state.inferredOwnIds.size ? 'packet-cluster' : 'world-transform');
     state.drawn = drawn;
     state.frame += 1;
 
@@ -661,6 +671,8 @@ function pageOverlayMain(initialState) {
         renderMode: state.renderMode,
         screenCircleCandidates: state.screenCircleCandidates,
         screenCircleMatches: state.screenCircleMatches,
+        ownRenderNodes: state.ownRenderNodes,
+        ownClusterMatches: state.ownClusterMatches,
       }, 'overlay-frame');
     }
   }
@@ -764,6 +776,120 @@ function pageOverlayMain(initialState) {
     return bestScore < 7 ? best : null;
   }
 
+  function buildOwnRenderNodes() {
+    const confirmed = Array.from(state.ownIds)
+      .map((id) => state.nodes.get(id))
+      .filter((node) => node && !node.removed);
+
+    const now = performance.now();
+    const liveConfirmed = confirmed.filter((node) => !node.updatedAt || now - node.updatedAt <= OWN_CLUSTER_MAX_AGE_MS * 3);
+
+    if (!liveConfirmed.length) {
+      state.inferredOwnIds.clear();
+      state.ownRenderNodes = [];
+      state.ownClusterCandidates = [];
+      state.ownClusterMatches = [];
+      return [];
+    }
+
+    const center = weightedNodeCenter(liveConfirmed);
+    const maxOwnSize = Math.max(...liveConfirmed.map((node) => Math.max(1, node.size || 1)));
+    const totalOwnSize = liveConfirmed.reduce((sum, node) => sum + Math.max(0, node.size || 0), 0);
+    const maxDistance = clamp(maxOwnSize * 8 + totalOwnSize * 3, 140, 900);
+    const minSize = Math.max(OWN_CLUSTER_MIN_SIZE, Math.min(maxOwnSize * 0.22, 28));
+    const maxSize = Math.max(maxOwnSize * 1.35, maxOwnSize + 70, 90);
+    const candidates = [];
+
+    for (const node of state.nodes.values()) {
+      if (!node || node.removed || state.ownIds.has(node.id)) continue;
+      if (!Number.isFinite(node.x) || !Number.isFinite(node.y) || !Number.isFinite(node.size)) continue;
+      if (node.size < minSize || node.size > maxSize) continue;
+      if (node.updatedAt && now - node.updatedAt > OWN_CLUSTER_MAX_AGE_MS) continue;
+
+      const distanceToCenter = Math.hypot(node.x - center.x, node.y - center.y);
+      const distanceToConfirmed = Math.min(...liveConfirmed.map((own) => Math.hypot(node.x - own.x, node.y - own.y)));
+      if (distanceToCenter > maxDistance && distanceToConfirmed > maxDistance * 0.85) continue;
+
+      const sizeScore = Math.abs(Math.log(Math.max(node.size, 1) / Math.max(maxOwnSize, 1)));
+      const distanceScore = Math.min(distanceToCenter, distanceToConfirmed) / Math.max(80, maxDistance);
+      const score = distanceScore + sizeScore * 0.45;
+
+      candidates.push({
+        id: node.id,
+        x: node.x,
+        y: node.y,
+        size: node.size,
+        distanceToCenter: Math.round(distanceToCenter),
+        distanceToConfirmed: Math.round(distanceToConfirmed),
+        score: Number(score.toFixed(3)),
+        updatedAgeMs: node.updatedAt ? Math.round(now - node.updatedAt) : null,
+      });
+    }
+
+    candidates.sort((a, b) => a.score - b.score);
+    const selected = candidates
+      .filter((candidate) => candidate.score <= 1.55)
+      .slice(0, OWN_CLUSTER_LIMIT);
+
+    state.inferredOwnIds = new Set(selected.map((candidate) => candidate.id));
+    state.ownClusterCandidates = candidates.slice(0, 40);
+    state.ownClusterMatches = selected;
+
+    const merged = new Map();
+    for (const node of liveConfirmed) merged.set(node.id, { ...node, ownership: 'confirmed' });
+    for (const candidate of selected) {
+      const node = state.nodes.get(candidate.id);
+      if (node && !node.removed) merged.set(node.id, { ...node, ownership: 'inferred', inferScore: candidate.score });
+    }
+
+    const renderNodes = Array.from(merged.values());
+    state.ownRenderNodes = renderNodes.map((node) => ({
+      id: node.id,
+      ownership: node.ownership || (state.ownIds.has(node.id) ? 'confirmed' : 'inferred'),
+      x: Math.round(node.x),
+      y: Math.round(node.y),
+      size: Math.round(node.size),
+      inferScore: node.inferScore ?? null,
+    }));
+
+    return renderNodes;
+  }
+
+  function weightedNodeCenter(nodes) {
+    let totalWeight = 0;
+    let x = 0;
+    let y = 0;
+    for (const node of nodes) {
+      const weight = Math.max(1, (node.size || 1) * (node.size || 1));
+      x += node.x * weight;
+      y += node.y * weight;
+      totalWeight += weight;
+    }
+    if (!totalWeight) return { x: 0, y: 0 };
+    return { x: x / totalWeight, y: y / totalWeight };
+  }
+
+  function updateCameraFromRenderNodes(renderNodes) {
+    if (!renderNodes || !renderNodes.length) {
+      updateCameraFromOwnCells();
+      return;
+    }
+
+    if (state.camera.source === 'server-position') return;
+
+    const center = weightedNodeCenter(renderNodes);
+    const totalSize = renderNodes.reduce((sum, node) => sum + Math.max(0, node.size || 0), 0);
+    state.camera.x = center.x;
+    state.camera.y = center.y;
+    state.camera.source = state.inferredOwnIds.size ? 'packet-cluster-average' : 'own-cell-average';
+    state.camera.scale = Math.max(0.18, Math.min(1.35, Math.pow(Math.min(64 / Math.max(totalSize, 1), 1), 0.38)));
+    state.lastOwnCenter = { x: state.camera.x, y: state.camera.y, totalSize };
+  }
+
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+
   function updateCameraFromOwnCells() {
     const live = [];
     for (const id of state.ownIds) {
@@ -811,8 +937,8 @@ function pageOverlayMain(initialState) {
   function installCanvasCircleTracker() {
     if (state.canvasHooked) return;
     const proto = window.CanvasRenderingContext2D && window.CanvasRenderingContext2D.prototype;
-    if (!proto || proto.__blobioSkinCircleTrackerV8) return;
-    proto.__blobioSkinCircleTrackerV8 = true;
+    if (!proto || proto.__blobioSkinCircleTrackerV9) return;
+    proto.__blobioSkinCircleTrackerV9 = true;
     state.canvasHooked = true;
 
     const originalArc = proto.arc;
@@ -1531,7 +1657,7 @@ function pageOverlayMain(initialState) {
   function downloadDebugDump() {
     const dump = {
       meta: {
-        version: 'packet-overlay-v8',
+        version: 'packet-overlay-v9',
         createdAt: new Date().toISOString(),
         href: location.href,
       },
@@ -1550,6 +1676,10 @@ function pageOverlayMain(initialState) {
         renderMode: state.renderMode,
         screenCircleCandidates: state.screenCircleCandidates,
         screenCircleMatches: state.screenCircleMatches,
+        ownRenderNodes: state.ownRenderNodes,
+        inferredOwnIds: Array.from(state.inferredOwnIds),
+        ownClusterCandidates: state.ownClusterCandidates,
+        ownClusterMatches: state.ownClusterMatches,
         recentScreenCircles: state.recentScreenCircles.slice(-30),
         sockets: state.sockets,
         wsMessages: state.wsMessages,
@@ -1584,7 +1714,7 @@ function pageOverlayMain(initialState) {
     }, 1000);
   }
 
-  window.__blobioCustomSkinOverlayV8 = {
+  window.__blobioCustomSkinOverlayV9 = {
     state,
     refresh,
     dump: () => ({
@@ -1598,6 +1728,10 @@ function pageOverlayMain(initialState) {
       renderMode: state.renderMode,
       screenCircleCandidates: state.screenCircleCandidates,
       screenCircleMatches: state.screenCircleMatches,
+      ownRenderNodes: state.ownRenderNodes,
+      inferredOwnIds: Array.from(state.inferredOwnIds),
+      ownClusterCandidates: state.ownClusterCandidates,
+      ownClusterMatches: state.ownClusterMatches,
       ownListPackets: state.ownListPackets,
       shortOwnFallbackUpdates: state.shortOwnFallbackUpdates,
       opCounts: state.opCounts,
