@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-06-13T00:00:00Z",
+  "updatedAt": "2026-06-13T22:35:57Z",
   "members": {
     "1189715": {
       "expiresAt": "UNLIMITED"
     },
     "944725": {
-      "expiresAt": "UNLIMITED"
+      "expiresAt": "2026-07-13T22:35:57Z"
     },
     "889": {
       "expiresAt": "UNLIMITED"
