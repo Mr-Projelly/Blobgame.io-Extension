@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   apply-fix:
-    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'vip-hover-fix-v28'
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'vip-hover-fix-v28-build'
     runs-on: ubuntu-latest
 
     steps:
