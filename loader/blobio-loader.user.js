@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Blobio Web Script Loader
 // @namespace    https://github.com/SkyViewBlobio/Blobgame.io-Web-Script
-// @version      0.1.39
+// @version      0.1.40
 // @description  Loads the Blobio modular extension bundle from GitHub.
 // @match        *://blobgame.io/*
 // @match        *://custom.client.blobgame.io/*
@@ -24,12 +24,14 @@
   'use strict';
 
   const LOG_PREFIX = '[Blobio]';
-  const VERSION = '0.1.39';
+  const VERSION = '0.1.40';
   const CUSTOM_CLIENT_HOST = 'custom.client.blobgame.io';
   const STORAGE_BRIDGE_SOURCE = 'BlobioExtensionStorageBridge';
   const CUSTOM_SKIN_ENABLED_KEY = 'blobio.customSkin.enabled';
   const CUSTOM_SKIN_ACTIVE_KEY = 'blobio.customSkin.activeUrl';
   const CUSTOM_SKIN_CARRIER_ASSET_KEY = 'blobio.customSkin.carrierAsset';
+  const CUSTOM_SKIN_PREPARED_KEY = 'blobio.customSkin.preparedDataUrl';
+  const CUSTOM_SKIN_PREPARED_SOURCE_KEY = 'blobio.customSkin.preparedSource';
   const DIRECT_IMGUR_IMAGE_MATCH = /^https:\/\/i\.imgur\.com\/[a-z0-9]+\.(?:png|jpe?g|webp)(?:\?.*)?$/i;
   const BUNDLE_URLS = [
     `https://raw.githubusercontent.com/SkyViewBlobio/Blobgame.io-Web-Script/main/dist/blobio-extension.bundle.js?v=${VERSION}`,
@@ -149,11 +151,23 @@
   function getCustomSkinState() {
     const activeUrl = String(getSharedValue(CUSTOM_SKIN_ACTIVE_KEY) || '').trim();
     const carrierAsset = normalizeCarrierAsset(getSharedValue(CUSTOM_SKIN_CARRIER_ASSET_KEY));
+    const preparedSource = String(getSharedValue(CUSTOM_SKIN_PREPARED_SOURCE_KEY) || '').trim();
+    const preparedDataUrl = String(getSharedValue(CUSTOM_SKIN_PREPARED_KEY) || '');
     const enabled = getSharedValue(CUSTOM_SKIN_ENABLED_KEY) === '1'
       && DIRECT_IMGUR_IMAGE_MATCH.test(activeUrl)
       && Boolean(carrierAsset);
+    const replacementDataUrl = enabled
+      && preparedSource === activeUrl
+      && /^data:image\/png;base64,/i.test(preparedDataUrl)
+      ? preparedDataUrl
+      : '';
 
-    return { enabled, activeUrl: enabled ? activeUrl : '', carrierAsset: enabled ? carrierAsset : '' };
+    return {
+      enabled,
+      activeUrl: enabled ? activeUrl : '',
+      carrierAsset: enabled ? carrierAsset : '',
+      replacementDataUrl,
+    };
   }
 
   function pageCarrierSkinBootstrap(initialState, pageWindow) {
@@ -162,42 +176,104 @@
     const window = pageWindow || globalThis;
     const document = window.document;
     const ImageElement = window.HTMLImageElement;
+    const ImageConstructor = window.Image;
     const Element = window.Element;
+    const XMLHttpRequest = window.XMLHttpRequest;
     const nativeFetch = typeof window.fetch === 'function' ? window.fetch.bind(window) : null;
     const nativeImageSrc = ImageElement
       ? Object.getOwnPropertyDescriptor(ImageElement.prototype, 'src')
       : null;
     const nativeSetAttribute = Element?.prototype?.setAttribute;
+    const nativeXhrOpen = XMLHttpRequest?.prototype?.open;
 
     if (window.__blobioCarrierSkinInstalled) {
       window.__blobioCarrierSkinRefresh?.(initialState);
+      if (initialState?.replacementDataUrl) {
+        window.__blobioCarrierSkinSetReplacement?.(initialState.replacementDataUrl, initialState.activeUrl);
+      }
       return;
     }
 
-    let state = { enabled: false, activeUrl: '', carrierAsset: '', ...initialState };
+    let state = {
+      enabled: false,
+      activeUrl: '',
+      carrierAsset: '',
+      replacementDataUrl: '',
+      ...initialState,
+    };
     let replacementUrl = '';
+    let replacementSource = null;
     let replacementFailed = false;
+    let replacementLoadId = 0;
     let waiters = [];
     const pendingImages = new Map();
+    const pendingTextureUploads = [];
     const status = {
       imageRequests: 0,
       fetchRequests: 0,
+      xhrRequests: 0,
+      webglUploads: 0,
+      webglReplays: 0,
       replacements: 0,
       queuedImages: 0,
+      queuedTextureUploads: 0,
       lastCarrierRequest: '',
+      lastCarrierUpload: '',
       lastError: '',
     };
 
-    function getPath(rawUrl) {
+    function parseUrl(rawUrl) {
       try {
-        return new URL(String(rawUrl || ''), window.location.href).pathname;
+        return new URL(String(rawUrl || ''), window.location.href);
       } catch {
-        return '';
+        return null;
+      }
+    }
+
+    function getPath(rawUrl) {
+      return parseUrl(rawUrl)?.pathname || '';
+    }
+
+    function getFilename(rawUrl) {
+      const path = getPath(rawUrl);
+      const filename = path.slice(path.lastIndexOf('/') + 1);
+      try {
+        return decodeURIComponent(filename).toLowerCase();
+      } catch {
+        return filename.toLowerCase();
       }
     }
 
     function matchesCarrier(rawUrl) {
-      return Boolean(state.enabled && state.carrierAsset && getPath(rawUrl) === getPath(state.carrierAsset));
+      if (!state.enabled || !state.carrierAsset) {
+        return false;
+      }
+
+      const candidatePath = getPath(rawUrl);
+      const carrierPath = getPath(state.carrierAsset);
+      if (!candidatePath || !carrierPath) {
+        return false;
+      }
+
+      if (candidatePath === carrierPath) {
+        return true;
+      }
+
+      const candidateFile = getFilename(rawUrl);
+      const carrierFile = getFilename(state.carrierAsset);
+      return Boolean(candidateFile && candidateFile === carrierFile && /\/skins\//i.test(candidatePath));
+    }
+
+    function sourceUrl(source) {
+      if (!source) {
+        return '';
+      }
+
+      if (ImageElement && source instanceof ImageElement) {
+        return source.currentSrc || source.src || source.getAttribute?.('src') || '';
+      }
+
+      return source.currentSrc || source.src || source.url || '';
     }
 
     function settleWaiters(value) {
@@ -257,6 +333,164 @@
       return true;
     }
 
+    function getTextureSourceIndex(args) {
+      const source = args.at(-1);
+      if (!source || ArrayBuffer.isView(source) || source instanceof ArrayBuffer) {
+        return -1;
+      }
+
+      const isKnownSource = (ImageElement && source instanceof ImageElement)
+        || (window.HTMLCanvasElement && source instanceof window.HTMLCanvasElement)
+        || (window.HTMLVideoElement && source instanceof window.HTMLVideoElement)
+        || (window.ImageBitmap && source instanceof window.ImageBitmap)
+        || (window.ImageData && source instanceof window.ImageData)
+        || (window.OffscreenCanvas && source instanceof window.OffscreenCanvas)
+        || typeof source?.src === 'string';
+
+      return isKnownSource ? args.length - 1 : -1;
+    }
+
+    function getTextureBinding(gl, target) {
+      if (target === gl.TEXTURE_2D) {
+        return { bindingTarget: gl.TEXTURE_2D, parameter: gl.TEXTURE_BINDING_2D };
+      }
+
+      if (target >= gl.TEXTURE_CUBE_MAP_POSITIVE_X && target <= gl.TEXTURE_CUBE_MAP_NEGATIVE_Z) {
+        return { bindingTarget: gl.TEXTURE_CUBE_MAP, parameter: gl.TEXTURE_BINDING_CUBE_MAP };
+      }
+
+      return null;
+    }
+
+    function replayTextureUpload(upload) {
+      if (!replacementSource || !upload.texture || !upload.binding) {
+        return false;
+      }
+
+      const { gl, nativeMethod, args, sourceIndex, texture, binding } = upload;
+      let previousTexture = null;
+      try {
+        previousTexture = gl.getParameter(binding.parameter);
+        gl.bindTexture(binding.bindingTarget, texture);
+        const replacementArgs = args.slice();
+        replacementArgs[sourceIndex] = replacementSource;
+        nativeMethod.apply(gl, replacementArgs);
+        status.webglReplays += 1;
+        status.replacements += 1;
+        return true;
+      } catch (error) {
+        status.lastError = error?.message || String(error);
+        return false;
+      } finally {
+        try {
+          gl.bindTexture(binding.bindingTarget, previousTexture);
+        } catch {}
+      }
+    }
+
+    function flushPendingTextureUploads() {
+      if (!replacementSource) {
+        return;
+      }
+
+      const uploads = pendingTextureUploads.splice(0);
+      for (const upload of uploads) {
+        replayTextureUpload(upload);
+      }
+      status.queuedTextureUploads = pendingTextureUploads.length;
+    }
+
+    function installWebGlMethod(prototype, methodName) {
+      const nativeMethod = prototype?.[methodName];
+      if (typeof nativeMethod !== 'function' || nativeMethod.__blobioCarrierWrapped) {
+        return;
+      }
+
+      function wrappedTextureUpload(...args) {
+        const sourceIndex = getTextureSourceIndex(args);
+        const source = sourceIndex >= 0 ? args[sourceIndex] : null;
+        const rawUrl = sourceUrl(source);
+        if (!matchesCarrier(rawUrl)) {
+          return nativeMethod.apply(this, args);
+        }
+
+        status.webglUploads += 1;
+        status.lastCarrierUpload = rawUrl;
+
+        if (replacementSource) {
+          const replacementArgs = args.slice();
+          replacementArgs[sourceIndex] = replacementSource;
+          status.replacements += 1;
+          return nativeMethod.apply(this, replacementArgs);
+        }
+
+        const result = nativeMethod.apply(this, args);
+        const binding = getTextureBinding(this, args[0]);
+        let texture = null;
+        try {
+          texture = binding ? this.getParameter(binding.parameter) : null;
+        } catch {}
+
+        if (texture && binding) {
+          pendingTextureUploads.push({
+            gl: this,
+            nativeMethod,
+            args: args.slice(),
+            sourceIndex,
+            texture,
+            binding,
+          });
+          status.queuedTextureUploads = pendingTextureUploads.length;
+        }
+
+        return result;
+      }
+
+      Object.defineProperty(wrappedTextureUpload, '__blobioCarrierWrapped', { value: true });
+      prototype[methodName] = wrappedTextureUpload;
+    }
+
+    function installWebGlHooks() {
+      const prototypes = new Set([
+        window.WebGLRenderingContext?.prototype,
+        window.WebGL2RenderingContext?.prototype,
+      ]);
+
+      for (const prototype of prototypes) {
+        if (!prototype) {
+          continue;
+        }
+        installWebGlMethod(prototype, 'texImage2D');
+        installWebGlMethod(prototype, 'texSubImage2D');
+      }
+    }
+
+    function loadReplacementSource(url) {
+      replacementSource = null;
+      const loadId = ++replacementLoadId;
+      if (!url || !ImageElement) {
+        return;
+      }
+
+      const image = typeof ImageConstructor === 'function'
+        ? new ImageConstructor()
+        : document?.createElement?.('img');
+      image.onload = () => {
+        if (loadId !== replacementLoadId || url !== replacementUrl) {
+          return;
+        }
+        replacementSource = image;
+        flushPendingTextureUploads();
+      };
+      image.onerror = () => {
+        if (loadId !== replacementLoadId || url !== replacementUrl) {
+          return;
+        }
+        status.lastError = 'Prepared Custom Skin PNG could not be decoded in the page context.';
+      };
+      setNativeImageSource(image, url);
+    }
+
     if (nativeImageSrc?.get && nativeImageSrc?.set) {
       Object.defineProperty(ImageElement.prototype, 'src', {
         configurable: nativeImageSrc.configurable,
@@ -272,7 +506,7 @@
 
     if (nativeSetAttribute) {
       Element.prototype.setAttribute = function setBlobioCarrierAttribute(name, value) {
-        if (this instanceof ImageElement && String(name).toLowerCase() === 'src' && handleImageSource(this, value)) {
+        if (ImageElement && this instanceof ImageElement && String(name).toLowerCase() === 'src' && handleImageSource(this, value)) {
           return;
         }
         return nativeSetAttribute.call(this, name, value);
@@ -298,14 +532,42 @@
       };
     }
 
+    if (nativeXhrOpen) {
+      XMLHttpRequest.prototype.open = function openBlobioCarrier(method, rawUrl, ...rest) {
+        if (!matchesCarrier(rawUrl)) {
+          return nativeXhrOpen.call(this, method, rawUrl, ...rest);
+        }
+
+        status.xhrRequests += 1;
+        status.lastCarrierRequest = String(rawUrl);
+        const resolved = replacementUrl || rawUrl;
+        if (replacementUrl) {
+          status.replacements += 1;
+        }
+        return nativeXhrOpen.call(this, method, resolved, ...rest);
+      };
+    }
+
+    installWebGlHooks();
+
     function refresh(nextState) {
       const previousKey = `${state.activeUrl}|${state.carrierAsset}`;
-      state = { enabled: false, activeUrl: '', carrierAsset: '', ...nextState };
+      state = {
+        enabled: false,
+        activeUrl: '',
+        carrierAsset: '',
+        replacementDataUrl: '',
+        ...nextState,
+      };
       const nextKey = `${state.activeUrl}|${state.carrierAsset}`;
 
       if (!state.enabled) {
         replacementUrl = '';
+        replacementSource = null;
         replacementFailed = false;
+        replacementLoadId += 1;
+        pendingTextureUploads.length = 0;
+        status.queuedTextureUploads = 0;
         flushPendingImages(false);
         settleWaiters('');
         return;
@@ -313,9 +575,17 @@
 
       if (previousKey !== nextKey) {
         replacementUrl = '';
+        replacementSource = null;
         replacementFailed = false;
+        replacementLoadId += 1;
+        pendingTextureUploads.length = 0;
+        status.queuedTextureUploads = 0;
         flushPendingImages(false);
         settleWaiters('');
+      }
+
+      if (state.replacementDataUrl && state.replacementDataUrl !== replacementUrl) {
+        setReplacement(state.replacementDataUrl, state.activeUrl);
       }
     }
 
@@ -326,6 +596,10 @@
 
       replacementUrl = String(url || '');
       replacementFailed = !replacementUrl;
+      replacementSource = null;
+      if (replacementUrl) {
+        loadReplacementSource(replacementUrl);
+      }
       flushPendingImages(Boolean(replacementUrl));
       settleWaiters(replacementUrl);
       return Boolean(replacementUrl);
@@ -337,7 +611,9 @@
       }
 
       replacementUrl = '';
+      replacementSource = null;
       replacementFailed = true;
+      replacementLoadId += 1;
       status.lastError = String(message || 'Custom skin image preparation failed.');
       flushPendingImages(false);
       settleWaiters('');
@@ -351,9 +627,13 @@
       enabled: state.enabled,
       activeUrl: state.activeUrl,
       carrierAsset: state.carrierAsset,
+      carrierFilename: getFilename(state.carrierAsset),
       replacementReady: Boolean(replacementUrl),
+      replacementSourceReady: Boolean(replacementSource),
     });
     window.__blobioCarrierSkinInstalled = true;
+
+    refresh(state);
 
     for (const image of document?.querySelectorAll?.('img[src]') || []) {
       const current = nativeImageSrc?.get?.call(image) || image.getAttribute?.('src') || '';
@@ -434,6 +714,39 @@
     return canvas.toDataURL('image/png');
   }
 
+
+  const preparedSkinPromises = new Map();
+
+  async function prepareAndStoreCustomSkin(url) {
+    const cleanUrl = String(url || '').trim();
+    if (!DIRECT_IMGUR_IMAGE_MATCH.test(cleanUrl)) {
+      throw new Error('Only direct i.imgur.com image links are accepted.');
+    }
+
+    const storedSource = String(getSharedValue(CUSTOM_SKIN_PREPARED_SOURCE_KEY) || '').trim();
+    const storedDataUrl = String(getSharedValue(CUSTOM_SKIN_PREPARED_KEY) || '');
+    if (storedSource === cleanUrl && /^data:image\/png;base64,/i.test(storedDataUrl)) {
+      return storedDataUrl;
+    }
+
+    if (preparedSkinPromises.has(cleanUrl)) {
+      return preparedSkinPromises.get(cleanUrl);
+    }
+
+    const promise = prepareCustomSkinDataUrl(cleanUrl)
+      .then((dataUrl) => {
+        setSharedValue(CUSTOM_SKIN_PREPARED_SOURCE_KEY, cleanUrl);
+        setSharedValue(CUSTOM_SKIN_PREPARED_KEY, dataUrl);
+        return dataUrl;
+      })
+      .finally(() => preparedSkinPromises.delete(cleanUrl));
+
+    preparedSkinPromises.set(cleanUrl, promise);
+    return promise;
+  }
+
+  globalThis.__blobioPrepareCustomSkinAsset = prepareAndStoreCustomSkin;
+
   function installCarrierSkinRuntime() {
     if (location.host !== CUSTOM_CLIENT_HOST) {
       return;
@@ -454,12 +767,12 @@
       pageWindow.__blobioCarrierSkinRefresh?.(state);
       const currentGeneration = ++generation;
 
-      if (!state.enabled) {
+      if (!state.enabled || state.replacementDataUrl) {
         return;
       }
 
       try {
-        const dataUrl = await prepareCustomSkinDataUrl(state.activeUrl);
+        const dataUrl = await prepareAndStoreCustomSkin(state.activeUrl);
         if (currentGeneration !== generation) {
           return;
         }
@@ -476,7 +789,13 @@
     refresh();
 
     if (typeof GM_addValueChangeListener === 'function') {
-      for (const key of [CUSTOM_SKIN_ENABLED_KEY, CUSTOM_SKIN_ACTIVE_KEY, CUSTOM_SKIN_CARRIER_ASSET_KEY]) {
+      for (const key of [
+        CUSTOM_SKIN_ENABLED_KEY,
+        CUSTOM_SKIN_ACTIVE_KEY,
+        CUSTOM_SKIN_CARRIER_ASSET_KEY,
+        CUSTOM_SKIN_PREPARED_KEY,
+        CUSTOM_SKIN_PREPARED_SOURCE_KEY,
+      ]) {
         try {
           GM_addValueChangeListener(key, refresh);
         } catch {}
@@ -485,7 +804,13 @@
 
     window.addEventListener?.('message', (event) => {
       const message = event.data;
-      if (message?.source === STORAGE_BRIDGE_SOURCE && [CUSTOM_SKIN_ENABLED_KEY, CUSTOM_SKIN_ACTIVE_KEY, CUSTOM_SKIN_CARRIER_ASSET_KEY].includes(message.key)) {
+      if (message?.source === STORAGE_BRIDGE_SOURCE && [
+        CUSTOM_SKIN_ENABLED_KEY,
+        CUSTOM_SKIN_ACTIVE_KEY,
+        CUSTOM_SKIN_CARRIER_ASSET_KEY,
+        CUSTOM_SKIN_PREPARED_KEY,
+        CUSTOM_SKIN_PREPARED_SOURCE_KEY,
+      ].includes(message.key)) {
         refresh();
       }
     });

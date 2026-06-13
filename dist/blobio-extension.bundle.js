@@ -1318,6 +1318,8 @@ html.${className} .blobio-watermark-extension::after {
   var CUSTOM_SKIN_CARRIER_ASSET_KEY = "blobio.customSkin.carrierAsset";
   var CUSTOM_SKIN_CARRIER_NAME_KEY = "blobio.customSkin.carrierName";
   var CUSTOM_SKIN_CARRIER_TYPE_KEY = "blobio.customSkin.carrierType";
+  var CUSTOM_SKIN_PREPARED_KEY = "blobio.customSkin.preparedDataUrl";
+  var CUSTOM_SKIN_PREPARED_SOURCE_KEY = "blobio.customSkin.preparedSource";
   var CUSTOM_SKIN_DEFAULT_URL = "https://i.imgur.com/OZz80VZ.jpeg";
   var DIRECT_IMGUR_IMAGE_MATCH = /^https:\/\/i\.imgur\.com\/[a-z0-9]+\.(?:png|jpe?g|webp)(?:\?.*)?$/i;
   var CUSTOM_SKIN_NOTICE_DURATION = 2200;
@@ -2285,6 +2287,13 @@ html.${className} .blobio-watermark-extension::after {
       this.storage?.setItem?.(CUSTOM_SKIN_CARRIER_NAME_KEY, carrier.name);
       this.storage?.setItem?.(CUSTOM_SKIN_CARRIER_TYPE_KEY, carrier.type);
     }
+    async prepareCustomSkinAsset(url) {
+      const prepare = globalThis.__blobioPrepareCustomSkinAsset;
+      if (typeof prepare !== "function") {
+        throw new Error("Custom Skin image preparation is unavailable. Reinstall the latest loader.");
+      }
+      return prepare(url);
+    }
     async useCustomSkinUrl(url, panel = null) {
       const cleanUrl = String(url || "").trim();
       if (!this.isValidImgurSkinUrl(cleanUrl)) {
@@ -2302,13 +2311,17 @@ html.${className} .blobio-watermark-extension::after {
         return { ok: false, reason: "no-owned-skins" };
       }
       try {
+        await this.prepareCustomSkinAsset(cleanUrl);
         this.saveCustomSkinUse(cleanUrl, carrier);
         this.updateChooseSkinPreview(cleanUrl);
         this.activateCustomSkinPanel(skins);
         return { ok: true, carrier };
       } catch (error) {
         this.logger.warn("[Blobio] Could not apply Custom Skin.", error);
-        return { ok: false, reason: "storage-error" };
+        return {
+          ok: false,
+          reason: /prepar|download|decode|loader/i.test(error?.message || "") ? "image-preparation-failed" : "storage-error"
+        };
       }
     }
     clearCustomSkinUse() {
@@ -2318,6 +2331,8 @@ html.${className} .blobio-watermark-extension::after {
         this.storage?.removeItem?.(CUSTOM_SKIN_CARRIER_ASSET_KEY);
         this.storage?.removeItem?.(CUSTOM_SKIN_CARRIER_NAME_KEY);
         this.storage?.removeItem?.(CUSTOM_SKIN_CARRIER_TYPE_KEY);
+        this.storage?.removeItem?.(CUSTOM_SKIN_PREPARED_KEY);
+        this.storage?.removeItem?.(CUSTOM_SKIN_PREPARED_SOURCE_KEY);
         if (carrier?.assetUrl) {
           this.updateChooseSkinPreview(carrier.assetUrl);
         }
@@ -2590,7 +2605,8 @@ html.${className} .blobio-watermark-extension::after {
         "logged-out": "Log in with Google or Facebook to use Custom Skin.",
         "no-owned-skins": "Own at least one skin in the Owned section to use Custom Skin.",
         "skins-unavailable": "Open the Skins menu and try again.",
-        "invalid-url": "Select a valid Custom Skin first."
+        "invalid-url": "Select a valid Custom Skin first.",
+        "image-preparation-failed": "The Custom Skin image could not be prepared. Reinstall the latest loader and try again."
       };
       this.showCustomSkinNotice(panel, messages[reason] || "Custom Skin could not be applied.", "error");
     }
