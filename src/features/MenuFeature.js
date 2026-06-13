@@ -1195,7 +1195,7 @@ export class MenuFeature {
   async prepareCustomSkinAsset(url) {
     const prepare = globalThis.__blobioPrepareCustomSkinAsset;
     if (typeof prepare !== 'function') {
-      throw new Error('Custom Skin image preparation is unavailable. Reinstall the latest loader.');
+      return null;
     }
 
     return prepare(url);
@@ -1579,7 +1579,7 @@ export class MenuFeature {
       'no-owned-skins': 'Own at least one skin in the Owned section to use Custom Skin.',
       'skins-unavailable': 'Open the Skins menu and try again.',
       'invalid-url': 'Select a valid Custom Skin first.',
-      'image-preparation-failed': 'The Custom Skin image could not be prepared. Reinstall the latest loader and try again.',
+      'image-preparation-failed': 'The Custom Skin image could not be downloaded or processed. Check the image URL and try again.',
     };
     this.showCustomSkinNotice(panel, messages[reason] || 'Custom Skin could not be applied.', 'error');
   }
