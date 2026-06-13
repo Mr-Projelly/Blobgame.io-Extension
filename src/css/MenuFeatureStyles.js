@@ -670,18 +670,23 @@ html.${className} app-settings.blobio-extension-settings-active .right {
 html.${className} app-settings.blobio-extension-settings-active .right > .inner-container,
 html.${className} app-settings.blobio-extension-settings-active .inner-container.zero-top-left-border {
   display: flex !important;
-  flex: 1 1 auto !important;
+  flex: 0 1 auto !important;
   flex-direction: column !important;
   align-self: stretch !important;
-  min-height: var(--blobio-extension-settings-panel-height, 525px) !important;
-  height: 100% !important;
+  min-height: 0 !important;
+  height: var(--blobio-extension-settings-panel-height, auto) !important;
+  max-height: var(--blobio-extension-settings-panel-height, 100%) !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
 }
 
 html.${className} app-settings.blobio-extension-settings-active .content-container {
   flex: 1 1 auto !important;
   min-height: 0 !important;
-  height: 100% !important;
+  height: auto !important;
+  max-height: 100% !important;
   overflow-y: auto !important;
+  overflow-x: hidden !important;
   box-sizing: border-box !important;
 }
 
@@ -722,6 +727,9 @@ html.${className} app-settings.blobio-extension-settings-active textarea {
 
 html.${className} app-settings.blobio-extension-settings-active .blobio-extension-settings-panel {
   display: grid;
+  align-content: start;
+  min-height: 100%;
+  box-sizing: border-box;
 }
 
 html.${className} app-settings .blobio-extension-setting-row {
@@ -1048,7 +1056,7 @@ html.${className} .blobio-vip-plus-slot {
   position: fixed !important;
   left: var(--blobio-vip-plus-left, -9999px) !important;
   top: var(--blobio-vip-plus-top, -9999px) !important;
-  z-index: 2147482500 !important;
+  z-index: 4 !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -1066,8 +1074,8 @@ html.${className} .blobio-vip-plus-slot {
 html.${className} .blobio-vip-plus-icon {
   display: block !important;
   width: auto !important;
-  height: var(--blobio-vip-plus-size, 65px) !important;
-  max-width: 112px !important;
+  height: var(--blobio-vip-plus-size, 75px) !important;
+  max-width: 128px !important;
   margin: 0 !important;
   object-fit: contain !important;
   transform: scale(1) !important;

@@ -827,18 +827,23 @@ html.${className} app-settings.blobio-extension-settings-active .right {
 html.${className} app-settings.blobio-extension-settings-active .right > .inner-container,
 html.${className} app-settings.blobio-extension-settings-active .inner-container.zero-top-left-border {
   display: flex !important;
-  flex: 1 1 auto !important;
+  flex: 0 1 auto !important;
   flex-direction: column !important;
   align-self: stretch !important;
-  min-height: var(--blobio-extension-settings-panel-height, 525px) !important;
-  height: 100% !important;
+  min-height: 0 !important;
+  height: var(--blobio-extension-settings-panel-height, auto) !important;
+  max-height: var(--blobio-extension-settings-panel-height, 100%) !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
 }
 
 html.${className} app-settings.blobio-extension-settings-active .content-container {
   flex: 1 1 auto !important;
   min-height: 0 !important;
-  height: 100% !important;
+  height: auto !important;
+  max-height: 100% !important;
   overflow-y: auto !important;
+  overflow-x: hidden !important;
   box-sizing: border-box !important;
 }
 
@@ -879,6 +884,9 @@ html.${className} app-settings.blobio-extension-settings-active textarea {
 
 html.${className} app-settings.blobio-extension-settings-active .blobio-extension-settings-panel {
   display: grid;
+  align-content: start;
+  min-height: 100%;
+  box-sizing: border-box;
 }
 
 html.${className} app-settings .blobio-extension-setting-row {
@@ -1205,7 +1213,7 @@ html.${className} .blobio-vip-plus-slot {
   position: fixed !important;
   left: var(--blobio-vip-plus-left, -9999px) !important;
   top: var(--blobio-vip-plus-top, -9999px) !important;
-  z-index: 2147482500 !important;
+  z-index: 4 !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -1223,8 +1231,8 @@ html.${className} .blobio-vip-plus-slot {
 html.${className} .blobio-vip-plus-icon {
   display: block !important;
   width: auto !important;
-  height: var(--blobio-vip-plus-size, 65px) !important;
-  max-width: 112px !important;
+  height: var(--blobio-vip-plus-size, 75px) !important;
+  max-width: 128px !important;
   margin: 0 !important;
   object-fit: contain !important;
   transform: scale(1) !important;
@@ -1496,7 +1504,7 @@ html.${className} .blobio-watermark-extension::after {
   var DEFAULT_CLASS_NAME2 = "blobio-menu-enabled";
   var DEFAULT_STYLE_ID2 = "blobio-menu-style";
   var DEFAULT_TOOLBAR_CLASS = "blobio-menu-toolbar";
-  var DEFAULT_EXTENSION_VERSION = "0.1.46";
+  var DEFAULT_EXTENSION_VERSION = "0.1.47";
   var HIDDEN_CLASS = "blobio-original-hidden";
   var PARTNER_LINK_MATCH = /iogames\.space|iogames\.live|io-games\.zone|silvergames\.com|crazygames\.com/i;
   var FAILED_VIRAL_FRAME_MATCH = /viral\.iogames\.space/i;
@@ -2295,14 +2303,12 @@ html.${className} .blobio-watermark-extension::after {
       if (!settings) {
         return;
       }
-      const right = settings.querySelector?.(".right");
-      const inner = right?.querySelector?.(".inner-container");
-      const content = inner?.querySelector?.(".content-container");
-      const candidates = [right, inner, content].filter(Boolean);
-      const height = Math.max(0, ...candidates.map((node) => {
-        const rectHeight = Number(node.getBoundingClientRect?.().height) || 0;
-        return Math.max(rectHeight, Number(node.clientHeight) || 0, Number(node.offsetHeight) || 0);
-      }));
+      const inner = settings.querySelector?.(".right > .inner-container") || settings.querySelector?.(".right .inner-container");
+      if (!inner) {
+        return;
+      }
+      const rectHeight = Number(inner.getBoundingClientRect?.().height) || 0;
+      const height = Math.max(rectHeight, Number(inner.clientHeight) || 0, Number(inner.offsetHeight) || 0);
       if (height < 100) {
         return;
       }
@@ -3059,7 +3065,7 @@ html.${className} .blobio-watermark-extension::after {
       const rect = target.getBoundingClientRect?.();
       const height = Number(rect?.height) || Number(target.clientHeight) || Number(target.height) || 0;
       if (height >= 18 && height <= 120) {
-        this.setStyleProperty(icon, "--blobio-vip-plus-size", `${Math.round(height * 1.3)}px`);
+        this.setStyleProperty(icon, "--blobio-vip-plus-size", `${Math.round(height * 1.5)}px`);
       }
       const right = Number(rect?.right);
       const top = Number(rect?.top);

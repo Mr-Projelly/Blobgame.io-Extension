@@ -4,7 +4,7 @@ import { createBlobioStorage } from '../storage/BlobioStorage.js';
 const DEFAULT_CLASS_NAME = 'blobio-menu-enabled';
 const DEFAULT_STYLE_ID = 'blobio-menu-style';
 const DEFAULT_TOOLBAR_CLASS = 'blobio-menu-toolbar';
-const DEFAULT_EXTENSION_VERSION = '0.1.46';
+const DEFAULT_EXTENSION_VERSION = '0.1.47';
 const HIDDEN_CLASS = 'blobio-original-hidden';
 const PARTNER_LINK_MATCH = /iogames\.space|iogames\.live|io-games\.zone|silvergames\.com|crazygames\.com/i;
 const FAILED_VIRAL_FRAME_MATCH = /viral\.iogames\.space/i;
@@ -964,14 +964,14 @@ export class MenuFeature {
       return;
     }
 
-    const right = settings.querySelector?.('.right');
-    const inner = right?.querySelector?.('.inner-container');
-    const content = inner?.querySelector?.('.content-container');
-    const candidates = [right, inner, content].filter(Boolean);
-    const height = Math.max(0, ...candidates.map((node) => {
-      const rectHeight = Number(node.getBoundingClientRect?.().height) || 0;
-      return Math.max(rectHeight, Number(node.clientHeight) || 0, Number(node.offsetHeight) || 0);
-    }));
+    const inner = settings.querySelector?.('.right > .inner-container')
+      || settings.querySelector?.('.right .inner-container');
+    if (!inner) {
+      return;
+    }
+
+    const rectHeight = Number(inner.getBoundingClientRect?.().height) || 0;
+    const height = Math.max(rectHeight, Number(inner.clientHeight) || 0, Number(inner.offsetHeight) || 0);
 
     if (height < 100) {
       return;
@@ -1910,7 +1910,7 @@ export class MenuFeature {
     const height = Number(rect?.height) || Number(target.clientHeight) || Number(target.height) || 0;
 
     if (height >= 18 && height <= 120) {
-      this.setStyleProperty(icon, '--blobio-vip-plus-size', `${Math.round(height * 1.3)}px`);
+      this.setStyleProperty(icon, '--blobio-vip-plus-size', `${Math.round(height * 1.5)}px`);
     }
 
     const right = Number(rect?.right);
