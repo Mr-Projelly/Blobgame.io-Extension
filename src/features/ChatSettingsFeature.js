@@ -8,6 +8,11 @@ import {
   setChatFontSizeEnabled,
 } from '../settings/RuntimeSettings.js';
 
+const CHAT_GAP = 10;
+const TOGGLE_WIDTH = 30;
+const MAIN_PANEL_WIDTH = 250;
+const CATEGORY_PANEL_WIDTH = 280;
+
 export class ChatSettingsFeature {
   constructor({
     document = globalThis.document,
@@ -19,8 +24,12 @@ export class ChatSettingsFeature {
     this.logger = logger;
     this.styleNode = null;
     this.root = null;
+    this.chatWrapper = null;
     this.pageObserver = null;
+    this.resizeObserver = null;
     this.viewportHandler = null;
+    this.outsidePointerHandler = null;
+    this.positionFrame = null;
     this.started = false;
   }
 
@@ -53,6 +62,7 @@ export class ChatSettingsFeature {
 
   ensureUi() {
     if (this.root?.parentNode) {
+      this.syncChatWrapper();
       this.positionUi();
       return;
     }
@@ -64,6 +74,7 @@ export class ChatSettingsFeature {
     toggle.type = 'button';
     toggle.classList.add('blobio-chat-settings-toggle');
     toggle.setAttribute('aria-label', 'Open chat settings');
+    toggle.setAttribute('aria-expanded', 'false');
     toggle.textContent = '+';
 
     const panel = this.document.createElement('div');
@@ -72,7 +83,11 @@ export class ChatSettingsFeature {
     const categoryButton = this.document.createElement('button');
     categoryButton.type = 'button';
     categoryButton.classList.add('blobio-chat-settings-category-button');
-    categoryButton.textContent = 'Chat-Settings';
+    categoryButton.setAttribute('aria-expanded', 'false');
+
+    const categoryButtonText = this.document.createElement('span');
+    categoryButtonText.textContent = 'Chat-Settings';
+    categoryButton.appendChild(categoryButtonText);
 
     const category = this.document.createElement('div');
     category.classList.add('blobio-chat-settings-category');
@@ -105,28 +120,23 @@ export class ChatSettingsFeature {
 
     controls.append(range, number);
     category.append(enabledButton, label, controls);
-    panel.append(categoryButton, category);
-    root.append(toggle, panel);
+    panel.appendChild(categoryButton);
+    root.append(toggle, panel, category);
     (this.document.body || this.document.documentElement).appendChild(root);
 
     toggle.addEventListener('click', () => {
-      const open = !root.classList.contains('is-open');
-      if (open) {
-        root.classList.add('is-open');
-      } else {
-        root.classList.remove('is-open');
-      }
-      toggle.textContent = open ? '-' : '+';
-      toggle.setAttribute('aria-label', open ? 'Close chat settings' : 'Open chat settings');
-      this.positionUi();
+      this.setOpen(!root.classList.contains('is-open'));
     });
 
     categoryButton.addEventListener('click', () => {
-      if (category.classList.contains('is-open')) {
-        category.classList.remove('is-open');
-      } else {
+      const open = !category.classList.contains('is-open');
+      if (open) {
         category.classList.add('is-open');
+      } else {
+        category.classList.remove('is-open');
       }
+      categoryButton.setAttribute('aria-expanded', String(open));
+      this.positionUi();
     });
 
     enabledButton.addEventListener('click', () => {
@@ -148,12 +158,55 @@ export class ChatSettingsFeature {
 
     this.root = root;
     this.syncControls();
+    this.syncChatWrapper();
     this.positionUi();
 
     const win = this.document.defaultView || globalThis;
-    this.viewportHandler = () => this.positionUi();
+    this.viewportHandler = () => this.schedulePositionUi();
     win.addEventListener?.('resize', this.viewportHandler);
     win.addEventListener?.('scroll', this.viewportHandler, true);
+
+    this.outsidePointerHandler = (event) => {
+      if (!this.root?.classList.contains('is-open')) {
+        return;
+      }
+
+      const path = event.composedPath?.();
+      const inside = Array.isArray(path)
+        ? path.includes(this.root)
+        : this.root.contains?.(event.target);
+
+      if (!inside) {
+        this.setOpen(false);
+      }
+    };
+    this.document.addEventListener?.('pointerdown', this.outsidePointerHandler, true);
+  }
+
+  setOpen(open) {
+    if (!this.root) {
+      return;
+    }
+
+    const toggle = this.root.querySelector?.('.blobio-chat-settings-toggle');
+    const category = this.root.querySelector?.('.blobio-chat-settings-category');
+    const categoryButton = this.root.querySelector?.('.blobio-chat-settings-category-button');
+
+    if (open) {
+      this.root.classList.add('is-open');
+    } else {
+      this.root.classList.remove('is-open');
+      category?.classList.remove('is-open');
+      categoryButton?.setAttribute('aria-expanded', 'false');
+    }
+
+    if (toggle) {
+      toggle.textContent = open ? '-' : '+';
+      toggle.setAttribute('aria-label', open ? 'Close chat settings' : 'Open chat settings');
+      toggle.setAttribute('aria-expanded', String(open));
+    }
+
+    this.positionUi();
   }
 
   syncControls() {
@@ -164,6 +217,7 @@ export class ChatSettingsFeature {
     const enabled = isChatFontSizeEnabled(this.storage);
     const size = getChatFontSize(this.storage);
     const toggle = this.root.querySelector?.('.blobio-chat-font-toggle');
+    const categoryButton = this.root.querySelector?.('.blobio-chat-settings-category-button');
     const range = this.root.querySelector?.('.blobio-chat-font-range');
     const number = this.root.querySelector?.('.blobio-chat-font-number');
 
@@ -175,6 +229,15 @@ export class ChatSettingsFeature {
         toggle.classList.remove('is-enabled');
       }
     }
+
+    if (categoryButton) {
+      if (enabled) {
+        categoryButton.classList.add('has-active-setting');
+      } else {
+        categoryButton.classList.remove('has-active-setting');
+      }
+    }
+
     if (range) {
       range.value = String(size);
       range.disabled = !enabled;
@@ -205,27 +268,73 @@ export class ChatSettingsFeature {
     }
   }
 
+  syncChatWrapper() {
+    const wrapper = this.document.querySelector?.('#chat-wrapper') || null;
+    if (wrapper === this.chatWrapper) {
+      return wrapper;
+    }
+
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = null;
+    this.chatWrapper = wrapper;
+
+    const ResizeObserver = this.document.defaultView?.ResizeObserver || globalThis.ResizeObserver;
+    if (wrapper && ResizeObserver) {
+      this.resizeObserver = new ResizeObserver(() => this.schedulePositionUi());
+      this.resizeObserver.observe(wrapper);
+    }
+
+    return wrapper;
+  }
+
   positionUi() {
     if (!this.root) {
       return;
     }
 
-    const wrapper = this.document.querySelector?.('#chat-wrapper');
+    const wrapper = this.syncChatWrapper();
     const rect = wrapper?.getBoundingClientRect?.();
     if (!rect || !Number.isFinite(rect.top) || !Number.isFinite(rect.right)) {
       return;
     }
 
+    const rootOpen = this.root.classList.contains('is-open');
+    const categoryOpen = this.root.querySelector?.('.blobio-chat-settings-category')?.classList.contains('is-open');
+    let totalWidth = TOGGLE_WIDTH;
+
+    if (rootOpen) {
+      totalWidth += CHAT_GAP + MAIN_PANEL_WIDTH;
+      if (categoryOpen) {
+        totalWidth += CHAT_GAP + CATEGORY_PANEL_WIDTH;
+      }
+    }
+
     const viewportWidth = this.document.defaultView?.innerWidth || 0;
-    const preferredLeft = rect.right + 8;
-    const panelWidth = this.root.classList.contains('is-open') ? 290 : 38;
-    const left = viewportWidth > 0 && preferredLeft + panelWidth > viewportWidth
-      ? Math.max(8, rect.left - panelWidth - 8)
+    const preferredLeft = rect.right + CHAT_GAP;
+    const left = viewportWidth > 0 && preferredLeft + totalWidth > viewportWidth - 4
+      ? Math.max(4, rect.left - totalWidth - CHAT_GAP)
       : preferredLeft;
 
     this.setStyle('--blobio-chat-settings-left', `${Math.round(left)}px`);
-    this.setStyle('--blobio-chat-settings-top', `${Math.max(8, Math.round(rect.top))}px`);
+    this.setStyle('--blobio-chat-settings-top', `${Math.max(4, Math.round(rect.top))}px`);
     this.setStyle('--blobio-chat-settings-bottom', 'auto');
+  }
+
+  schedulePositionUi() {
+    if (this.positionFrame !== null) {
+      return;
+    }
+
+    const win = this.document.defaultView || globalThis;
+    if (typeof win.requestAnimationFrame !== 'function') {
+      this.positionUi();
+      return;
+    }
+
+    this.positionFrame = win.requestAnimationFrame(() => {
+      this.positionFrame = null;
+      this.positionUi();
+    });
   }
 
   setStyle(name, value) {
@@ -251,7 +360,8 @@ export class ChatSettingsFeature {
 
           if (node?.id === 'chat' || node?.id === 'chat-wrapper' || node?.querySelector?.('#chat, #chat-wrapper')) {
             this.applyChatFontSize();
-            this.positionUi();
+            this.syncChatWrapper();
+            this.schedulePositionUi();
             return;
           }
         }
@@ -264,12 +374,25 @@ export class ChatSettingsFeature {
   destroy() {
     this.pageObserver?.disconnect();
     this.pageObserver = null;
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = null;
+    this.chatWrapper = null;
 
     const win = this.document.defaultView || globalThis;
     if (this.viewportHandler) {
       win.removeEventListener?.('resize', this.viewportHandler);
       win.removeEventListener?.('scroll', this.viewportHandler, true);
       this.viewportHandler = null;
+    }
+
+    if (this.outsidePointerHandler) {
+      this.document.removeEventListener?.('pointerdown', this.outsidePointerHandler, true);
+      this.outsidePointerHandler = null;
+    }
+
+    if (this.positionFrame !== null) {
+      win.cancelAnimationFrame?.(this.positionFrame);
+      this.positionFrame = null;
     }
 
     this.document.querySelector?.('#chat')?.classList?.remove('blobio-chat-font-size-enabled');

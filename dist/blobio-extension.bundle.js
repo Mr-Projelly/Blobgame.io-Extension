@@ -968,34 +968,41 @@ html.${this.className} body::before {
   z-index: 80;
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: 10px;
   font-family: Arial, sans-serif;
 }
 
 .blobio-chat-settings-toggle,
 .blobio-chat-settings-category-button,
 .blobio-chat-font-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
   border: 1px solid rgba(130, 255, 166, 0.72);
   background: rgba(0, 0, 0, 0.74);
   color: #ecfff1;
+  text-align: center;
   text-shadow: 0 0 5px rgba(255, 255, 255, 0.76), 0 0 12px rgba(77, 255, 126, 0.74);
   box-shadow: inset 0 0 9px rgba(79, 255, 130, 0.12), 0 0 12px rgba(79, 255, 130, 0.26);
   cursor: pointer;
 }
 
 .blobio-chat-settings-toggle {
+  flex: 0 0 30px;
   width: 30px;
   height: 30px;
   padding: 0;
   border-radius: 5px;
   font-size: 22px;
   font-weight: 900;
-  line-height: 28px;
+  line-height: 1;
 }
 
 .blobio-chat-settings-panel {
   display: none;
   width: 250px;
+  box-sizing: border-box;
   padding: 10px;
   border: 1px solid rgba(130, 255, 166, 0.62);
   border-radius: 8px;
@@ -1008,33 +1015,71 @@ html.${this.className} body::before {
 }
 
 .blobio-chat-settings-category-button {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   width: 100%;
   min-height: 34px;
   padding: 7px 10px;
   border-radius: 6px;
   font-size: 14px;
   font-weight: 800;
-  text-align: left;
+  transition: border-color 300ms ease, box-shadow 300ms ease, color 300ms ease;
+}
+
+.blobio-chat-settings-category-button::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: linear-gradient(135deg, rgba(18, 104, 47, 0.9), rgba(47, 226, 101, 0.28) 58%, rgba(7, 43, 22, 0.82));
+  opacity: 0;
+  transition: opacity 340ms ease;
+  pointer-events: none;
+}
+
+.blobio-chat-settings-category-button > span {
+  position: relative;
+  z-index: 1;
+}
+
+.blobio-chat-settings-category-button.has-active-setting {
+  border-color: rgba(151, 255, 181, 0.96);
+  box-shadow: inset 0 0 12px rgba(65, 255, 122, 0.2), 0 0 15px rgba(65, 255, 122, 0.42);
+}
+
+.blobio-chat-settings-category-button.has-active-setting::before {
+  opacity: 1;
 }
 
 .blobio-chat-settings-category {
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 0;
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 8px 10px;
   align-items: center;
-  max-height: 0;
-  margin-top: 0;
+  width: 280px;
+  box-sizing: border-box;
+  padding: 10px;
+  border: 1px solid rgba(130, 255, 166, 0.62);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.82);
+  box-shadow: inset 0 0 18px rgba(79, 255, 130, 0.11), 0 0 16px rgba(79, 255, 130, 0.24);
   opacity: 0;
-  overflow: hidden;
-  transform: translateY(-4px);
-  transition: max-height 260ms ease, opacity 220ms ease, transform 260ms ease, margin-top 260ms ease;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateX(-6px);
+  transition: opacity 240ms ease, transform 280ms ease, visibility 0s linear 280ms;
 }
 
-.blobio-chat-settings-category.is-open {
-  max-height: 150px;
-  margin-top: 10px;
+.blobio-chat-settings-root.is-open .blobio-chat-settings-category.is-open {
   opacity: 1;
-  transform: translateY(0);
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateX(0);
+  transition-delay: 0s;
 }
 
 .blobio-chat-font-toggle {
@@ -1051,12 +1096,17 @@ html.${this.className} body::before {
 .blobio-chat-font-toggle.is-enabled {
   color: #ecfff1;
   border-color: rgba(137, 255, 170, 0.9);
-  background: rgba(11, 76, 35, 0.82);
+  background: linear-gradient(135deg, rgba(13, 95, 41, 0.92), rgba(30, 157, 68, 0.76));
   text-shadow: 0 0 5px rgba(255, 255, 255, 0.84), 0 0 11px rgba(62, 255, 114, 0.9);
   box-shadow: inset 0 0 9px rgba(79, 255, 130, 0.2), 0 0 14px rgba(79, 255, 130, 0.42);
 }
 
 .blobio-chat-font-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  box-sizing: border-box;
   padding: 6px 8px;
   border: 1px solid rgba(130, 255, 166, 0.44);
   border-radius: 5px;
@@ -1064,6 +1114,7 @@ html.${this.className} body::before {
   color: #ecfff1;
   font-size: 13px;
   font-weight: 800;
+  text-align: center;
   text-shadow: 0 0 5px rgba(255, 255, 255, 0.7), 0 0 11px rgba(77, 255, 126, 0.7);
 }
 
@@ -1078,6 +1129,7 @@ html.${this.className} body::before {
 .blobio-chat-font-range {
   width: 100%;
   accent-color: rgb(74, 229, 111);
+  transition: opacity 220ms ease;
 }
 
 .blobio-chat-font-number {
@@ -1092,6 +1144,13 @@ html.${this.className} body::before {
   text-align: center;
   outline: none;
   box-shadow: inset 0 0 7px rgba(79, 255, 130, 0.12);
+  transition: opacity 220ms ease, border-color 220ms ease;
+}
+
+.blobio-chat-font-range:disabled,
+.blobio-chat-font-number:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
 }
 
 #chat.blobio-chat-font-size-enabled li,
@@ -1101,7 +1160,11 @@ html.${this.className} body::before {
 
 @media (prefers-reduced-motion: reduce) {
   .blobio-chat-settings-category,
-  .blobio-chat-font-toggle {
+  .blobio-chat-settings-category-button,
+  .blobio-chat-settings-category-button::before,
+  .blobio-chat-font-toggle,
+  .blobio-chat-font-range,
+  .blobio-chat-font-number {
     transition: none;
   }
 }
@@ -1177,6 +1240,10 @@ html.${this.className} body::before {
   };
 
   // src/features/ChatSettingsFeature.js
+  var CHAT_GAP = 10;
+  var TOGGLE_WIDTH = 30;
+  var MAIN_PANEL_WIDTH = 250;
+  var CATEGORY_PANEL_WIDTH = 280;
   var ChatSettingsFeature = class {
     constructor({
       document = globalThis.document,
@@ -1188,8 +1255,12 @@ html.${this.className} body::before {
       this.logger = logger;
       this.styleNode = null;
       this.root = null;
+      this.chatWrapper = null;
       this.pageObserver = null;
+      this.resizeObserver = null;
       this.viewportHandler = null;
+      this.outsidePointerHandler = null;
+      this.positionFrame = null;
       this.started = false;
     }
     start() {
@@ -1217,6 +1288,7 @@ html.${this.className} body::before {
     }
     ensureUi() {
       if (this.root?.parentNode) {
+        this.syncChatWrapper();
         this.positionUi();
         return;
       }
@@ -1226,13 +1298,17 @@ html.${this.className} body::before {
       toggle.type = "button";
       toggle.classList.add("blobio-chat-settings-toggle");
       toggle.setAttribute("aria-label", "Open chat settings");
+      toggle.setAttribute("aria-expanded", "false");
       toggle.textContent = "+";
       const panel = this.document.createElement("div");
       panel.classList.add("blobio-chat-settings-panel");
       const categoryButton = this.document.createElement("button");
       categoryButton.type = "button";
       categoryButton.classList.add("blobio-chat-settings-category-button");
-      categoryButton.textContent = "Chat-Settings";
+      categoryButton.setAttribute("aria-expanded", "false");
+      const categoryButtonText = this.document.createElement("span");
+      categoryButtonText.textContent = "Chat-Settings";
+      categoryButton.appendChild(categoryButtonText);
       const category = this.document.createElement("div");
       category.classList.add("blobio-chat-settings-category");
       const enabledButton = this.document.createElement("button");
@@ -1258,26 +1334,21 @@ html.${this.className} body::before {
       number.setAttribute("aria-label", "Chat font size");
       controls.append(range, number);
       category.append(enabledButton, label, controls);
-      panel.append(categoryButton, category);
-      root.append(toggle, panel);
+      panel.appendChild(categoryButton);
+      root.append(toggle, panel, category);
       (this.document.body || this.document.documentElement).appendChild(root);
       toggle.addEventListener("click", () => {
-        const open = !root.classList.contains("is-open");
-        if (open) {
-          root.classList.add("is-open");
-        } else {
-          root.classList.remove("is-open");
-        }
-        toggle.textContent = open ? "-" : "+";
-        toggle.setAttribute("aria-label", open ? "Close chat settings" : "Open chat settings");
-        this.positionUi();
+        this.setOpen(!root.classList.contains("is-open"));
       });
       categoryButton.addEventListener("click", () => {
-        if (category.classList.contains("is-open")) {
-          category.classList.remove("is-open");
-        } else {
+        const open = !category.classList.contains("is-open");
+        if (open) {
           category.classList.add("is-open");
+        } else {
+          category.classList.remove("is-open");
         }
+        categoryButton.setAttribute("aria-expanded", String(open));
+        this.positionUi();
       });
       enabledButton.addEventListener("click", () => {
         setChatFontSizeEnabled(this.storage, !isChatFontSizeEnabled(this.storage));
@@ -1295,11 +1366,44 @@ html.${this.className} body::before {
       number.addEventListener("change", () => updateSize(number.value));
       this.root = root;
       this.syncControls();
+      this.syncChatWrapper();
       this.positionUi();
       const win = this.document.defaultView || globalThis;
-      this.viewportHandler = () => this.positionUi();
+      this.viewportHandler = () => this.schedulePositionUi();
       win.addEventListener?.("resize", this.viewportHandler);
       win.addEventListener?.("scroll", this.viewportHandler, true);
+      this.outsidePointerHandler = (event) => {
+        if (!this.root?.classList.contains("is-open")) {
+          return;
+        }
+        const path = event.composedPath?.();
+        const inside = Array.isArray(path) ? path.includes(this.root) : this.root.contains?.(event.target);
+        if (!inside) {
+          this.setOpen(false);
+        }
+      };
+      this.document.addEventListener?.("pointerdown", this.outsidePointerHandler, true);
+    }
+    setOpen(open) {
+      if (!this.root) {
+        return;
+      }
+      const toggle = this.root.querySelector?.(".blobio-chat-settings-toggle");
+      const category = this.root.querySelector?.(".blobio-chat-settings-category");
+      const categoryButton = this.root.querySelector?.(".blobio-chat-settings-category-button");
+      if (open) {
+        this.root.classList.add("is-open");
+      } else {
+        this.root.classList.remove("is-open");
+        category?.classList.remove("is-open");
+        categoryButton?.setAttribute("aria-expanded", "false");
+      }
+      if (toggle) {
+        toggle.textContent = open ? "-" : "+";
+        toggle.setAttribute("aria-label", open ? "Close chat settings" : "Open chat settings");
+        toggle.setAttribute("aria-expanded", String(open));
+      }
+      this.positionUi();
     }
     syncControls() {
       if (!this.root) {
@@ -1308,6 +1412,7 @@ html.${this.className} body::before {
       const enabled = isChatFontSizeEnabled(this.storage);
       const size = getChatFontSize(this.storage);
       const toggle = this.root.querySelector?.(".blobio-chat-font-toggle");
+      const categoryButton = this.root.querySelector?.(".blobio-chat-settings-category-button");
       const range = this.root.querySelector?.(".blobio-chat-font-range");
       const number = this.root.querySelector?.(".blobio-chat-font-number");
       if (toggle) {
@@ -1316,6 +1421,13 @@ html.${this.className} body::before {
           toggle.classList.add("is-enabled");
         } else {
           toggle.classList.remove("is-enabled");
+        }
+      }
+      if (categoryButton) {
+        if (enabled) {
+          categoryButton.classList.add("has-active-setting");
+        } else {
+          categoryButton.classList.remove("has-active-setting");
         }
       }
       if (range) {
@@ -1345,22 +1457,59 @@ html.${this.className} body::before {
         chat.style["--blobio-chat-font-size"] = `${size}px`;
       }
     }
+    syncChatWrapper() {
+      const wrapper = this.document.querySelector?.("#chat-wrapper") || null;
+      if (wrapper === this.chatWrapper) {
+        return wrapper;
+      }
+      this.resizeObserver?.disconnect();
+      this.resizeObserver = null;
+      this.chatWrapper = wrapper;
+      const ResizeObserver = this.document.defaultView?.ResizeObserver || globalThis.ResizeObserver;
+      if (wrapper && ResizeObserver) {
+        this.resizeObserver = new ResizeObserver(() => this.schedulePositionUi());
+        this.resizeObserver.observe(wrapper);
+      }
+      return wrapper;
+    }
     positionUi() {
       if (!this.root) {
         return;
       }
-      const wrapper = this.document.querySelector?.("#chat-wrapper");
+      const wrapper = this.syncChatWrapper();
       const rect = wrapper?.getBoundingClientRect?.();
       if (!rect || !Number.isFinite(rect.top) || !Number.isFinite(rect.right)) {
         return;
       }
+      const rootOpen = this.root.classList.contains("is-open");
+      const categoryOpen = this.root.querySelector?.(".blobio-chat-settings-category")?.classList.contains("is-open");
+      let totalWidth = TOGGLE_WIDTH;
+      if (rootOpen) {
+        totalWidth += CHAT_GAP + MAIN_PANEL_WIDTH;
+        if (categoryOpen) {
+          totalWidth += CHAT_GAP + CATEGORY_PANEL_WIDTH;
+        }
+      }
       const viewportWidth = this.document.defaultView?.innerWidth || 0;
-      const preferredLeft = rect.right + 8;
-      const panelWidth = this.root.classList.contains("is-open") ? 290 : 38;
-      const left = viewportWidth > 0 && preferredLeft + panelWidth > viewportWidth ? Math.max(8, rect.left - panelWidth - 8) : preferredLeft;
+      const preferredLeft = rect.right + CHAT_GAP;
+      const left = viewportWidth > 0 && preferredLeft + totalWidth > viewportWidth - 4 ? Math.max(4, rect.left - totalWidth - CHAT_GAP) : preferredLeft;
       this.setStyle("--blobio-chat-settings-left", `${Math.round(left)}px`);
-      this.setStyle("--blobio-chat-settings-top", `${Math.max(8, Math.round(rect.top))}px`);
+      this.setStyle("--blobio-chat-settings-top", `${Math.max(4, Math.round(rect.top))}px`);
       this.setStyle("--blobio-chat-settings-bottom", "auto");
+    }
+    schedulePositionUi() {
+      if (this.positionFrame !== null) {
+        return;
+      }
+      const win = this.document.defaultView || globalThis;
+      if (typeof win.requestAnimationFrame !== "function") {
+        this.positionUi();
+        return;
+      }
+      this.positionFrame = win.requestAnimationFrame(() => {
+        this.positionFrame = null;
+        this.positionUi();
+      });
     }
     setStyle(name, value) {
       if (typeof this.root?.style?.setProperty === "function") {
@@ -1382,7 +1531,8 @@ html.${this.className} body::before {
             }
             if (node?.id === "chat" || node?.id === "chat-wrapper" || node?.querySelector?.("#chat, #chat-wrapper")) {
               this.applyChatFontSize();
-              this.positionUi();
+              this.syncChatWrapper();
+              this.schedulePositionUi();
               return;
             }
           }
@@ -1393,11 +1543,22 @@ html.${this.className} body::before {
     destroy() {
       this.pageObserver?.disconnect();
       this.pageObserver = null;
+      this.resizeObserver?.disconnect();
+      this.resizeObserver = null;
+      this.chatWrapper = null;
       const win = this.document.defaultView || globalThis;
       if (this.viewportHandler) {
         win.removeEventListener?.("resize", this.viewportHandler);
         win.removeEventListener?.("scroll", this.viewportHandler, true);
         this.viewportHandler = null;
+      }
+      if (this.outsidePointerHandler) {
+        this.document.removeEventListener?.("pointerdown", this.outsidePointerHandler, true);
+        this.outsidePointerHandler = null;
+      }
+      if (this.positionFrame !== null) {
+        win.cancelAnimationFrame?.(this.positionFrame);
+        this.positionFrame = null;
       }
       this.document.querySelector?.("#chat")?.classList?.remove("blobio-chat-font-size-enabled");
       this.root?.remove();
@@ -2598,7 +2759,7 @@ html.${className} .blobio-watermark-extension::after {
   var DEFAULT_CLASS_NAME2 = "blobio-menu-enabled";
   var DEFAULT_STYLE_ID2 = "blobio-menu-style";
   var DEFAULT_TOOLBAR_CLASS = "blobio-menu-toolbar";
-  var DEFAULT_EXTENSION_VERSION = "0.1.55";
+  var DEFAULT_EXTENSION_VERSION = "0.1.56";
   var HIDDEN_CLASS = "blobio-original-hidden";
   var PARTNER_LINK_MATCH = /iogames\.space|iogames\.live|io-games\.zone|silvergames\.com|crazygames\.com/i;
   var FAILED_VIRAL_FRAME_MATCH = /viral\.iogames\.space/i;
