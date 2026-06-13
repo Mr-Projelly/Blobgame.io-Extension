@@ -83,7 +83,7 @@ export class CustomSkinOverlayFeature {
   injectPageOverlayRefresh(nextState) {
     const script = this.document.createElement('script');
     script.dataset.blobioCustomSkinOverlayRefresh = 'true';
-    script.textContent = `;(() => {\n  const state = ${JSON.stringify(nextState)};\n  window.__blobioCustomSkinOverlayV11?.refresh?.(state);\n})();`;
+    script.textContent = `;(() => {\n  const state = ${JSON.stringify(nextState)};\n  window.__blobioCustomSkinOverlayV12?.refresh?.(state);\n})();`;
     (this.document.documentElement || this.document.head || this.document.body)?.appendChild?.(script);
     script.remove();
   }
@@ -284,8 +284,8 @@ function pageOverlayMain(initialState) {
   const SIBLING_MAX_AGE_MS = 1400;
   const SIBLING_MAX_DISTANCE_FACTOR = 34;
 
-  if (window.__blobioCustomSkinOverlayV11) {
-    window.__blobioCustomSkinOverlayV11.refresh?.(initialState);
+  if (window.__blobioCustomSkinOverlayV12) {
+    window.__blobioCustomSkinOverlayV12.refresh?.(initialState);
     return;
   }
 
@@ -309,6 +309,8 @@ function pageOverlayMain(initialState) {
     wsMessages: 0,
     addNodePackets: 0,
     ownListPackets: 0,
+    ownListParsedPackets: 0,
+    ownListPacketSamples: [],
     shortOwnFallbackUpdates: 0,
     updatePackets: 0,
     updateParseErrors: 0,
@@ -1014,8 +1016,8 @@ function pageOverlayMain(initialState) {
   function installCanvasCircleTracker() {
     if (state.canvasHooked) return;
     const proto = window.CanvasRenderingContext2D && window.CanvasRenderingContext2D.prototype;
-    if (!proto || proto.__blobioSkinCircleTrackerV11) return;
-    proto.__blobioSkinCircleTrackerV11 = true;
+    if (!proto || proto.__blobioSkinCircleTrackerV12) return;
+    proto.__blobioSkinCircleTrackerV12 = true;
     state.canvasHooked = true;
 
     const originalArc = proto.arc;
@@ -1387,17 +1389,29 @@ function pageOverlayMain(initialState) {
 
   function parseOwnNodeList(packet, meta) {
     // Blobgame short-packet mode uses opcode 0x31 (decimal 49).
-    // Format observed in logs: opcode, uint32 count, then count cell IDs.
-    // Use uint32 IDs when available; older/short paths may fit into uint16.
-    if (packet.length < 7) return;
+    // v12 deliberately records the full packet sample because recent logs show
+    // opcode 49 packets with extra trailing bytes that may contain more owned-cell state.
+    state.ownListPackets += 1;
+    const sample = buildOwnListPacketSample(packet, meta);
+    state.ownListPacketSamples.push(sample);
+    while (state.ownListPacketSamples.length > 40) state.ownListPacketSamples.shift();
+
+    if (packet.length < 7) {
+      log('own node list packet too short', sample, 'packet-own-list');
+      return;
+    }
 
     const view = new DataView(packet.buffer, packet.byteOffset, packet.byteLength);
     const count32 = view.getUint32(1, true);
     const count16 = view.getUint16(1, true);
-    const count = count32 > 0 && count32 <= OWN_ID_LIMIT ? count32 : count16;
-    if (!Number.isFinite(count) || count <= 0 || count > OWN_ID_LIMIT) return;
+    const count8 = view.getUint8(1);
+    const count = count32 > 0 && count32 <= OWN_ID_LIMIT ? count32 : (count16 > 0 && count16 <= OWN_ID_LIMIT ? count16 : count8);
+    if (!Number.isFinite(count) || count <= 0 || count > OWN_ID_LIMIT) {
+      log('own node list count rejected', { sample, count8, count16, count32 }, 'packet-own-list');
+      return;
+    }
 
-    let offset = count === count32 ? 5 : 3;
+    let offset = count === count32 ? 5 : (count === count16 ? 3 : 2);
     let added = 0;
     const ids = [];
 
@@ -1421,9 +1435,103 @@ function pageOverlayMain(initialState) {
     }
 
     if (added > 0) {
-      state.ownListPackets += 1;
-      log('own node list parsed', { added, ids, ownIds: Array.from(state.ownIds), raw: Array.from(packet.slice(0, Math.min(40, packet.length))), meta }, 'packet');
+      state.ownListParsedPackets += 1;
+      log('own node list parsed', {
+        added,
+        ids,
+        ownIds: Array.from(state.ownIds),
+        parseLayout: { count, count8, count16, count32, nextOffset: offset, trailingBytes: Math.max(0, packet.length - offset) },
+        sample,
+        meta,
+      }, 'packet');
     }
+  }
+
+  function buildOwnListPacketSample(packet, meta) {
+    const view = new DataView(packet.buffer, packet.byteOffset, packet.byteLength);
+    const bytes = Array.from(packet.slice(0, Math.min(packet.length, 128)));
+    const first64 = Array.from(packet.slice(0, Math.min(packet.length, 64)));
+    const hex = first64.map((byte) => byte.toString(16).padStart(2, '0')).join(' ');
+    const byteCount = packet.length;
+
+    const safeUint8 = (offset) => offset < byteCount ? view.getUint8(offset) : null;
+    const safeUint16 = (offset) => offset + 2 <= byteCount ? view.getUint16(offset, true) >>> 0 : null;
+    const safeUint32 = (offset) => offset + 4 <= byteCount ? view.getUint32(offset, true) >>> 0 : null;
+
+    const parseIds = (offset, width, count) => {
+      const ids = [];
+      const maxCount = Math.min(count || 12, 16);
+      for (let index = 0; index < maxCount; index += 1) {
+        const at = offset + index * width;
+        const id = width === 4 ? safeUint32(at) : safeUint16(at);
+        if (id === null || id === undefined) break;
+        ids.push(id >>> 0);
+      }
+      return ids;
+    };
+
+    const offsetGuesses = [];
+    for (let offset = 1; offset <= Math.min(16, Math.max(1, byteCount - 2)); offset += 1) {
+      const le16 = parseIds(offset, 2, 8).filter((id) => id > 0);
+      const le32 = parseIds(offset, 4, 8).filter((id) => id > 0);
+      const nearbyOwn16 = le16.filter((id) => isNearKnownOwnId(id));
+      const nearbyOwn32 = le32.filter((id) => isNearKnownOwnId(id));
+      if (le16.length || le32.length) {
+        offsetGuesses.push({
+          offset,
+          u8: safeUint8(offset),
+          u16: safeUint16(offset),
+          u32: safeUint32(offset),
+          le16,
+          le32,
+          nearbyOwn16,
+          nearbyOwn32,
+        });
+      }
+    }
+
+    const count8 = safeUint8(1);
+    const count16 = safeUint16(1);
+    const count32 = safeUint32(1);
+    const standardLayouts = {
+      count8At1IdsU16At2: count8 && count8 <= OWN_ID_LIMIT ? parseIds(2, 2, count8) : [],
+      count8At1IdsU32At2: count8 && count8 <= OWN_ID_LIMIT ? parseIds(2, 4, count8) : [],
+      count16At1IdsU16At3: count16 && count16 <= OWN_ID_LIMIT ? parseIds(3, 2, count16) : [],
+      count16At1IdsU32At3: count16 && count16 <= OWN_ID_LIMIT ? parseIds(3, 4, count16) : [],
+      count32At1IdsU16At5: count32 && count32 <= OWN_ID_LIMIT ? parseIds(5, 2, count32) : [],
+      count32At1IdsU32At5: count32 && count32 <= OWN_ID_LIMIT ? parseIds(5, 4, count32) : [],
+    };
+
+    const matchedKnownOwnIds = [];
+    for (const [layout, ids] of Object.entries(standardLayouts)) {
+      for (const id of ids) {
+        if (state.ownIds.has(id)) matchedKnownOwnIds.push({ layout, id });
+      }
+    }
+
+    return sanitize({
+      t: new Date().toISOString(),
+      opcode: packet[0],
+      length: byteCount,
+      bytes,
+      bytesTruncated: byteCount > bytes.length,
+      first64,
+      hexFirst64: hex,
+      meta,
+      countCandidates: { count8, count16, count32 },
+      standardLayouts,
+      matchedKnownOwnIds,
+      offsetGuesses,
+      knownOwnIds: Array.from(state.ownIds),
+    });
+  }
+
+  function isNearKnownOwnId(id) {
+    if (!id || !state.ownIds.size) return false;
+    for (const ownId of state.ownIds) {
+      if (Math.abs((id >>> 0) - (ownId >>> 0)) <= 64) return true;
+    }
+    return false;
   }
 
   function addOwnId(id, source, meta) {
@@ -1932,7 +2040,7 @@ function pageOverlayMain(initialState) {
   function downloadDebugDump() {
     const dump = {
       meta: {
-        version: 'packet-overlay-v11',
+        version: 'packet-overlay-v12',
         createdAt: new Date().toISOString(),
         href: location.href,
       },
@@ -1969,6 +2077,8 @@ function pageOverlayMain(initialState) {
         wsMessages: state.wsMessages,
         addNodePackets: state.addNodePackets,
         ownListPackets: state.ownListPackets,
+        ownListParsedPackets: state.ownListParsedPackets,
+        ownListPacketSamples: state.ownListPacketSamples.slice(-20),
         shortOwnFallbackUpdates: state.shortOwnFallbackUpdates,
         updatePackets: state.updatePackets,
         updateParseErrors: state.updateParseErrors,
@@ -1998,7 +2108,7 @@ function pageOverlayMain(initialState) {
     }, 1000);
   }
 
-  window.__blobioCustomSkinOverlayV11 = {
+  window.__blobioCustomSkinOverlayV12 = {
     state,
     refresh,
     dump: () => ({
@@ -2024,6 +2134,8 @@ function pageOverlayMain(initialState) {
       packetNameMatches: state.packetNameMatches.slice(-20),
       rawOwnRecords: state.rawOwnRecords.slice(-20),
       ownListPackets: state.ownListPackets,
+      ownListParsedPackets: state.ownListParsedPackets,
+      ownListPacketSamples: state.ownListPacketSamples.slice(-10),
       shortOwnFallbackUpdates: state.shortOwnFallbackUpdates,
       opCounts: state.opCounts,
       earlyPackets: state.earlyPackets,
