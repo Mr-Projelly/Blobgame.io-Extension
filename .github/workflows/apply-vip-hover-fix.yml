@@ -45,3 +45,5 @@ jobs:
           git add -A
           git commit -m "Fix VIP+ icon hover isolation"
           git push origin main
+
+# One-time build trigger for v0.1.46.
