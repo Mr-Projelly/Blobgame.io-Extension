@@ -4008,7 +4008,7 @@ html.${className} .blobio-watermark-extension::after {
       script.dataset.blobioCustomSkinOverlayRefresh = "true";
       script.textContent = `;(() => {
   const state = ${JSON.stringify(nextState)};
-  window.__blobioCustomSkinOverlayV13?.refresh?.(state);
+  window.__blobioCustomSkinOverlayV15?.refresh?.(state);
 })();`;
       (this.document.documentElement || this.document.head || this.document.body)?.appendChild?.(script);
       script.remove();
@@ -4188,8 +4188,12 @@ html.${className} .blobio-watermark-extension::after {
     const SIBLING_MIN_OBSERVATIONS = 3;
     const SIBLING_MAX_AGE_MS = 1400;
     const SIBLING_MAX_DISTANCE_FACTOR = 34;
-    if (window.__blobioCustomSkinOverlayV13) {
-      window.__blobioCustomSkinOverlayV13.refresh?.(initialState);
+    const ZOOM_FACTOR_STORAGE_KEY = "blobio.customSkin.overlayZoomFactor";
+    const ZOOM_FACTOR_MIN = 0.25;
+    const ZOOM_FACTOR_MAX = 4;
+    const ZOOM_WHEEL_SENSITIVITY = 115e-5;
+    if (window.__blobioCustomSkinOverlayV15) {
+      window.__blobioCustomSkinOverlayV15.refresh?.(initialState);
       return;
     }
     const state = {
@@ -4246,6 +4250,11 @@ html.${className} .blobio-watermark-extension::after {
       rawOwnRecords: [],
       siblingCandidateScores: /* @__PURE__ */ new Map(),
       siblingOwnIds: /* @__PURE__ */ new Set(),
+      zoomFactor: readStoredZoomFactor(),
+      zoomEvents: [],
+      lastViewport: null,
+      lastCanvasRect: null,
+      lastEffectiveScale: 1,
       siblingOwnCandidates: [],
       siblingOwnMatches: []
     };
@@ -4481,6 +4490,8 @@ html.${className} .blobio-watermark-extension::after {
       }
       const canvas = findMainCanvas();
       const rect = canvas?.getBoundingClientRect?.() || { left: 0, top: 0, width: cssWidth, height: cssHeight };
+      state.lastViewport = { width: Math.round(cssWidth), height: Math.round(cssHeight), dpr, visualViewportScale: Number(window.visualViewport?.scale || 1) };
+      state.lastCanvasRect = { left: Math.round(rect.left || 0), top: Math.round(rect.top || 0), width: Math.round(rect.width || 0), height: Math.round(rect.height || 0) };
       updateCameraFromOwnCells();
       if (!state.ownIds.size) {
         state.ownNodeMissFrames += 1;
@@ -4504,7 +4515,7 @@ html.${className} .blobio-watermark-extension::after {
           mode = "screen-circle";
         } else {
           screen = worldToScreen(node.x, node.y, rect);
-          radius = Math.max(4, Math.abs(node.size * state.camera.scale));
+          radius = Math.max(4, Math.abs(node.size * getEffectiveCameraScale()));
           mode = "world-transform";
         }
         const drawRadius = Math.max(MIN_CELL_SCREEN_RADIUS, radius * CELL_BORDER_OVERDRAW);
@@ -4603,7 +4614,7 @@ html.${className} .blobio-watermark-extension::after {
     function pickBestScreenCircleForNode(node, circles, usedCircles, rect, ownNodes) {
       if (!circles.length) return null;
       const predicted = worldToScreen(node.x, node.y, rect);
-      const expectedRadius = Math.max(4, Math.abs(node.size * state.camera.scale));
+      const expectedRadius = Math.max(4, Math.abs(node.size * getEffectiveCameraScale()));
       const canvasCenter = {
         x: rect.left + rect.width / 2,
         y: rect.top + rect.height / 2
@@ -4793,17 +4804,45 @@ html.${className} .blobio-watermark-extension::after {
       }
       state.lastOwnCenter = { x: state.camera.x, y: state.camera.y, totalSize };
     }
+    function getEffectiveCameraScale() {
+      const baseScale = Number.isFinite(state.camera?.scale) && state.camera.scale > 0 ? state.camera.scale : 1;
+      const zoomFactor = Number.isFinite(state.zoomFactor) && state.zoomFactor > 0 ? state.zoomFactor : 1;
+      const effective = clamp(baseScale * zoomFactor, 0.04, 8);
+      state.lastEffectiveScale = effective;
+      return effective;
+    }
+    function readStoredZoomFactor() {
+      try {
+        const raw = localStorage.getItem(ZOOM_FACTOR_STORAGE_KEY);
+        const value = Number.parseFloat(raw || "1");
+        return Number.isFinite(value) && value > 0 ? clamp(value, ZOOM_FACTOR_MIN, ZOOM_FACTOR_MAX) : 1;
+      } catch {
+        return 1;
+      }
+    }
+    function setZoomFactor(next, source = "manual") {
+      const value = clamp(Number.isFinite(next) ? next : 1, ZOOM_FACTOR_MIN, ZOOM_FACTOR_MAX);
+      if (Math.abs(value - (state.zoomFactor || 1)) < 1e-4) return;
+      state.zoomFactor = value;
+      try {
+        localStorage.setItem(ZOOM_FACTOR_STORAGE_KEY, String(Number(value.toFixed(5))));
+      } catch {
+      }
+      state.zoomEvents.push({ t: (/* @__PURE__ */ new Date()).toISOString(), source, zoomFactor: Number(value.toFixed(5)) });
+      while (state.zoomEvents.length > 40) state.zoomEvents.shift();
+    }
     function worldToScreen(x, y, canvasRect) {
+      const scale = getEffectiveCameraScale();
       return {
-        x: canvasRect.left + canvasRect.width / 2 + (x - state.camera.x) * state.camera.scale,
-        y: canvasRect.top + canvasRect.height / 2 + (y - state.camera.y) * state.camera.scale
+        x: canvasRect.left + canvasRect.width / 2 + (x - state.camera.x) * scale,
+        y: canvasRect.top + canvasRect.height / 2 + (y - state.camera.y) * scale
       };
     }
     function installCanvasCircleTracker() {
       if (state.canvasHooked) return;
       const proto = window.CanvasRenderingContext2D && window.CanvasRenderingContext2D.prototype;
-      if (!proto || proto.__blobioSkinCircleTrackerV13) return;
-      proto.__blobioSkinCircleTrackerV13 = true;
+      if (!proto || proto.__blobioSkinCircleTrackerV15) return;
+      proto.__blobioSkinCircleTrackerV15 = true;
       state.canvasHooked = true;
       const originalArc = proto.arc;
       const originalFill = proto.fill;
@@ -5938,7 +5977,7 @@ html.${className} .blobio-watermark-extension::after {
     function downloadDebugDump() {
       const dump = {
         meta: {
-          version: "packet-overlay-v14",
+          version: "packet-overlay-v15",
           createdAt: (/* @__PURE__ */ new Date()).toISOString(),
           href: location.href
         },
@@ -5953,6 +5992,11 @@ html.${className} .blobio-watermark-extension::after {
           nodeCount: state.nodes.size,
           camera: state.camera,
           lastOwnCenter: state.lastOwnCenter,
+          zoomFactor: state.zoomFactor,
+          effectiveCameraScale: state.lastEffectiveScale,
+          zoomEvents: state.zoomEvents.slice(-20),
+          viewport: state.lastViewport,
+          canvasRect: state.lastCanvasRect,
           drawn: state.drawn,
           renderMode: state.renderMode,
           screenCircleCandidates: state.screenCircleCandidates,
@@ -6006,7 +6050,7 @@ html.${className} .blobio-watermark-extension::after {
         a.remove();
       }, 1e3);
     }
-    window.__blobioCustomSkinOverlayV13 = {
+    window.__blobioCustomSkinOverlayV15 = {
       state,
       refresh,
       dump: () => ({
@@ -6040,14 +6084,55 @@ html.${className} .blobio-watermark-extension::after {
         opCounts: state.opCounts,
         earlyPackets: state.earlyPackets,
         camera: state.camera,
+        zoomFactor: state.zoomFactor,
+        effectiveCameraScale: state.lastEffectiveScale,
+        zoomEvents: state.zoomEvents.slice(-20),
+        viewport: state.lastViewport,
+        canvasRect: state.lastCanvasRect,
         lastPacketSummary: state.lastPacketSummary,
         events: state.debugEvents.slice()
       }),
       downloadDebugDump
     };
+    function installZoomTracker() {
+      const applyWheelZoom = (event) => {
+        try {
+          if (!state.enabled) return;
+          const target = event.target;
+          const overlay = state.overlay;
+          const canvas = state.mainCanvas || findMainCanvas();
+          const targetCanvas = target && target.closest?.("canvas");
+          const inGameCanvas = targetCanvas && targetCanvas !== overlay && (!canvas || targetCanvas === canvas);
+          const overViewport = event.clientX >= 0 && event.clientY >= 0 && event.clientX <= (window.innerWidth || 0) && event.clientY <= (window.innerHeight || 0);
+          if (!inGameCanvas && !overViewport) return;
+          const delta = Number(event.deltaY || 0);
+          if (!Number.isFinite(delta) || Math.abs(delta) < 1) return;
+          const multiplier = Math.exp(-delta * ZOOM_WHEEL_SENSITIVITY);
+          setZoomFactor((state.zoomFactor || 1) * multiplier, "wheel");
+        } catch {
+        }
+      };
+      window.addEventListener("wheel", applyWheelZoom, { capture: true, passive: true });
+    }
+    function nudgeZoomFactor(multiplier, source) {
+      setZoomFactor((state.zoomFactor || 1) * multiplier, source);
+      log("overlay zoom factor changed", { zoomFactor: state.zoomFactor, source }, "zoom");
+    }
     window.addEventListener("keydown", (event) => {
       if (event.key === "F9") {
         downloadDebugDump();
+        return;
+      }
+      if (event.key === "F7") {
+        nudgeZoomFactor(0.94, "F7");
+        return;
+      }
+      if (event.key === "F8") {
+        nudgeZoomFactor(1.064, "F8");
+        return;
+      }
+      if (event.key === "F10") {
+        setZoomFactor(1, "F10-reset");
       }
     }, true);
     window.addEventListener?.("blobio-custom-skin-state", (event) => {
@@ -6060,6 +6145,7 @@ html.${className} .blobio-watermark-extension::after {
     }, false);
     refresh(initialState);
     installCanvasCircleTracker();
+    installZoomTracker();
     installSocketHooks();
     renderLoop();
   }
