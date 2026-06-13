@@ -1,7 +1,8 @@
 import { createBlobioStorage } from '../storage/BlobioStorage.js';
 import { normalizeUid, ROLE_STORAGE_KEYS } from './RoleRegistry.js';
 
-const PROFILE_UID_SELECTOR = '#profile-modal .profile-records-title-userid';
+const PROFILE_MODAL_SELECTOR = '#profile-modal';
+const PROFILE_UID_CLASS = 'profile-records-title-userid';
 
 export function parseProfileUid(value) {
   const match = String(value ?? '').match(/\bID\s*:\s*([\d\s]+)/i);
@@ -19,7 +20,9 @@ export class ProfileUidDetector {
     this.logger = logger;
     this.uid = normalizeUid(storage.getItem(ROLE_STORAGE_KEYS.ownUid));
     this.listeners = new Set();
-    this.observer = null;
+    this.pageObserver = null;
+    this.profileObserver = null;
+    this.profileModal = null;
     this.clickHandler = null;
     this.started = false;
   }
@@ -30,8 +33,8 @@ export class ProfileUidDetector {
     }
 
     this.started = true;
-    this.captureFromProfile();
-    this.observeProfile();
+    this.attachProfileModal(this.document.querySelector?.(PROFILE_MODAL_SELECTOR));
+    this.observeForProfileModal();
     this.installSignOutHandler();
     return true;
   }
@@ -50,12 +53,11 @@ export class ProfileUidDetector {
     return () => this.listeners.delete(listener);
   }
 
-  captureFromProfile(root = this.document) {
-    const isUidNode = root?.classList?.contains?.('profile-records-title-userid')
-      && root?.parentElement?.parentElement?.id === 'profile-modal';
-    const node = isUidNode
+  captureFromProfile(root = this.profileModal || this.document) {
+    const node = root?.classList?.contains?.(PROFILE_UID_CLASS)
       ? root
-      : root?.querySelector?.(PROFILE_UID_SELECTOR) || this.document.querySelector?.(PROFILE_UID_SELECTOR);
+      : root?.querySelector?.(`.${PROFILE_UID_CLASS}`)
+        || this.document.querySelector?.(`${PROFILE_MODAL_SELECTOR} .${PROFILE_UID_CLASS}`);
     const uid = parseProfileUid(node?.textContent);
     if (!uid || uid === this.uid) {
       return false;
@@ -67,25 +69,83 @@ export class ProfileUidDetector {
     return true;
   }
 
-  observeProfile() {
+  observeForProfileModal() {
     const MutationObserver = this.document.defaultView?.MutationObserver || globalThis.MutationObserver;
     const root = this.document.documentElement;
     if (!MutationObserver || !root) {
       return;
     }
 
-    this.observer = new MutationObserver((mutations) => {
+    this.pageObserver = new MutationObserver((mutations) => {
+      if (this.profileModal && this.isConnected(this.profileModal)) {
+        return;
+      }
+
+      if (this.profileModal) {
+        this.attachProfileModal(null);
+      }
+
       for (const mutation of mutations) {
         for (const node of mutation.addedNodes || []) {
-          if (this.captureFromProfile(node)) {
+          const modal = this.findProfileModal(node);
+          if (modal) {
+            this.attachProfileModal(modal);
             return;
           }
         }
       }
-
-      this.captureFromProfile();
     });
-    this.observer.observe(root, { childList: true, subtree: true, characterData: true });
+
+    this.pageObserver.observe(root, { childList: true, subtree: true });
+  }
+
+  findProfileModal(node) {
+    if (node?.id === 'profile-modal') {
+      return node;
+    }
+
+    return node?.querySelector?.(PROFILE_MODAL_SELECTOR) || null;
+  }
+
+  attachProfileModal(modal) {
+    if (modal === this.profileModal) {
+      this.captureFromProfile(modal || this.document);
+      return;
+    }
+
+    this.profileObserver?.disconnect();
+    this.profileObserver = null;
+    this.profileModal = modal || null;
+
+    if (!this.profileModal) {
+      return;
+    }
+
+    this.captureFromProfile(this.profileModal);
+
+    const MutationObserver = this.document.defaultView?.MutationObserver || globalThis.MutationObserver;
+    if (!MutationObserver) {
+      return;
+    }
+
+    this.profileObserver = new MutationObserver(() => this.captureFromProfile(this.profileModal));
+    this.profileObserver.observe(this.profileModal, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+  }
+
+  isConnected(node) {
+    if (!node) {
+      return false;
+    }
+
+    if (typeof node.isConnected === 'boolean') {
+      return node.isConnected;
+    }
+
+    return Boolean(this.document.documentElement?.contains?.(node));
   }
 
   installSignOutHandler() {
@@ -114,12 +174,17 @@ export class ProfileUidDetector {
   }
 
   destroy() {
-    this.observer?.disconnect();
-    this.observer = null;
+    this.pageObserver?.disconnect();
+    this.profileObserver?.disconnect();
+    this.pageObserver = null;
+    this.profileObserver = null;
+    this.profileModal = null;
+
     if (this.clickHandler) {
       this.document.removeEventListener?.('click', this.clickHandler);
       this.clickHandler = null;
     }
+
     this.listeners.clear();
     this.started = false;
   }

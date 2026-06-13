@@ -725,20 +725,27 @@ html.${this.className} body::before {
       }
       this.chatObserver?.disconnect();
       this.chatList = chatList;
-      this.processMessages(chatList.querySelectorAll?.("li") || []);
+      this.processMessages(chatList.querySelectorAll?.("li") || [], true);
       const MutationObserver = this.document.defaultView?.MutationObserver || globalThis.MutationObserver;
       if (!MutationObserver) {
         return;
       }
       this.chatObserver = new MutationObserver((mutations) => {
+        const messages = /* @__PURE__ */ new Set();
         for (const mutation of mutations) {
+          if (String(mutation.target?.tagName || "").toUpperCase() === "LI") {
+            messages.add(mutation.target);
+          }
           for (const node of mutation.addedNodes || []) {
             if (String(node?.tagName || "").toUpperCase() === "LI") {
-              this.processMessage(node);
+              messages.add(node);
             }
-            this.processMessages(node?.querySelectorAll?.("li") || []);
+            for (const message of node?.querySelectorAll?.("li") || []) {
+              messages.add(message);
+            }
           }
         }
+        this.processMessages(messages);
       });
       this.chatObserver.observe(chatList, { childList: true, subtree: true });
     }
@@ -747,21 +754,56 @@ html.${this.className} body::before {
       if (!MutationObserver) {
         return;
       }
-      this.pageObserver = new MutationObserver(() => this.attachChatObserver());
+      this.pageObserver = new MutationObserver((mutations) => {
+        if (this.chatList && this.isConnected(this.chatList)) {
+          return;
+        }
+        for (const mutation of mutations) {
+          for (const node of mutation.addedNodes || []) {
+            if (this.nodeContainsChat(node)) {
+              this.attachChatObserver();
+              return;
+            }
+          }
+        }
+      });
       this.pageObserver.observe(this.document.documentElement, { childList: true, subtree: true });
+    }
+    nodeContainsChat(node) {
+      if (node?.id === "chat") {
+        return true;
+      }
+      return Boolean(node?.querySelector?.("#chat"));
+    }
+    isConnected(node) {
+      if (!node) {
+        return false;
+      }
+      if (typeof node.isConnected === "boolean") {
+        return node.isConnected;
+      }
+      return Boolean(this.document.documentElement?.contains?.(node));
     }
     reprocessExistingMessages() {
       this.attachChatObserver();
-      this.processMessages(this.chatList?.querySelectorAll?.("li") || []);
+      this.processMessages(this.chatList?.querySelectorAll?.("li") || [], true);
     }
-    processMessages(messages) {
+    processMessages(messages, force = false) {
       for (const message of messages) {
-        this.processMessage(message);
+        this.processMessage(message, force);
       }
     }
-    processMessage(message) {
+    processMessage(message, force = false) {
       const uid = normalizeUid(message?.getAttribute?.("uid"));
       if (!uid) {
+        return;
+      }
+      const roles = this.roleRegistry?.getRoles?.(uid) || {
+        vip: { active: false },
+        admin: false
+      };
+      const signature = `${uid}:${roles.admin ? 1 : 0}:${roles.vip.active ? 1 : 0}`;
+      if (!force && message.dataset.blobioRoleSignature === signature) {
         return;
       }
       this.removeExtensionTags(message);
@@ -773,10 +815,6 @@ html.${this.className} body::before {
       const messageSpan = spans.slice(1).find((span) => /^\s*:/.test(span.textContent || "")) || spans.at(-1);
       const messageIndex = spans.indexOf(messageSpan);
       const builtInTags = messageIndex > 1 ? spans.slice(1, messageIndex) : [];
-      const roles = this.roleRegistry?.getRoles?.(uid) || {
-        vip: { active: false },
-        admin: false
-      };
       for (const tag of builtInTags) {
         if (String(tag.textContent || "").trim() === "[VIP]") {
           this.toggleClass(tag, "blobio-chat-built-in-vip-hidden", roles.vip.active);
@@ -785,8 +823,7 @@ html.${this.className} body::before {
       this.toggleClass(username, "blobio-chat-admin-username", roles.admin);
       this.toggleClass(messageSpan, "blobio-chat-admin-message", roles.admin);
       if (roles.admin) {
-        const adminTag = this.createTag(" [ADMIN]", "blobio-chat-admin-tag");
-        message.insertBefore(adminTag, messageSpan);
+        message.insertBefore(this.createTag(" [ADMIN]", "blobio-chat-admin-tag"), messageSpan);
       }
       if (roles.vip.active) {
         const vipTag = this.createTag(" [VIP+]", "blobio-chat-vip-plus-tag");
@@ -795,7 +832,7 @@ html.${this.className} body::before {
         }
         message.insertBefore(vipTag, messageSpan);
       }
-      message.dataset.blobioRoleSignature = `${uid}:${roles.admin ? 1 : 0}:${roles.vip.active ? 1 : 0}`;
+      message.dataset.blobioRoleSignature = signature;
     }
     createTag(text, className) {
       const tag = this.document.createElement("span");
@@ -2013,7 +2050,7 @@ html.${className} .blobio-watermark-extension::after {
   var DEFAULT_CLASS_NAME2 = "blobio-menu-enabled";
   var DEFAULT_STYLE_ID2 = "blobio-menu-style";
   var DEFAULT_TOOLBAR_CLASS = "blobio-menu-toolbar";
-  var DEFAULT_EXTENSION_VERSION = "0.1.48";
+  var DEFAULT_EXTENSION_VERSION = "0.1.49";
   var HIDDEN_CLASS = "blobio-original-hidden";
   var PARTNER_LINK_MATCH = /iogames\.space|iogames\.live|io-games\.zone|silvergames\.com|crazygames\.com/i;
   var FAILED_VIRAL_FRAME_MATCH = /viral\.iogames\.space/i;
@@ -4011,11 +4048,14 @@ html.${className} .blobio-watermark-extension::after {
       this.slot = null;
       this.icon = null;
       this.timeLabel = null;
+      this.massBooster = null;
       this.observer = null;
       this.interval = null;
       this.viewportHandler = null;
       this.unsubscribeRoles = null;
       this.unsubscribeUid = null;
+      this.pendingSync = null;
+      this.pendingSyncType = "";
       this.started = false;
     }
     start() {
@@ -4050,17 +4090,93 @@ html.${className} .blobio-watermark-extension::after {
       if (!MutationObserver) {
         return;
       }
-      this.observer = new MutationObserver(() => this.sync());
-      this.observer.observe(this.document.documentElement, { childList: true, subtree: true });
+      this.observer = new MutationObserver((mutations) => {
+        if (this.mutationsAffectMassBooster(mutations)) {
+          this.scheduleSync();
+        }
+      });
+      this.observer.observe(this.document.documentElement, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ["src"]
+      });
+    }
+    mutationsAffectMassBooster(mutations) {
+      for (const mutation of mutations) {
+        if (this.slot && (mutation.target === this.slot || this.slot.contains?.(mutation.target))) {
+          continue;
+        }
+        if (mutation.type === "attributes" && this.isMassBoosterImage(mutation.target)) {
+          return true;
+        }
+        for (const node of mutation.addedNodes || []) {
+          if (node === this.slot || this.slot?.contains?.(node)) {
+            continue;
+          }
+          if (this.nodeContainsMassBooster(node)) {
+            return true;
+          }
+        }
+        for (const node of mutation.removedNodes || []) {
+          if (node === this.slot || this.slot?.contains?.(node)) {
+            continue;
+          }
+          if (node === this.massBooster || node?.contains?.(this.massBooster)) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+    nodeContainsMassBooster(node) {
+      if (this.isMassBoosterImage(node)) {
+        return true;
+      }
+      return Array.from(node?.querySelectorAll?.("img") || []).some((image) => this.isMassBoosterImage(image));
     }
     installViewportTracking() {
       const win = this.document.defaultView;
       if (!win?.addEventListener) {
         return;
       }
-      this.viewportHandler = () => this.sync();
+      this.viewportHandler = () => this.scheduleSync();
       win.addEventListener("resize", this.viewportHandler);
       win.addEventListener("scroll", this.viewportHandler, true);
+    }
+    scheduleSync() {
+      if (!this.started || this.pendingSync !== null) {
+        return;
+      }
+      const win = this.document.defaultView || globalThis;
+      const run = () => {
+        this.pendingSync = null;
+        this.pendingSyncType = "";
+        this.sync();
+      };
+      if (typeof win.requestAnimationFrame === "function") {
+        this.pendingSyncType = "frame";
+        this.pendingSync = win.requestAnimationFrame(run);
+        return;
+      }
+      this.pendingSyncType = "timeout";
+      this.pendingSync = win.setTimeout?.(run, 0) ?? null;
+      if (this.pendingSync === null) {
+        run();
+      }
+    }
+    cancelScheduledSync() {
+      if (this.pendingSync === null) {
+        return;
+      }
+      const win = this.document.defaultView || globalThis;
+      if (this.pendingSyncType === "frame") {
+        win.cancelAnimationFrame?.(this.pendingSync);
+      } else {
+        win.clearTimeout?.(this.pendingSync);
+      }
+      this.pendingSync = null;
+      this.pendingSyncType = "";
     }
     sync() {
       const uid = this.uidDetector?.getUid?.() || "";
@@ -4069,19 +4185,17 @@ html.${className} .blobio-watermark-extension::after {
         this.removeBadge();
         return;
       }
-      const target = Array.from(this.document.querySelectorAll?.("img") || []).find((image) => this.isMassBoosterImage(image));
+      const target = this.findMassBooster();
       if (!target || !this.document.body) {
         this.removeBadge();
         return;
       }
+      this.massBooster = target;
       this.ensureBadge();
       const rect = target.getBoundingClientRect?.();
       const height = Number(rect?.height) || Number(target.clientHeight) || Number(target.height) || 0;
       if (height >= 18 && height <= 120) {
-        this.icon.style.setProperty?.("--blobio-vip-plus-size", `${Math.round(height * VIP_SIZE_MULTIPLIER)}px`);
-        if (!this.icon.style.setProperty) {
-          this.icon.style["--blobio-vip-plus-size"] = `${Math.round(height * VIP_SIZE_MULTIPLIER)}px`;
-        }
+        this.setStyle(this.icon, "--blobio-vip-plus-size", `${Math.round(height * VIP_SIZE_MULTIPLIER)}px`);
       }
       const right = Number(rect?.right);
       const top = Number(rect?.top);
@@ -4089,12 +4203,31 @@ html.${className} .blobio-watermark-extension::after {
         this.setStyle(this.slot, "--blobio-vip-plus-left", `${Math.round(right + 10)}px`);
         this.setStyle(this.slot, "--blobio-vip-plus-top", `${Math.round(top + height / 2)}px`);
       }
-      this.timeLabel.textContent = status.unlimited ? "UNLIMITED" : formatVipRemainingTime(status.remainingMs);
-      this.timeLabel.classList.toggle?.("is-unlimited", status.unlimited);
-      if (!this.timeLabel.classList.toggle) {
-        if (status.unlimited) this.timeLabel.classList.add("is-unlimited");
-        else this.timeLabel.classList.remove("is-unlimited");
+      const nextText = status.unlimited ? "UNLIMITED" : formatVipRemainingTime(status.remainingMs);
+      if (this.timeLabel.textContent !== nextText) {
+        this.timeLabel.textContent = nextText;
       }
+      const hasUnlimitedClass = this.timeLabel.classList.contains?.("is-unlimited");
+      if (status.unlimited && !hasUnlimitedClass) {
+        this.timeLabel.classList.add("is-unlimited");
+      } else if (!status.unlimited && hasUnlimitedClass) {
+        this.timeLabel.classList.remove("is-unlimited");
+      }
+    }
+    findMassBooster() {
+      if (this.isConnected(this.massBooster) && this.isMassBoosterImage(this.massBooster)) {
+        return this.massBooster;
+      }
+      return Array.from(this.document.querySelectorAll?.("img") || []).find((image) => this.isMassBoosterImage(image)) || null;
+    }
+    isConnected(node) {
+      if (!node) {
+        return false;
+      }
+      if (typeof node.isConnected === "boolean") {
+        return node.isConnected;
+      }
+      return Boolean(this.document.documentElement?.contains?.(node));
     }
     ensureBadge() {
       if (!this.slot) {
@@ -4124,14 +4257,24 @@ html.${className} .blobio-watermark-extension::after {
       }
     }
     setStyle(node, property, value) {
-      if (typeof node?.style?.setProperty === "function") {
+      if (!node?.style) {
+        return;
+      }
+      const currentValue = typeof node.style.getPropertyValue === "function" ? node.style.getPropertyValue(property) : node.style[property];
+      if (currentValue === value) {
+        return;
+      }
+      if (typeof node.style.setProperty === "function") {
         node.style.setProperty(property, value);
-      } else if (node?.style) {
+      } else {
         node.style[property] = value;
       }
     }
     isMassBoosterImage(image) {
-      const source = String(image?.getAttribute?.("src") || image?.src || "").split("#")[0].split("?")[0].toLowerCase();
+      if (String(image?.tagName || "").toUpperCase() !== "IMG") {
+        return false;
+      }
+      const source = String(image.getAttribute?.("src") || image.src || "").split("#")[0].split("?")[0].toLowerCase();
       return source.endsWith("/assets/images/mass_booster_web_trans.png") || source === "assets/images/mass_booster_web_trans.png";
     }
     removeBadge() {
@@ -4157,7 +4300,9 @@ html.${className} .blobio-watermark-extension::after {
         win.removeEventListener?.("scroll", this.viewportHandler, true);
         this.viewportHandler = null;
       }
+      this.cancelScheduledSync();
       this.removeBadge();
+      this.massBooster = null;
       this.styleNode?.remove();
       this.styleNode = null;
       this.started = false;
@@ -4177,7 +4322,8 @@ html.${className} .blobio-watermark-extension::after {
   }
 
   // src/roles/ProfileUidDetector.js
-  var PROFILE_UID_SELECTOR = "#profile-modal .profile-records-title-userid";
+  var PROFILE_MODAL_SELECTOR = "#profile-modal";
+  var PROFILE_UID_CLASS = "profile-records-title-userid";
   function parseProfileUid(value) {
     const match = String(value ?? "").match(/\bID\s*:\s*([\d\s]+)/i);
     return normalizeUid(match?.[1] || "");
@@ -4193,7 +4339,9 @@ html.${className} .blobio-watermark-extension::after {
       this.logger = logger;
       this.uid = normalizeUid(storage.getItem(ROLE_STORAGE_KEYS.ownUid));
       this.listeners = /* @__PURE__ */ new Set();
-      this.observer = null;
+      this.pageObserver = null;
+      this.profileObserver = null;
+      this.profileModal = null;
       this.clickHandler = null;
       this.started = false;
     }
@@ -4202,8 +4350,8 @@ html.${className} .blobio-watermark-extension::after {
         return true;
       }
       this.started = true;
-      this.captureFromProfile();
-      this.observeProfile();
+      this.attachProfileModal(this.document.querySelector?.(PROFILE_MODAL_SELECTOR));
+      this.observeForProfileModal();
       this.installSignOutHandler();
       return true;
     }
@@ -4219,9 +4367,8 @@ html.${className} .blobio-watermark-extension::after {
       listener(this.uid);
       return () => this.listeners.delete(listener);
     }
-    captureFromProfile(root = this.document) {
-      const isUidNode = root?.classList?.contains?.("profile-records-title-userid") && root?.parentElement?.parentElement?.id === "profile-modal";
-      const node = isUidNode ? root : root?.querySelector?.(PROFILE_UID_SELECTOR) || this.document.querySelector?.(PROFILE_UID_SELECTOR);
+    captureFromProfile(root = this.profileModal || this.document) {
+      const node = root?.classList?.contains?.(PROFILE_UID_CLASS) ? root : root?.querySelector?.(`.${PROFILE_UID_CLASS}`) || this.document.querySelector?.(`${PROFILE_MODAL_SELECTOR} .${PROFILE_UID_CLASS}`);
       const uid = parseProfileUid(node?.textContent);
       if (!uid || uid === this.uid) {
         return false;
@@ -4231,23 +4378,68 @@ html.${className} .blobio-watermark-extension::after {
       this.notify();
       return true;
     }
-    observeProfile() {
+    observeForProfileModal() {
       const MutationObserver = this.document.defaultView?.MutationObserver || globalThis.MutationObserver;
       const root = this.document.documentElement;
       if (!MutationObserver || !root) {
         return;
       }
-      this.observer = new MutationObserver((mutations) => {
+      this.pageObserver = new MutationObserver((mutations) => {
+        if (this.profileModal && this.isConnected(this.profileModal)) {
+          return;
+        }
+        if (this.profileModal) {
+          this.attachProfileModal(null);
+        }
         for (const mutation of mutations) {
           for (const node of mutation.addedNodes || []) {
-            if (this.captureFromProfile(node)) {
+            const modal = this.findProfileModal(node);
+            if (modal) {
+              this.attachProfileModal(modal);
               return;
             }
           }
         }
-        this.captureFromProfile();
       });
-      this.observer.observe(root, { childList: true, subtree: true, characterData: true });
+      this.pageObserver.observe(root, { childList: true, subtree: true });
+    }
+    findProfileModal(node) {
+      if (node?.id === "profile-modal") {
+        return node;
+      }
+      return node?.querySelector?.(PROFILE_MODAL_SELECTOR) || null;
+    }
+    attachProfileModal(modal) {
+      if (modal === this.profileModal) {
+        this.captureFromProfile(modal || this.document);
+        return;
+      }
+      this.profileObserver?.disconnect();
+      this.profileObserver = null;
+      this.profileModal = modal || null;
+      if (!this.profileModal) {
+        return;
+      }
+      this.captureFromProfile(this.profileModal);
+      const MutationObserver = this.document.defaultView?.MutationObserver || globalThis.MutationObserver;
+      if (!MutationObserver) {
+        return;
+      }
+      this.profileObserver = new MutationObserver(() => this.captureFromProfile(this.profileModal));
+      this.profileObserver.observe(this.profileModal, {
+        childList: true,
+        subtree: true,
+        characterData: true
+      });
+    }
+    isConnected(node) {
+      if (!node) {
+        return false;
+      }
+      if (typeof node.isConnected === "boolean") {
+        return node.isConnected;
+      }
+      return Boolean(this.document.documentElement?.contains?.(node));
     }
     installSignOutHandler() {
       this.clickHandler = (event) => {
@@ -4271,8 +4463,11 @@ html.${className} .blobio-watermark-extension::after {
       }
     }
     destroy() {
-      this.observer?.disconnect();
-      this.observer = null;
+      this.pageObserver?.disconnect();
+      this.profileObserver?.disconnect();
+      this.pageObserver = null;
+      this.profileObserver = null;
+      this.profileModal = null;
       if (this.clickHandler) {
         this.document.removeEventListener?.("click", this.clickHandler);
         this.clickHandler = null;
