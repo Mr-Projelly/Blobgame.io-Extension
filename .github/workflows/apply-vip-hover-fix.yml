@@ -1,26 +1,26 @@
 name: Apply VIP hover fix
 
 on:
-  workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - scripts/vip-hover-fix-v28.patch
-      - .github/workflows/apply-vip-hover-fix.yml
+  pull_request_target:
+    types:
+      - opened
+      - synchronize
+      - reopened
 
 permissions:
   contents: write
 
 jobs:
   apply-fix:
-    if: github.actor != 'github-actions[bot]'
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'vip-hover-fix-v28'
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check out repository
+      - name: Check out fix branch
         uses: actions/checkout@v4
         with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
 
       - name: Apply source patch
@@ -38,12 +38,10 @@ jobs:
       - name: Build bundle
         run: npm run build
 
-      - name: Commit fix
+      - name: Commit fix to branch
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           git commit -m "Fix VIP+ icon hover isolation"
-          git push origin main
-
-# One-time build trigger for v0.1.46.
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
