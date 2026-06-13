@@ -1,7 +1,7 @@
 import { VIP_BADGE_CSS, VIP_BADGE_STYLE_ID } from '../css/RoleFeatureStyles.js';
 
 const VIP_REFRESH_INTERVAL_MS = 30000;
-const VIP_SIZE_MULTIPLIER = 2.625;
+const VIP_SIZE_MULTIPLIER = 2.1;
 const UNLIMITED_TEXT = 'UNLIMITED';
 
 export function formatVipRemainingTime(remainingMs) {

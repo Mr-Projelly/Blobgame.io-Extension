@@ -175,8 +175,8 @@ html.${this.className} body::before {
 .blobio-vip-plus-icon {
   display: block !important;
   width: auto !important;
-  height: var(--blobio-vip-plus-size, 132px) !important;
-  max-width: 250px !important;
+  height: var(--blobio-vip-plus-size, 106px) !important;
+  max-width: 200px !important;
   margin: 0 !important;
   object-fit: contain !important;
   transform: rotate(-7deg) scale(1) !important;
@@ -194,15 +194,15 @@ html.${this.className} body::before {
 
 .blobio-vip-plus-time {
   position: absolute;
-  left: 72%;
-  top: 79%;
+  left: 68%;
+  top: 72%;
   display: inline-flex;
   align-items: flex-end;
   justify-content: center;
   max-width: 92%;
-  transform: translate(-50%, -50%) rotate(4deg);
+  transform: translate(-50%, -50%) rotate(-7deg);
   color: #f4fff6;
-  font-size: clamp(10px, calc(var(--blobio-vip-plus-size, 132px) * 0.085), 21px);
+  font-size: clamp(9px, calc(var(--blobio-vip-plus-size, 106px) * 0.09), 18px);
   font-weight: 900;
   line-height: 1;
   letter-spacing: 0.02em;
@@ -227,11 +227,11 @@ html.${this.className} body::before {
 @keyframes blobio-vip-unlimited-pulse {
   0%, 100% {
     opacity: 0.84;
-    transform: translate(-50%, -50%) rotate(4deg) scale(0.98);
+    transform: translate(-50%, -50%) rotate(-7deg) scale(0.98);
   }
   50% {
     opacity: 1;
-    transform: translate(-50%, -50%) rotate(4deg) scale(1.04);
+    transform: translate(-50%, -50%) rotate(-7deg) scale(1.04);
   }
 }
 
@@ -2140,7 +2140,7 @@ html.${className} .blobio-watermark-extension::after {
   var DEFAULT_CLASS_NAME2 = "blobio-menu-enabled";
   var DEFAULT_STYLE_ID2 = "blobio-menu-style";
   var DEFAULT_TOOLBAR_CLASS = "blobio-menu-toolbar";
-  var DEFAULT_EXTENSION_VERSION = "0.1.50";
+  var DEFAULT_EXTENSION_VERSION = "0.1.51";
   var HIDDEN_CLASS = "blobio-original-hidden";
   var PARTNER_LINK_MATCH = /iogames\.space|iogames\.live|io-games\.zone|silvergames\.com|crazygames\.com/i;
   var FAILED_VIRAL_FRAME_MATCH = /viral\.iogames\.space/i;
@@ -4172,7 +4172,7 @@ html.${className} .blobio-watermark-extension::after {
 
   // src/features/VipBadgeFeature.js
   var VIP_REFRESH_INTERVAL_MS = 3e4;
-  var VIP_SIZE_MULTIPLIER = 2.625;
+  var VIP_SIZE_MULTIPLIER = 2.1;
   var UNLIMITED_TEXT = "UNLIMITED";
   function formatVipRemainingTime(remainingMs) {
     const totalMinutes = Math.max(0, Math.ceil(Number(remainingMs) / 6e4));

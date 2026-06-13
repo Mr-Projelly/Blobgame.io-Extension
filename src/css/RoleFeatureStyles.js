@@ -22,8 +22,8 @@ export const VIP_BADGE_CSS = `
 .blobio-vip-plus-icon {
   display: block !important;
   width: auto !important;
-  height: var(--blobio-vip-plus-size, 132px) !important;
-  max-width: 250px !important;
+  height: var(--blobio-vip-plus-size, 106px) !important;
+  max-width: 200px !important;
   margin: 0 !important;
   object-fit: contain !important;
   transform: rotate(-7deg) scale(1) !important;
@@ -41,15 +41,15 @@ export const VIP_BADGE_CSS = `
 
 .blobio-vip-plus-time {
   position: absolute;
-  left: 72%;
-  top: 79%;
+  left: 68%;
+  top: 72%;
   display: inline-flex;
   align-items: flex-end;
   justify-content: center;
   max-width: 92%;
-  transform: translate(-50%, -50%) rotate(4deg);
+  transform: translate(-50%, -50%) rotate(-7deg);
   color: #f4fff6;
-  font-size: clamp(10px, calc(var(--blobio-vip-plus-size, 132px) * 0.085), 21px);
+  font-size: clamp(9px, calc(var(--blobio-vip-plus-size, 106px) * 0.09), 18px);
   font-weight: 900;
   line-height: 1;
   letter-spacing: 0.02em;
@@ -74,11 +74,11 @@ export const VIP_BADGE_CSS = `
 @keyframes blobio-vip-unlimited-pulse {
   0%, 100% {
     opacity: 0.84;
-    transform: translate(-50%, -50%) rotate(4deg) scale(0.98);
+    transform: translate(-50%, -50%) rotate(-7deg) scale(0.98);
   }
   50% {
     opacity: 1;
-    transform: translate(-50%, -50%) rotate(4deg) scale(1.04);
+    transform: translate(-50%, -50%) rotate(-7deg) scale(1.04);
   }
 }
 
