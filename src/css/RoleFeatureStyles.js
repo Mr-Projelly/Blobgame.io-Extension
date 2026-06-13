@@ -41,7 +41,7 @@ export const VIP_BADGE_CSS = `
 
 .blobio-vip-plus-time {
   position: absolute;
-  left: 12%;
+  left: 53%;
   top: 65%;
   display: inline-flex;
   align-items: flex-end;
@@ -49,7 +49,7 @@ export const VIP_BADGE_CSS = `
   max-width: 982%;
   transform: translate(-50%, -50%) rotate(-7deg);
   color: #f4fff6;
-  font-size: clamp(9px, calc(var(--blobio-vip-plus-size, 106px) * 0.09), 18px);
+  font-size: clamp(9px, calc(var(--blobio-vip-plus-size, 195px) * 0.09), 20px);
   font-weight: 900;
   line-height: 1;
   letter-spacing: 0.02em;
