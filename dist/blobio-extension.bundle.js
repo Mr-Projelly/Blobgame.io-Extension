@@ -413,8 +413,8 @@ html.${this.className} body::before {
 
   // src/roles/RoleRegistry.js
   var DEFAULT_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1e3;
-  var DEFAULT_VIP_URL = "https://raw.githubusercontent.com/SkyViewBlobio/Blobgame.io-Web-Script/main/data/roles/vip.json";
-  var DEFAULT_ADMIN_URL = "https://raw.githubusercontent.com/SkyViewBlobio/Blobgame.io-Web-Script/main/data/roles/admins.json";
+  var DEFAULT_VIP_URL = "https://raw.githubusercontent.com/SkyViewBlobio/Blobgame.io-Extension/main/data/roles/vip.json";
+  var DEFAULT_ADMIN_URL = "https://raw.githubusercontent.com/SkyViewBlobio/Blobgame.io-Extension/main/data/roles/admins.json";
   var VIP_CACHE_KEY = "blobio.roles.vipCache";
   var ADMIN_CACHE_KEY = "blobio.roles.adminCache";
   function normalizeUid(value) {
@@ -2759,7 +2759,7 @@ html.${className} .blobio-watermark-extension::after {
   var DEFAULT_CLASS_NAME2 = "blobio-menu-enabled";
   var DEFAULT_STYLE_ID2 = "blobio-menu-style";
   var DEFAULT_TOOLBAR_CLASS = "blobio-menu-toolbar";
-  var DEFAULT_EXTENSION_VERSION = "0.1.57";
+  var DEFAULT_EXTENSION_VERSION = "0.1.59";
   var HIDDEN_CLASS = "blobio-original-hidden";
   var PARTNER_LINK_MATCH = /iogames\.space|iogames\.live|io-games\.zone|silvergames\.com|crazygames\.com/i;
   var FAILED_VIRAL_FRAME_MATCH = /viral\.iogames\.space/i;
@@ -2785,7 +2785,7 @@ html.${className} .blobio-watermark-extension::after {
     watermark: "This option will display the Extension name text, alongside its current version.",
     customSkin: "Replace one of your owned skin assets locally with a saved direct i.imgur.com image. Only you see the custom image.",
     hideAdminMd: "Hide the built-in [MD] tag from extension ADMIN users in chat. This is enabled by default.",
-    fpsUncap: "Run the custom game client frame loop without the normal display-refresh requestAnimationFrame cap. Off by default and applies immediately."
+    fpsUncap: "Uncap the in-game render loop after a safe startup delay, periodically yield to native frames, keep the game active when unfocused, and smooth camera zoom using the real frame delta. Off by default and applies immediately."
   };
   var DEFAULT_VIDEO = {
     title: "Featured Blob.io Video",
@@ -5417,7 +5417,7 @@ html.${className} .blobio-watermark-extension::after {
 
   // src/main.js
   var INSTANCE_KEY = "__blobioExtension";
-  var VIP_BADGE_URL = "https://raw.githubusercontent.com/SkyViewBlobio/Blobgame.io-Web-Script/main/assets/VIP_icon_plus.png";
+  var VIP_BADGE_URL = "https://raw.githubusercontent.com/SkyViewBlobio/Blobgame.io-Extension/main/assets/VIP_icon_plus.png";
   var BlobioExtension = class {
     constructor(windowRef = globalThis) {
       this.window = windowRef;
