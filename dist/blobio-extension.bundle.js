@@ -1548,6 +1548,7 @@ html.${this.className} body::before {
   display: grid;
   gap: 7px;
   max-height: 280px;
+  overflow-x: hidden;
   overflow-y: auto;
   padding-right: 3px;
 }
@@ -1614,6 +1615,15 @@ html.${this.className} body::before {
   text-shadow: 0 0 6px rgba(255, 255, 255, 0.7), 0 0 10px rgba(67, 255, 122, 0.52);
   box-shadow: inset 0 0 8px rgba(79, 255, 130, 0.1);
   transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+
+.blobio-hotkey-bind:focus {
+  outline: none;
+}
+
+.blobio-hotkey-bind:focus-visible {
+  border-color: rgba(151, 255, 181, 0.98);
+  box-shadow: inset 0 0 10px rgba(79, 255, 130, 0.2), 0 0 13px rgba(79, 255, 130, 0.46);
 }
 
 .blobio-hotkey-bind:hover,
@@ -2836,6 +2846,13 @@ html.${this.className} body::before {
         notification.classList.add("is-leaving");
         this.notificationRemoveTimer = win.setTimeout?.(() => notification.remove(), 450);
       }, visibleMs);
+    }
+    showMutedPlayerNotification(uid) {
+      const safeUid = String(uid ?? "").trim();
+      if (!safeUid) {
+        return;
+      }
+      this.showNotification(`You muted ${safeUid}.`, "success");
     }
     showProtectedMuteNotification() {
       this.showNotification("You cannot mute a ADMIN/MD.", "error");
@@ -4701,7 +4718,7 @@ html.${className} .blobio-watermark-extension::after {
   var DEFAULT_CLASS_NAME2 = "blobio-menu-enabled";
   var DEFAULT_STYLE_ID2 = "blobio-menu-style";
   var DEFAULT_TOOLBAR_CLASS = "blobio-menu-toolbar";
-  var DEFAULT_EXTENSION_VERSION = "0.1.72";
+  var DEFAULT_EXTENSION_VERSION = "0.1.73";
   var HIDDEN_CLASS = "blobio-original-hidden";
   var PARTNER_LINK_MATCH = /iogames\.space|iogames\.live|io-games\.zone|silvergames\.com|crazygames\.com/i;
   var FAILED_VIRAL_FRAME_MATCH = /viral\.iogames\.space/i;
@@ -8537,7 +8554,7 @@ html.${className} .blobio-watermark-extension::after {
 
   // src/main.js
   var INSTANCE_KEY = "__blobioExtension";
-  var EXTENSION_VERSION = "0.1.72";
+  var EXTENSION_VERSION = "0.1.73";
   var VIP_BADGE_URL = "https://raw.githubusercontent.com/SkyViewBlobio/Blobgame.io-Extension/main/assets/VIP_icon_plus.png";
   var BlobioExtension = class {
     constructor(windowRef = globalThis) {

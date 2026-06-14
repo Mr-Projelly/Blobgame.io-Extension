@@ -356,6 +356,7 @@ export const CHAT_SETTINGS_CSS = `
   display: grid;
   gap: 7px;
   max-height: 280px;
+  overflow-x: hidden;
   overflow-y: auto;
   padding-right: 3px;
 }
@@ -422,6 +423,15 @@ export const CHAT_SETTINGS_CSS = `
   text-shadow: 0 0 6px rgba(255, 255, 255, 0.7), 0 0 10px rgba(67, 255, 122, 0.52);
   box-shadow: inset 0 0 8px rgba(79, 255, 130, 0.1);
   transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+
+.blobio-hotkey-bind:focus {
+  outline: none;
+}
+
+.blobio-hotkey-bind:focus-visible {
+  border-color: rgba(151, 255, 181, 0.98);
+  box-shadow: inset 0 0 10px rgba(79, 255, 130, 0.2), 0 0 13px rgba(79, 255, 130, 0.46);
 }
 
 .blobio-hotkey-bind:hover,

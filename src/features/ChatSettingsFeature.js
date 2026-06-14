@@ -982,6 +982,15 @@ export class ChatSettingsFeature {
     }, visibleMs);
   }
 
+  showMutedPlayerNotification(uid) {
+    const safeUid = String(uid ?? '').trim();
+    if (!safeUid) {
+      return;
+    }
+
+    this.showNotification(`You muted ${safeUid}.`, 'success');
+  }
+
   showProtectedMuteNotification() {
     this.showNotification('You cannot mute a ADMIN/MD.', 'error');
   }
