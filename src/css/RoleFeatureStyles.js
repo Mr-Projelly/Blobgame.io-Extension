@@ -171,11 +171,6 @@ export const CHAT_ROLE_CSS = `
      0 2px 0 #000 !important;
 }
 
-#chat .blobio-chat-friend-message:not(.blobio-chat-admin-message) * {
-  color: inherit !important;
-  text-shadow: inherit !important;
-}
-
 #chat .blobio-chat-admin-username {
   font-weight: 800 !important;
   font-style: italic !important;

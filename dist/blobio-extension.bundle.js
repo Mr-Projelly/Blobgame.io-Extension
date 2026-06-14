@@ -869,11 +869,6 @@ html.${this.className} body::before {
      0 2px 0 #000 !important;
 }
 
-#chat .blobio-chat-friend-message:not(.blobio-chat-admin-message) * {
-  color: inherit !important;
-  text-shadow: inherit !important;
-}
-
 #chat .blobio-chat-admin-username {
   font-weight: 800 !important;
   font-style: italic !important;
@@ -3452,7 +3447,7 @@ html.${className} .blobio-watermark-extension::after {
   var DEFAULT_CLASS_NAME2 = "blobio-menu-enabled";
   var DEFAULT_STYLE_ID2 = "blobio-menu-style";
   var DEFAULT_TOOLBAR_CLASS = "blobio-menu-toolbar";
-  var DEFAULT_EXTENSION_VERSION = "0.1.66";
+  var DEFAULT_EXTENSION_VERSION = "0.1.67";
   var HIDDEN_CLASS = "blobio-original-hidden";
   var PARTNER_LINK_MATCH = /iogames\.space|iogames\.live|io-games\.zone|silvergames\.com|crazygames\.com/i;
   var FAILED_VIRAL_FRAME_MATCH = /viral\.iogames\.space/i;
