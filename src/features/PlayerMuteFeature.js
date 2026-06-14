@@ -3,23 +3,7 @@ import { extractUidFromElement, findAngularUid } from '../roles/UidReader.js';
 
 export { extractUidFromElement } from '../roles/UidReader.js';
 
-const MENU_SELECTOR = [
-  '#mouse-menu',
-  '#mouseMenu',
-  '#context-menu',
-  '#contextmenu',
-  '.mouse-menu',
-  '.mouseMenu',
-  '.context-menu',
-  '.contextmenu',
-  '.player-menu',
-  '.player-context-menu',
-  'app-mouse-menu',
-  'app-context-menu',
-  'mouse-menu',
-  'context-menu',
-  '[data-player-menu]',
-].join(',');
+const MENU_SELECTOR = '#mouseMenu';
 
 const CONTEXT_DELAYS = [0, 40, 140, 320];
 
@@ -159,79 +143,8 @@ export class PlayerMuteFeature {
   }
 
   findCurrentMenu() {
-    const explicitMenus = Array.from(this.document.querySelectorAll?.(MENU_SELECTOR) || [])
-      .filter((menu) => this.isVisible(menu));
-    if (explicitMenus.length > 0) {
-      return explicitMenus.sort((a, b) => this.menuScore(b) - this.menuScore(a))[0];
-    }
-
-    const knownActionMenu = this.findKnownActionMenu();
-    if (knownActionMenu) {
-      return knownActionMenu;
-    }
-
-    const pointElements = this.document.elementsFromPoint?.(
-      this.pendingTarget?.x || 0,
-      this.pendingTarget?.y || 0,
-    ) || [];
-
-    for (const element of pointElements) {
-      let current = element;
-      for (let depth = 0; current && depth < 6; depth += 1) {
-        if (this.looksLikeActionMenu(current)) {
-          return current;
-        }
-        current = current.parentElement;
-      }
-    }
-
-    return null;
-  }
-
-  findKnownActionMenu() {
-    const actions = this.document.querySelectorAll?.('button, a, li, [role="button"]') || [];
-    for (const action of actions) {
-      if (String(action.textContent || '').trim().toLowerCase() !== 'copy id' || !this.isVisible(action)) {
-        continue;
-      }
-
-      let current = action.parentElement;
-      for (let depth = 0; current && depth < 5; depth += 1) {
-        if (this.looksLikeActionMenu(current)) {
-          return current;
-        }
-        current = current.parentElement;
-      }
-    }
-
-    return null;
-  }
-
-  looksLikeActionMenu(element) {
-    if (!element || element === this.document.body || element === this.document.documentElement || !this.isVisible(element)) {
-      return false;
-    }
-
-    const rect = element.getBoundingClientRect?.();
-    if (!rect || rect.width > 520 || rect.height > 650) {
-      return false;
-    }
-
-    const name = `${element.id || ''} ${element.className || ''} ${element.tagName || ''}`;
-    const actions = element.querySelectorAll?.('button, [role="button"], a, li') || [];
-    return actions.length > 0 && (/menu|context|mouse|player/i.test(name) || actions.length >= 2);
-  }
-
-  menuScore(menu) {
-    const rect = menu.getBoundingClientRect?.();
-    if (!rect) {
-      return 0;
-    }
-
-    const x = this.pendingTarget?.x || rect.left;
-    const y = this.pendingTarget?.y || rect.top;
-    const distance = Math.abs(rect.left - x) + Math.abs(rect.top - y);
-    return 10000 - distance - (rect.width * rect.height) / 1000;
+    const menu = this.document.getElementById?.('mouseMenu');
+    return menu && this.isVisible(menu) ? menu : null;
   }
 
   isVisible(element) {
@@ -246,7 +159,7 @@ export class PlayerMuteFeature {
   }
 
   decorateMenu(menu) {
-    if (!menu || !this.shouldInspectMenus()) {
+    if (!menu || menu.id !== 'mouseMenu' || !this.shouldInspectMenus()) {
       return;
     }
 
@@ -264,15 +177,8 @@ export class PlayerMuteFeature {
       return;
     }
 
-    const template = Array.from(actionContainer.children || [])
-      .find((node) => node.matches?.('button, [role="button"], a, li, div')) || null;
-    const action = this.createMenuAction(template);
-    action.addEventListener('click', (event) => {
-      if (String(action.tagName).toUpperCase() === 'A') {
-        event.preventDefault();
-      }
-      this.muteCurrentTarget(menu);
-    });
+    const action = this.createMenuAction();
+    action.addEventListener('click', () => this.muteCurrentTarget(menu));
     actionContainer.appendChild(action);
   }
 
@@ -336,41 +242,14 @@ export class PlayerMuteFeature {
   }
 
   findActionContainer(menu) {
-    const ownActions = Array.from(menu.querySelectorAll?.('button, [role="button"], a, li') || [])
-      .filter((node) => !node.classList?.contains('blobio-mute-player-action'));
-    if (ownActions.length > 0) {
-      return ownActions[0].parentElement || menu;
-    }
-
-    return menu;
+    return Array.from(menu?.children || [])
+      .find((node) => String(node.tagName || '').toUpperCase() === 'UL') || null;
   }
 
-  createMenuAction(template) {
-    const allowedTag = String(template?.tagName || '').toUpperCase();
-    const tagName = ['BUTTON', 'LI', 'A', 'DIV'].includes(allowedTag)
-      ? allowedTag.toLowerCase()
-      : 'button';
-    const action = this.document.createElement(tagName);
-
-    if (tagName === 'button') {
-      action.type = 'button';
-    } else if (tagName === 'a') {
-      action.href = '#';
-    }
-
-    if (template?.className && typeof template.className === 'string') {
-      action.className = template.className;
-    }
+  createMenuAction() {
+    const action = this.document.createElement('li');
     action.classList.add('blobio-mute-player-action');
-    action.setAttribute('role', 'button');
-    action.tabIndex = 0;
     action.textContent = 'Mute-Player';
-    action.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
-        action.click();
-      }
-    });
     return action;
   }
 
@@ -401,9 +280,10 @@ export class PlayerMuteFeature {
   }
 
   readTargetFromMenu(menu) {
-    const uid = extractUidFromElement(menu);
+    const playerName = menu?.querySelector?.('#playerName');
+    const uid = extractUidFromElement(playerName, false);
     if (uid) {
-      return { uid, protected: hasProtectedRoleText(menu) };
+      return { uid, protected: hasProtectedRoleText(playerName) || hasProtectedRoleText(menu) };
     }
 
     return this.readAngularTarget(menu);

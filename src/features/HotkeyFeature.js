@@ -225,22 +225,7 @@ export class HotkeyFeature {
       return false;
     }
 
-    if (this.document.activeElement === input || String(input.value || '').length > 0) {
-      return true;
-    }
-
-    if (input.hidden || input.getAttribute?.('aria-hidden') === 'true') {
-      return false;
-    }
-
-    const inlineDisplay = String(input.style?.display || '').toLowerCase();
-    if (inlineDisplay === 'none') {
-      return false;
-    }
-
-    const win = this.document.defaultView || globalThis;
-    const display = win.getComputedStyle?.(input)?.display;
-    return display ? display !== 'none' : inlineDisplay === 'block';
+    return this.document.activeElement === input || String(input.value || '').length > 0;
   }
 
   async sendChatText(rawText) {
@@ -254,12 +239,11 @@ export class HotkeyFeature {
       return false;
     }
 
-    if (!this.isElementVisible(input)) {
-      this.dispatchEnter(this.document.activeElement || this.document.body || this.document.documentElement);
-      await this.nextFrame();
-      input = this.document.getElementById?.('message');
-    }
+    // Follow the same sequence as a player: Enter opens chat, then Enter sends it.
+    this.dispatchEnter(this.document);
+    await this.waitForUi();
 
+    input = this.document.getElementById?.('message');
     if (!input) {
       return false;
     }
@@ -267,6 +251,8 @@ export class HotkeyFeature {
     input.focus?.();
     this.setInputValue(input, text);
     this.dispatchInput(input, text);
+    this.dispatchChange(input);
+    await this.nextFrame();
     this.dispatchEnter(input);
     return true;
   }
@@ -316,13 +302,25 @@ export class HotkeyFeature {
     input.dispatchEvent?.(event);
   }
 
+  dispatchChange(input) {
+    const win = this.document.defaultView || globalThis;
+    const EventCtor = win.Event || globalThis.Event;
+    const event = EventCtor
+      ? new EventCtor('change', { bubbles: true })
+      : { type: 'change', bubbles: true };
+    input.dispatchEvent?.(event);
+  }
+
   dispatchEnter(target) {
-    if (!target?.dispatchEvent) {
+    const eventTarget = target?.dispatchEvent
+      ? target
+      : this.document.body || this.document.documentElement;
+    if (!eventTarget?.dispatchEvent) {
       return;
     }
 
     for (const type of ['keydown', 'keypress', 'keyup']) {
-      target.dispatchEvent(this.createKeyboardEvent(type));
+      eventTarget.dispatchEvent(this.createKeyboardEvent(type));
     }
   }
 
@@ -348,6 +346,13 @@ export class HotkeyFeature {
       });
     } catch {}
     return event;
+  }
+
+  waitForUi() {
+    const win = this.document.defaultView || globalThis;
+    return new Promise((resolve) => {
+      win.setTimeout?.(resolve, 24) ?? resolve();
+    });
   }
 
   nextFrame() {

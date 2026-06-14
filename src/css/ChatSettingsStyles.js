@@ -504,23 +504,6 @@ export const CHAT_SETTINGS_CSS = `
   transform: translateY(-6px);
 }
 
-.blobio-mute-player-action {
-  display: block;
-  width: 100%;
-  box-sizing: border-box;
-  padding: 7px 10px;
-  border: 1px solid rgba(137, 255, 170, 0.78);
-  border-radius: 4px;
-  background: rgba(11, 95, 39, 0.9);
-  color: #ffffff;
-  font: 800 12px Arial, sans-serif;
-  cursor: pointer;
-  text-align: center;
-}
-
-.blobio-mute-player-action:hover {
-  background: rgba(24, 139, 61, 0.94);
-}
 
 @keyframes blobio-chat-error-flash {
   0%, 100% { filter: brightness(1); }

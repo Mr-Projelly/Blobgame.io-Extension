@@ -1696,23 +1696,6 @@ html.${this.className} body::before {
   transform: translateY(-6px);
 }
 
-.blobio-mute-player-action {
-  display: block;
-  width: 100%;
-  box-sizing: border-box;
-  padding: 7px 10px;
-  border: 1px solid rgba(137, 255, 170, 0.78);
-  border-radius: 4px;
-  background: rgba(11, 95, 39, 0.9);
-  color: #ffffff;
-  font: 800 12px Arial, sans-serif;
-  cursor: pointer;
-  text-align: center;
-}
-
-.blobio-mute-player-action:hover {
-  background: rgba(24, 139, 61, 0.94);
-}
 
 @keyframes blobio-chat-error-flash {
   0%, 100% { filter: brightness(1); }
@@ -2061,9 +2044,10 @@ html.${this.className} body::before {
       this.hotkeyCapture = null;
       this.hotkeyKeydownHandler = null;
       this.hotkeyKeyupHandler = null;
-      this.hotkeyPointerdownHandler = null;
+      this.hotkeyMousedownHandler = null;
       this.hotkeyContextMenuHandler = null;
       this.suppressHotkeyContextMenu = false;
+      this.suppressHotkeyBindClickUntil = 0;
       this.started = false;
     }
     start() {
@@ -2207,6 +2191,12 @@ html.${this.className} body::before {
       hotkeyApply.addEventListener("click", () => this.applyHotkeyText());
       hotkeyList.addEventListener("click", (event) => {
         const bindButton = event.target?.closest?.(".blobio-hotkey-bind");
+        if (bindButton && Date.now() <= this.suppressHotkeyBindClickUntil) {
+          this.suppressHotkeyBindClickUntil = 0;
+          event.preventDefault?.();
+          event.stopPropagation?.();
+          return;
+        }
         if (bindButton?.dataset?.id && bindButton.dataset.kind) {
           this.beginHotkeyCapture(bindButton.dataset.id, bindButton.dataset.kind);
           return;
@@ -2246,7 +2236,7 @@ html.${this.className} body::before {
         if (!this.root?.classList.contains("is-open")) {
           return;
         }
-        if (event.__blobioHotkeyCaptured) {
+        if (event.__blobioHotkeyCaptured || this.hotkeyCapture?.kind === "mouse") {
           return;
         }
         const path = event.composedPath?.();
@@ -2624,7 +2614,7 @@ html.${this.className} body::before {
       }
       this.hotkeyKeydownHandler = (event) => this.handleHotkeyCaptureKeydown(event);
       this.hotkeyKeyupHandler = (event) => this.handleHotkeyCaptureKeyup(event);
-      this.hotkeyPointerdownHandler = (event) => this.handleHotkeyCapturePointerdown(event);
+      this.hotkeyMousedownHandler = (event) => this.handleHotkeyCaptureMousedown(event);
       this.hotkeyContextMenuHandler = (event) => {
         if (this.hotkeyCapture?.kind === "mouse" || this.suppressHotkeyContextMenu) {
           event.preventDefault?.();
@@ -2634,7 +2624,7 @@ html.${this.className} body::before {
       };
       this.document.addEventListener?.("keydown", this.hotkeyKeydownHandler, true);
       this.document.addEventListener?.("keyup", this.hotkeyKeyupHandler, true);
-      this.document.addEventListener?.("pointerdown", this.hotkeyPointerdownHandler, true);
+      this.document.addEventListener?.("mousedown", this.hotkeyMousedownHandler, true);
       this.document.addEventListener?.("contextmenu", this.hotkeyContextMenuHandler, true);
     }
     handleHotkeyCaptureKeydown(event) {
@@ -2681,12 +2671,9 @@ html.${this.className} body::before {
         this.syncHotkeyUi();
       }
     }
-    handleHotkeyCapturePointerdown(event) {
+    handleHotkeyCaptureMousedown(event) {
       const capture = this.hotkeyCapture;
       if (!capture || capture.kind !== "mouse") {
-        return;
-      }
-      if (event.target?.closest?.(".blobio-hotkey-bind")) {
         return;
       }
       if (![0, 1, 2].includes(Number(event.button))) {
@@ -2696,6 +2683,9 @@ html.${this.className} body::before {
       event.stopImmediatePropagation?.();
       event.stopPropagation?.();
       event.__blobioHotkeyCaptured = true;
+      if (event.target?.closest?.(".blobio-hotkey-bind")) {
+        this.suppressHotkeyBindClickUntil = Date.now() + 300;
+      }
       this.suppressHotkeyContextMenu = Number(event.button) === 2;
       this.hotkeyStore.setMouse(capture.id, Number(event.button));
       this.cancelHotkeyCapture();
@@ -2944,13 +2934,14 @@ html.${this.className} body::before {
       if (this.hotkeyKeydownHandler) {
         this.document.removeEventListener?.("keydown", this.hotkeyKeydownHandler, true);
         this.document.removeEventListener?.("keyup", this.hotkeyKeyupHandler, true);
-        this.document.removeEventListener?.("pointerdown", this.hotkeyPointerdownHandler, true);
+        this.document.removeEventListener?.("mousedown", this.hotkeyMousedownHandler, true);
         this.document.removeEventListener?.("contextmenu", this.hotkeyContextMenuHandler, true);
         this.hotkeyKeydownHandler = null;
         this.hotkeyKeyupHandler = null;
-        this.hotkeyPointerdownHandler = null;
+        this.hotkeyMousedownHandler = null;
         this.hotkeyContextMenuHandler = null;
         this.suppressHotkeyContextMenu = false;
+        this.suppressHotkeyBindClickUntil = 0;
       }
       if (this.outsidePointerHandler) {
         this.document.removeEventListener?.("pointerdown", this.outsidePointerHandler, true);
@@ -3344,19 +3335,7 @@ html.${this.className} body::before {
       if (!input) {
         return false;
       }
-      if (this.document.activeElement === input || String(input.value || "").length > 0) {
-        return true;
-      }
-      if (input.hidden || input.getAttribute?.("aria-hidden") === "true") {
-        return false;
-      }
-      const inlineDisplay = String(input.style?.display || "").toLowerCase();
-      if (inlineDisplay === "none") {
-        return false;
-      }
-      const win = this.document.defaultView || globalThis;
-      const display = win.getComputedStyle?.(input)?.display;
-      return display ? display !== "none" : inlineDisplay === "block";
+      return this.document.activeElement === input || String(input.value || "").length > 0;
     }
     async sendChatText(rawText) {
       const text = String(rawText ?? "").trim().slice(0, 50);
@@ -3367,17 +3346,17 @@ html.${this.className} body::before {
       if (!input) {
         return false;
       }
-      if (!this.isElementVisible(input)) {
-        this.dispatchEnter(this.document.activeElement || this.document.body || this.document.documentElement);
-        await this.nextFrame();
-        input = this.document.getElementById?.("message");
-      }
+      this.dispatchEnter(this.document);
+      await this.waitForUi();
+      input = this.document.getElementById?.("message");
       if (!input) {
         return false;
       }
       input.focus?.();
       this.setInputValue(input, text);
       this.dispatchInput(input, text);
+      this.dispatchChange(input);
+      await this.nextFrame();
       this.dispatchEnter(input);
       return true;
     }
@@ -3418,12 +3397,19 @@ html.${this.className} body::before {
       }
       input.dispatchEvent?.(event);
     }
+    dispatchChange(input) {
+      const win = this.document.defaultView || globalThis;
+      const EventCtor = win.Event || globalThis.Event;
+      const event = EventCtor ? new EventCtor("change", { bubbles: true }) : { type: "change", bubbles: true };
+      input.dispatchEvent?.(event);
+    }
     dispatchEnter(target) {
-      if (!target?.dispatchEvent) {
+      const eventTarget = target?.dispatchEvent ? target : this.document.body || this.document.documentElement;
+      if (!eventTarget?.dispatchEvent) {
         return;
       }
       for (const type of ["keydown", "keypress", "keyup"]) {
-        target.dispatchEvent(this.createKeyboardEvent(type));
+        eventTarget.dispatchEvent(this.createKeyboardEvent(type));
       }
     }
     createKeyboardEvent(type) {
@@ -3447,6 +3433,12 @@ html.${this.className} body::before {
       } catch {
       }
       return event;
+    }
+    waitForUi() {
+      const win = this.document.defaultView || globalThis;
+      return new Promise((resolve) => {
+        win.setTimeout?.(resolve, 24) ?? resolve();
+      });
     }
     nextFrame() {
       const win = this.document.defaultView || globalThis;
@@ -4663,7 +4655,7 @@ html.${className} .blobio-watermark-extension::after {
   var DEFAULT_CLASS_NAME2 = "blobio-menu-enabled";
   var DEFAULT_STYLE_ID2 = "blobio-menu-style";
   var DEFAULT_TOOLBAR_CLASS = "blobio-menu-toolbar";
-  var DEFAULT_EXTENSION_VERSION = "0.1.70";
+  var DEFAULT_EXTENSION_VERSION = "0.1.71";
   var HIDDEN_CLASS = "blobio-original-hidden";
   var PARTNER_LINK_MATCH = /iogames\.space|iogames\.live|io-games\.zone|silvergames\.com|crazygames\.com/i;
   var FAILED_VIRAL_FRAME_MATCH = /viral\.iogames\.space/i;
@@ -7584,23 +7576,7 @@ html.${className} .blobio-watermark-extension::after {
   }
 
   // src/features/PlayerMuteFeature.js
-  var MENU_SELECTOR = [
-    "#mouse-menu",
-    "#mouseMenu",
-    "#context-menu",
-    "#contextmenu",
-    ".mouse-menu",
-    ".mouseMenu",
-    ".context-menu",
-    ".contextmenu",
-    ".player-menu",
-    ".player-context-menu",
-    "app-mouse-menu",
-    "app-context-menu",
-    "mouse-menu",
-    "context-menu",
-    "[data-player-menu]"
-  ].join(",");
+  var MENU_SELECTOR = "#mouseMenu";
   var CONTEXT_DELAYS = [0, 40, 140, 320];
   function hasProtectedRoleText(element) {
     const text = String(element?.textContent || "");
@@ -7723,66 +7699,8 @@ html.${className} .blobio-watermark-extension::after {
       this.pageObserver.observe(this.document.documentElement, { childList: true, subtree: true });
     }
     findCurrentMenu() {
-      const explicitMenus = Array.from(this.document.querySelectorAll?.(MENU_SELECTOR) || []).filter((menu) => this.isVisible(menu));
-      if (explicitMenus.length > 0) {
-        return explicitMenus.sort((a, b) => this.menuScore(b) - this.menuScore(a))[0];
-      }
-      const knownActionMenu = this.findKnownActionMenu();
-      if (knownActionMenu) {
-        return knownActionMenu;
-      }
-      const pointElements = this.document.elementsFromPoint?.(
-        this.pendingTarget?.x || 0,
-        this.pendingTarget?.y || 0
-      ) || [];
-      for (const element of pointElements) {
-        let current = element;
-        for (let depth = 0; current && depth < 6; depth += 1) {
-          if (this.looksLikeActionMenu(current)) {
-            return current;
-          }
-          current = current.parentElement;
-        }
-      }
-      return null;
-    }
-    findKnownActionMenu() {
-      const actions = this.document.querySelectorAll?.('button, a, li, [role="button"]') || [];
-      for (const action of actions) {
-        if (String(action.textContent || "").trim().toLowerCase() !== "copy id" || !this.isVisible(action)) {
-          continue;
-        }
-        let current = action.parentElement;
-        for (let depth = 0; current && depth < 5; depth += 1) {
-          if (this.looksLikeActionMenu(current)) {
-            return current;
-          }
-          current = current.parentElement;
-        }
-      }
-      return null;
-    }
-    looksLikeActionMenu(element) {
-      if (!element || element === this.document.body || element === this.document.documentElement || !this.isVisible(element)) {
-        return false;
-      }
-      const rect = element.getBoundingClientRect?.();
-      if (!rect || rect.width > 520 || rect.height > 650) {
-        return false;
-      }
-      const name = `${element.id || ""} ${element.className || ""} ${element.tagName || ""}`;
-      const actions = element.querySelectorAll?.('button, [role="button"], a, li') || [];
-      return actions.length > 0 && (/menu|context|mouse|player/i.test(name) || actions.length >= 2);
-    }
-    menuScore(menu) {
-      const rect = menu.getBoundingClientRect?.();
-      if (!rect) {
-        return 0;
-      }
-      const x = this.pendingTarget?.x || rect.left;
-      const y = this.pendingTarget?.y || rect.top;
-      const distance = Math.abs(rect.left - x) + Math.abs(rect.top - y);
-      return 1e4 - distance - rect.width * rect.height / 1e3;
+      const menu = this.document.getElementById?.("mouseMenu");
+      return menu && this.isVisible(menu) ? menu : null;
     }
     isVisible(element) {
       const rect = element?.getBoundingClientRect?.();
@@ -7794,7 +7712,7 @@ html.${className} .blobio-watermark-extension::after {
       return style?.display !== "none" && style?.visibility !== "hidden";
     }
     decorateMenu(menu) {
-      if (!menu || !this.shouldInspectMenus()) {
+      if (!menu || menu.id !== "mouseMenu" || !this.shouldInspectMenus()) {
         return;
       }
       this.syncFriendStatusFromMenu(menu);
@@ -7808,14 +7726,8 @@ html.${className} .blobio-watermark-extension::after {
       if (!actionContainer) {
         return;
       }
-      const template = Array.from(actionContainer.children || []).find((node) => node.matches?.('button, [role="button"], a, li, div')) || null;
-      const action = this.createMenuAction(template);
-      action.addEventListener("click", (event) => {
-        if (String(action.tagName).toUpperCase() === "A") {
-          event.preventDefault();
-        }
-        this.muteCurrentTarget(menu);
-      });
+      const action = this.createMenuAction();
+      action.addEventListener("click", () => this.muteCurrentTarget(menu));
       actionContainer.appendChild(action);
     }
     shouldInspectMenus() {
@@ -7864,34 +7776,12 @@ html.${className} .blobio-watermark-extension::after {
       return "";
     }
     findActionContainer(menu) {
-      const ownActions = Array.from(menu.querySelectorAll?.('button, [role="button"], a, li') || []).filter((node) => !node.classList?.contains("blobio-mute-player-action"));
-      if (ownActions.length > 0) {
-        return ownActions[0].parentElement || menu;
-      }
-      return menu;
+      return Array.from(menu?.children || []).find((node) => String(node.tagName || "").toUpperCase() === "UL") || null;
     }
-    createMenuAction(template) {
-      const allowedTag = String(template?.tagName || "").toUpperCase();
-      const tagName = ["BUTTON", "LI", "A", "DIV"].includes(allowedTag) ? allowedTag.toLowerCase() : "button";
-      const action = this.document.createElement(tagName);
-      if (tagName === "button") {
-        action.type = "button";
-      } else if (tagName === "a") {
-        action.href = "#";
-      }
-      if (template?.className && typeof template.className === "string") {
-        action.className = template.className;
-      }
+    createMenuAction() {
+      const action = this.document.createElement("li");
       action.classList.add("blobio-mute-player-action");
-      action.setAttribute("role", "button");
-      action.tabIndex = 0;
       action.textContent = "Mute-Player";
-      action.addEventListener("keydown", (event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          action.click();
-        }
-      });
       return action;
     }
     muteCurrentTarget(menu) {
@@ -7915,9 +7805,10 @@ html.${className} .blobio-watermark-extension::after {
       }
     }
     readTargetFromMenu(menu) {
-      const uid = extractUidFromElement(menu);
+      const playerName = menu?.querySelector?.("#playerName");
+      const uid = extractUidFromElement(playerName, false);
       if (uid) {
-        return { uid, protected: hasProtectedRoleText(menu) };
+        return { uid, protected: hasProtectedRoleText(playerName) || hasProtectedRoleText(menu) };
       }
       return this.readAngularTarget(menu);
     }
@@ -8600,7 +8491,7 @@ html.${className} .blobio-watermark-extension::after {
 
   // src/main.js
   var INSTANCE_KEY = "__blobioExtension";
-  var EXTENSION_VERSION = "0.1.70";
+  var EXTENSION_VERSION = "0.1.71";
   var VIP_BADGE_URL = "https://raw.githubusercontent.com/SkyViewBlobio/Blobgame.io-Extension/main/assets/VIP_icon_plus.png";
   var BlobioExtension = class {
     constructor(windowRef = globalThis) {
@@ -8760,4 +8651,3 @@ html.${className} .blobio-watermark-extension::after {
   }
   startBlobioExtension(globalThis);
 })();
-

@@ -49,9 +49,10 @@ export class ChatSettingsFeature {
     this.hotkeyCapture = null;
     this.hotkeyKeydownHandler = null;
     this.hotkeyKeyupHandler = null;
-    this.hotkeyPointerdownHandler = null;
+    this.hotkeyMousedownHandler = null;
     this.hotkeyContextMenuHandler = null;
     this.suppressHotkeyContextMenu = false;
+    this.suppressHotkeyBindClickUntil = 0;
     this.started = false;
   }
 
@@ -222,6 +223,13 @@ export class ChatSettingsFeature {
     hotkeyApply.addEventListener('click', () => this.applyHotkeyText());
     hotkeyList.addEventListener('click', (event) => {
       const bindButton = event.target?.closest?.('.blobio-hotkey-bind');
+      if (bindButton && Date.now() <= this.suppressHotkeyBindClickUntil) {
+        this.suppressHotkeyBindClickUntil = 0;
+        event.preventDefault?.();
+        event.stopPropagation?.();
+        return;
+      }
+
       if (bindButton?.dataset?.id && bindButton.dataset.kind) {
         this.beginHotkeyCapture(bindButton.dataset.id, bindButton.dataset.kind);
         return;
@@ -269,7 +277,7 @@ export class ChatSettingsFeature {
         return;
       }
 
-      if (event.__blobioHotkeyCaptured) {
+      if (event.__blobioHotkeyCaptured || this.hotkeyCapture?.kind === 'mouse') {
         return;
       }
 
@@ -723,7 +731,7 @@ export class ChatSettingsFeature {
 
     this.hotkeyKeydownHandler = (event) => this.handleHotkeyCaptureKeydown(event);
     this.hotkeyKeyupHandler = (event) => this.handleHotkeyCaptureKeyup(event);
-    this.hotkeyPointerdownHandler = (event) => this.handleHotkeyCapturePointerdown(event);
+    this.hotkeyMousedownHandler = (event) => this.handleHotkeyCaptureMousedown(event);
     this.hotkeyContextMenuHandler = (event) => {
       if (this.hotkeyCapture?.kind === 'mouse' || this.suppressHotkeyContextMenu) {
         event.preventDefault?.();
@@ -734,7 +742,7 @@ export class ChatSettingsFeature {
 
     this.document.addEventListener?.('keydown', this.hotkeyKeydownHandler, true);
     this.document.addEventListener?.('keyup', this.hotkeyKeyupHandler, true);
-    this.document.addEventListener?.('pointerdown', this.hotkeyPointerdownHandler, true);
+    this.document.addEventListener?.('mousedown', this.hotkeyMousedownHandler, true);
     this.document.addEventListener?.('contextmenu', this.hotkeyContextMenuHandler, true);
   }
 
@@ -791,13 +799,9 @@ export class ChatSettingsFeature {
     }
   }
 
-  handleHotkeyCapturePointerdown(event) {
+  handleHotkeyCaptureMousedown(event) {
     const capture = this.hotkeyCapture;
     if (!capture || capture.kind !== 'mouse') {
-      return;
-    }
-
-    if (event.target?.closest?.('.blobio-hotkey-bind')) {
       return;
     }
 
@@ -809,6 +813,9 @@ export class ChatSettingsFeature {
     event.stopImmediatePropagation?.();
     event.stopPropagation?.();
     event.__blobioHotkeyCaptured = true;
+    if (event.target?.closest?.('.blobio-hotkey-bind')) {
+      this.suppressHotkeyBindClickUntil = Date.now() + 300;
+    }
     this.suppressHotkeyContextMenu = Number(event.button) === 2;
     this.hotkeyStore.setMouse(capture.id, Number(event.button));
     this.cancelHotkeyCapture();
@@ -1088,13 +1095,14 @@ export class ChatSettingsFeature {
     if (this.hotkeyKeydownHandler) {
       this.document.removeEventListener?.('keydown', this.hotkeyKeydownHandler, true);
       this.document.removeEventListener?.('keyup', this.hotkeyKeyupHandler, true);
-      this.document.removeEventListener?.('pointerdown', this.hotkeyPointerdownHandler, true);
+      this.document.removeEventListener?.('mousedown', this.hotkeyMousedownHandler, true);
       this.document.removeEventListener?.('contextmenu', this.hotkeyContextMenuHandler, true);
       this.hotkeyKeydownHandler = null;
       this.hotkeyKeyupHandler = null;
-      this.hotkeyPointerdownHandler = null;
+      this.hotkeyMousedownHandler = null;
       this.hotkeyContextMenuHandler = null;
       this.suppressHotkeyContextMenu = false;
+      this.suppressHotkeyBindClickUntil = 0;
     }
 
     if (this.outsidePointerHandler) {
