@@ -1,5 +1,6 @@
 import { CHAT_SETTINGS_CSS, CHAT_SETTINGS_STYLE_ID } from '../css/ChatSettingsStyles.js';
 import { createBlobioStorage } from '../storage/BlobioStorage.js';
+import { HOTKEY_TEXT_LIMIT } from '../hotkeys/HotkeyStore.js';
 import {
   CHAT_FONT_SIZE_LIMITS,
   getChatFontSize,
@@ -13,17 +14,20 @@ const TOGGLE_WIDTH = 30;
 const MAIN_PANEL_WIDTH = 250;
 const CATEGORY_PANEL_WIDTH = 330;
 const ENABLED_NOTICE = "To mute a person thats logged in, right click on their name in chat, or on their cells/LB name";
+const HOTKEY_CLEAR_HOLD_MS = 3000;
 
 export class ChatSettingsFeature {
   constructor({
     document = globalThis.document,
     storage = createBlobioStorage(document),
     mutedPlayersStore = null,
+    hotkeyStore = null,
     logger = console,
   } = {}) {
     this.document = document;
     this.storage = storage;
     this.mutedPlayersStore = mutedPlayersStore;
+    this.hotkeyStore = hotkeyStore;
     this.logger = logger;
     this.styleNode = null;
     this.root = null;
@@ -35,11 +39,19 @@ export class ChatSettingsFeature {
     this.outsidePointerHandler = null;
     this.positionFrame = null;
     this.unsubscribeMutedPlayers = null;
+    this.unsubscribeHotkeys = null;
     this.selectedMutedUids = new Set();
     this.editingUid = '';
     this.editingNameDraft = '';
     this.notificationTimer = null;
     this.notificationRemoveTimer = null;
+    this.selectedHotkeyId = '';
+    this.hotkeyCapture = null;
+    this.hotkeyKeydownHandler = null;
+    this.hotkeyKeyupHandler = null;
+    this.hotkeyPointerdownHandler = null;
+    this.hotkeyContextMenuHandler = null;
+    this.suppressHotkeyContextMenu = false;
     this.started = false;
   }
 
@@ -52,6 +64,7 @@ export class ChatSettingsFeature {
     this.ensureStyle();
     this.ensureUi();
     this.unsubscribeMutedPlayers = this.mutedPlayersStore?.subscribe?.(() => this.syncMutedPlayersUi()) || null;
+    this.unsubscribeHotkeys = this.hotkeyStore?.subscribe?.(() => this.syncHotkeyUi()) || null;
     this.applyChatFontSize();
     this.watchPage();
     return true;
@@ -93,11 +106,13 @@ export class ChatSettingsFeature {
 
     const chatButton = this.createCategoryButton('Chat-Settings', 'chat');
     const mutedButton = this.createCategoryButton('Muted-Players', 'muted');
-    panel.append(chatButton, mutedButton);
+    const hotkeyButton = this.createCategoryButton('HotKey', 'hotkey');
+    panel.append(chatButton, mutedButton, hotkeyButton);
 
     const chatCategory = this.createChatCategory();
     const mutedCategory = this.createMutedPlayersCategory();
-    root.append(toggle, panel, chatCategory, mutedCategory);
+    const hotkeyCategory = this.createHotkeyCategory();
+    root.append(toggle, panel, chatCategory, mutedCategory, hotkeyCategory);
     (this.document.body || this.document.documentElement).appendChild(root);
 
     const notificationHost = this.document.createElement('div');
@@ -111,6 +126,7 @@ export class ChatSettingsFeature {
 
     chatButton.addEventListener('click', () => this.toggleCategory('chat'));
     mutedButton.addEventListener('click', () => this.toggleCategory('muted'));
+    hotkeyButton.addEventListener('click', () => this.toggleCategory('hotkey'));
 
     const enabledButton = chatCategory.querySelector('.blobio-chat-font-toggle');
     const range = chatCategory.querySelector('.blobio-chat-font-range');
@@ -179,10 +195,65 @@ export class ChatSettingsFeature {
       this.syncMutedPlayersUi();
     });
 
+    const hotkeyInput = hotkeyCategory.querySelector('.blobio-hotkey-text-input');
+    const hotkeyApply = hotkeyCategory.querySelector('.blobio-hotkey-apply');
+    const hotkeyList = hotkeyCategory.querySelector('.blobio-hotkey-list');
+    const hotkeyRemove = hotkeyCategory.querySelector('.blobio-hotkey-remove');
+
+    hotkeyInput.addEventListener('focus', () => {
+      hotkeyInput.placeholder = '';
+    });
+    hotkeyInput.addEventListener('blur', () => {
+      if (!hotkeyInput.value) {
+        hotkeyInput.placeholder = 'Write command here...';
+      }
+    });
+    hotkeyInput.addEventListener('input', () => this.syncHotkeyDraftUi());
+    hotkeyInput.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' || event.isComposing) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      this.applyHotkeyText();
+    });
+    hotkeyApply.addEventListener('click', () => this.applyHotkeyText());
+    hotkeyList.addEventListener('click', (event) => {
+      const bindButton = event.target?.closest?.('.blobio-hotkey-bind');
+      if (bindButton?.dataset?.id && bindButton.dataset.kind) {
+        this.beginHotkeyCapture(bindButton.dataset.id, bindButton.dataset.kind);
+        return;
+      }
+
+      const load = event.target?.closest?.('.blobio-hotkey-load');
+      const id = load?.dataset?.id;
+      if (!id) {
+        return;
+      }
+
+      this.cancelHotkeyCapture();
+      this.selectedHotkeyId = this.selectedHotkeyId === id ? '' : id;
+      this.syncHotkeyUi();
+    });
+    hotkeyRemove.addEventListener('click', () => {
+      if (!this.selectedHotkeyId) {
+        return;
+      }
+
+      this.cancelHotkeyCapture();
+      this.hotkeyStore?.remove?.(this.selectedHotkeyId);
+      this.selectedHotkeyId = '';
+      this.syncHotkeyUi();
+    });
+
+    this.installHotkeyCaptureListeners();
+
     this.root = root;
     this.notificationHost = notificationHost;
     this.syncControls();
     this.syncMutedPlayersUi();
+    this.syncHotkeyUi();
     this.syncChatWrapper();
     this.positionUi();
 
@@ -193,6 +264,10 @@ export class ChatSettingsFeature {
 
     this.outsidePointerHandler = (event) => {
       if (!this.root?.classList.contains('is-open')) {
+        return;
+      }
+
+      if (event.__blobioHotkeyCaptured) {
         return;
       }
 
@@ -297,6 +372,35 @@ export class ChatSettingsFeature {
     return category;
   }
 
+  createHotkeyCategory() {
+    const category = this.document.createElement('div');
+    category.classList.add('blobio-chat-settings-category', 'blobio-hotkey-category');
+    category.dataset.category = 'hotkey';
+
+    const input = this.document.createElement('input');
+    input.type = 'text';
+    input.classList.add('blobio-hotkey-text-input');
+    input.maxLength = HOTKEY_TEXT_LIMIT;
+    input.placeholder = 'Write command here...';
+    input.setAttribute('aria-label', 'Hotkey command or message');
+
+    const list = this.document.createElement('div');
+    list.classList.add('blobio-hotkey-list');
+
+    const apply = this.document.createElement('button');
+    apply.type = 'button';
+    apply.classList.add('blobio-hotkey-action', 'blobio-hotkey-apply');
+    apply.textContent = 'Apply HK text';
+
+    const remove = this.document.createElement('button');
+    remove.type = 'button';
+    remove.classList.add('blobio-hotkey-action', 'blobio-hotkey-remove');
+    remove.textContent = 'Remove';
+
+    category.append(input, list, apply, remove);
+    return category;
+  }
+
   setOpen(open) {
     if (!this.root) {
       return;
@@ -308,6 +412,8 @@ export class ChatSettingsFeature {
     } else {
       this.root.classList.remove('is-open');
       this.finishNameEdit();
+      this.cancelHotkeyCapture();
+      this.syncHotkeyUi();
       for (const category of this.root.querySelectorAll('.blobio-chat-settings-category')) {
         category.classList.remove('is-open');
       }
@@ -330,6 +436,8 @@ export class ChatSettingsFeature {
     const category = this.root.querySelector(`.blobio-chat-settings-category[data-category="${categoryName}"]`);
     const shouldOpen = !category?.classList.contains('is-open');
     this.finishNameEdit();
+    this.cancelHotkeyCapture();
+    this.syncHotkeyUi();
 
     for (const item of this.root.querySelectorAll('.blobio-chat-settings-category')) {
       item.classList.toggle('is-open', shouldOpen && item === category);
@@ -457,6 +565,264 @@ export class ChatSettingsFeature {
     uid.textContent = `UID: ${player.uid}`;
     chip.appendChild(uid);
     return chip;
+  }
+
+  syncHotkeyDraftUi() {
+    const input = this.root?.querySelector('.blobio-hotkey-text-input');
+    const apply = this.root?.querySelector('.blobio-hotkey-apply');
+    if (!input || !apply) {
+      return;
+    }
+
+    apply.classList.toggle('is-visible', Boolean(String(input.value || '').trim()));
+  }
+
+  syncHotkeyUi() {
+    if (!this.root || !this.hotkeyStore) {
+      return;
+    }
+
+    const entries = this.hotkeyStore.getHotkeys();
+    if (this.selectedHotkeyId && !entries.some((entry) => entry.id === this.selectedHotkeyId)) {
+      this.selectedHotkeyId = '';
+    }
+    if (this.hotkeyCapture && !entries.some((entry) => entry.id === this.hotkeyCapture.id)) {
+      this.cancelHotkeyCapture();
+    }
+
+    const list = this.root.querySelector('.blobio-hotkey-list');
+    const remove = this.root.querySelector('.blobio-hotkey-remove');
+    const categoryButton = this.root.querySelector('.blobio-chat-settings-category-button[data-category="hotkey"]');
+    list.textContent = '';
+
+    if (entries.length === 0) {
+      const empty = this.document.createElement('div');
+      empty.classList.add('blobio-hotkey-empty');
+      empty.textContent = 'No hotkey loads saved.';
+      list.appendChild(empty);
+    } else {
+      for (const entry of entries) {
+        list.appendChild(this.createHotkeyRow(entry));
+      }
+    }
+
+    remove.classList.toggle('is-visible', Boolean(this.selectedHotkeyId));
+    categoryButton.classList.toggle('has-active-setting', entries.length > 0);
+    this.syncHotkeyDraftUi();
+  }
+
+  createHotkeyRow(entry) {
+    const row = this.document.createElement('div');
+    row.classList.add('blobio-hotkey-row');
+    row.dataset.id = entry.id;
+
+    const load = this.document.createElement('button');
+    load.type = 'button';
+    load.classList.add('blobio-hotkey-load');
+    load.dataset.id = entry.id;
+    load.textContent = entry.text;
+    load.title = entry.text;
+    load.classList.toggle('is-selected', this.selectedHotkeyId === entry.id);
+
+    const key = this.createHotkeyBindButton(entry, 'key', this.keyLabel(entry.keyCode));
+    const mouse = this.createHotkeyBindButton(entry, 'mouse', this.mouseLabel(entry.mouseButton));
+    row.append(load, key, mouse);
+    return row;
+  }
+
+  createHotkeyBindButton(entry, kind, label) {
+    const button = this.document.createElement('button');
+    button.type = 'button';
+    button.classList.add('blobio-hotkey-bind', `is-${kind}`);
+    button.dataset.id = entry.id;
+    button.dataset.kind = kind;
+
+    const listening = this.hotkeyCapture?.id === entry.id && this.hotkeyCapture.kind === kind;
+    button.classList.toggle('is-listening', listening);
+    button.textContent = listening ? '...' : label;
+    button.title = listening
+      ? `Press a ${kind === 'key' ? 'key' : 'mouse button'}; hold Space for 3 seconds to clear`
+      : kind === 'key'
+        ? (entry.keyCode || 'Set keyboard hotkey')
+        : (entry.mouseButton === null ? 'Set mouse hotkey' : this.mouseName(entry.mouseButton));
+    return button;
+  }
+
+  applyHotkeyText() {
+    const input = this.root?.querySelector('.blobio-hotkey-text-input');
+    const entry = this.hotkeyStore?.add?.(input?.value);
+    if (!entry || !input) {
+      return;
+    }
+
+    input.value = '';
+    this.selectedHotkeyId = '';
+    this.syncHotkeyUi();
+    input.focus?.();
+  }
+
+  beginHotkeyCapture(id, kind) {
+    if (!this.hotkeyStore?.getById?.(id) || (kind !== 'key' && kind !== 'mouse')) {
+      return;
+    }
+
+    this.cancelHotkeyCapture();
+    if (kind === 'key') {
+      this.hotkeyStore.setKey(id, '');
+    } else {
+      this.hotkeyStore.setMouse(id, null);
+    }
+
+    this.hotkeyCapture = {
+      id,
+      kind,
+      spaceTimer: null,
+      spaceDown: false,
+      cleared: false,
+    };
+    this.syncHotkeyUi();
+  }
+
+  installHotkeyCaptureListeners() {
+    if (this.hotkeyKeydownHandler) {
+      return;
+    }
+
+    this.hotkeyKeydownHandler = (event) => this.handleHotkeyCaptureKeydown(event);
+    this.hotkeyKeyupHandler = (event) => this.handleHotkeyCaptureKeyup(event);
+    this.hotkeyPointerdownHandler = (event) => this.handleHotkeyCapturePointerdown(event);
+    this.hotkeyContextMenuHandler = (event) => {
+      if (this.hotkeyCapture?.kind === 'mouse' || this.suppressHotkeyContextMenu) {
+        event.preventDefault?.();
+        event.stopPropagation?.();
+        this.suppressHotkeyContextMenu = false;
+      }
+    };
+
+    this.document.addEventListener?.('keydown', this.hotkeyKeydownHandler, true);
+    this.document.addEventListener?.('keyup', this.hotkeyKeyupHandler, true);
+    this.document.addEventListener?.('pointerdown', this.hotkeyPointerdownHandler, true);
+    this.document.addEventListener?.('contextmenu', this.hotkeyContextMenuHandler, true);
+  }
+
+  handleHotkeyCaptureKeydown(event) {
+    const capture = this.hotkeyCapture;
+    if (!capture) {
+      return;
+    }
+
+    event.preventDefault?.();
+    event.stopPropagation?.();
+
+    if (event.code === 'Space') {
+      if (capture.spaceDown || event.repeat) {
+        return;
+      }
+
+      capture.spaceDown = true;
+      const win = this.document.defaultView || globalThis;
+      capture.spaceTimer = win.setTimeout?.(() => {
+        if (this.hotkeyCapture !== capture || !capture.spaceDown) {
+          return;
+        }
+
+        capture.cleared = true;
+        this.cancelHotkeyCapture();
+        this.syncHotkeyUi();
+      }, HOTKEY_CLEAR_HOLD_MS);
+      return;
+    }
+
+    if (capture.kind === 'key' && event.code) {
+      this.hotkeyStore.setKey(capture.id, event.code);
+      this.cancelHotkeyCapture();
+      this.syncHotkeyUi();
+    }
+  }
+
+  handleHotkeyCaptureKeyup(event) {
+    const capture = this.hotkeyCapture;
+    if (!capture || event.code !== 'Space' || !capture.spaceDown) {
+      return;
+    }
+
+    event.preventDefault?.();
+    event.stopPropagation?.();
+    this.clearHotkeySpaceTimer(capture);
+    capture.spaceDown = false;
+
+    if (capture.kind === 'key' && !capture.cleared) {
+      this.hotkeyStore.setKey(capture.id, 'Space');
+      this.cancelHotkeyCapture();
+      this.syncHotkeyUi();
+    }
+  }
+
+  handleHotkeyCapturePointerdown(event) {
+    const capture = this.hotkeyCapture;
+    if (!capture || capture.kind !== 'mouse') {
+      return;
+    }
+
+    if (event.target?.closest?.('.blobio-hotkey-bind')) {
+      return;
+    }
+
+    if (![0, 1, 2].includes(Number(event.button))) {
+      return;
+    }
+
+    event.preventDefault?.();
+    event.stopImmediatePropagation?.();
+    event.stopPropagation?.();
+    event.__blobioHotkeyCaptured = true;
+    this.suppressHotkeyContextMenu = Number(event.button) === 2;
+    this.hotkeyStore.setMouse(capture.id, Number(event.button));
+    this.cancelHotkeyCapture();
+    this.syncHotkeyUi();
+  }
+
+  clearHotkeySpaceTimer(capture = this.hotkeyCapture) {
+    if (!capture?.spaceTimer) {
+      return;
+    }
+
+    const win = this.document.defaultView || globalThis;
+    win.clearTimeout?.(capture.spaceTimer);
+    capture.spaceTimer = null;
+  }
+
+  cancelHotkeyCapture() {
+    if (!this.hotkeyCapture) {
+      return;
+    }
+
+    this.clearHotkeySpaceTimer(this.hotkeyCapture);
+    this.hotkeyCapture = null;
+  }
+
+  keyLabel(code) {
+    if (!code) return 'K';
+    if (/^Key[A-Z]$/.test(code)) return code.slice(3);
+    if (/^Digit\d$/.test(code)) return code.slice(5);
+    if (/^Numpad\d$/.test(code)) return `N${code.slice(6)}`;
+
+    const labels = {
+      Space: 'SPC', Enter: 'ENT', Escape: 'ESC', Tab: 'TAB', Backspace: 'BSP',
+      ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→',
+      ShiftLeft: 'LS', ShiftRight: 'RS', ControlLeft: 'LC', ControlRight: 'RC',
+      AltLeft: 'LA', AltRight: 'RA', CapsLock: 'CAP', Delete: 'DEL', Insert: 'INS',
+      Home: 'HOM', End: 'END', PageUp: 'PG↑', PageDown: 'PG↓',
+    };
+    return labels[code] || code.replace(/^(Numpad|Intl)/, '').slice(0, 4).toUpperCase();
+  }
+
+  mouseLabel(button) {
+    return button === 0 ? 'L' : button === 1 ? 'M' : button === 2 ? 'R' : 'M';
+  }
+
+  mouseName(button) {
+    return button === 0 ? 'Left mouse button' : button === 1 ? 'Wheel press' : 'Right mouse button';
   }
 
   beginNameEdit() {
@@ -674,6 +1040,9 @@ export class ChatSettingsFeature {
     this.chatWrapper = null;
     this.unsubscribeMutedPlayers?.();
     this.unsubscribeMutedPlayers = null;
+    this.unsubscribeHotkeys?.();
+    this.unsubscribeHotkeys = null;
+    this.cancelHotkeyCapture();
     this.clearNotificationTimers();
 
     const win = this.document.defaultView || globalThis;
@@ -681,6 +1050,18 @@ export class ChatSettingsFeature {
       win.removeEventListener?.('resize', this.viewportHandler);
       win.removeEventListener?.('scroll', this.viewportHandler, true);
       this.viewportHandler = null;
+    }
+
+    if (this.hotkeyKeydownHandler) {
+      this.document.removeEventListener?.('keydown', this.hotkeyKeydownHandler, true);
+      this.document.removeEventListener?.('keyup', this.hotkeyKeyupHandler, true);
+      this.document.removeEventListener?.('pointerdown', this.hotkeyPointerdownHandler, true);
+      this.document.removeEventListener?.('contextmenu', this.hotkeyContextMenuHandler, true);
+      this.hotkeyKeydownHandler = null;
+      this.hotkeyKeyupHandler = null;
+      this.hotkeyPointerdownHandler = null;
+      this.hotkeyContextMenuHandler = null;
+      this.suppressHotkeyContextMenu = false;
     }
 
     if (this.outsidePointerHandler) {
@@ -703,6 +1084,7 @@ export class ChatSettingsFeature {
     this.selectedMutedUids.clear();
     this.editingUid = '';
     this.editingNameDraft = '';
+    this.selectedHotkeyId = '';
     this.started = false;
   }
 }

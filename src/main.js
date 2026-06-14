@@ -11,9 +11,11 @@ import { BackgroundFeature } from './features/BackgroundFeature.js';
 import { ChatRoleFeature } from './features/ChatRoleFeature.js';
 import { ChatSettingsFeature } from './features/ChatSettingsFeature.js';
 import { FriendHighlightFeature } from './features/FriendHighlightFeature.js';
+import { HotkeyFeature } from './features/HotkeyFeature.js';
 import { MenuFeature } from './features/MenuFeature.js';
 import { FriendHighlightStore } from './friends/FriendHighlightStore.js';
 import { FriendRelationService } from './friends/FriendRelationService.js';
+import { HotkeyStore } from './hotkeys/HotkeyStore.js';
 import { PlayerMuteFeature } from './features/PlayerMuteFeature.js';
 import { VipBadgeFeature } from './features/VipBadgeFeature.js';
 import { getBlobioHostMode } from './hostRules.js';
@@ -30,6 +32,7 @@ class BlobioExtension {
     this.roleRegistry = null;
     this.mutedPlayersStore = null;
     this.friendHighlightStore = null;
+    this.hotkeyStore = null;
     this.started = false;
   }
 
@@ -95,6 +98,8 @@ class BlobioExtension {
       );
     } else if (hostMode === 'runtime') {
       this.mutedPlayersStore = new MutedPlayersStore({ document, logger });
+      this.hotkeyStore = new HotkeyStore({ document, logger });
+      this.hotkeyStore.start();
       const friendRelationService = new FriendRelationService({
         document,
         logger,
@@ -104,6 +109,7 @@ class BlobioExtension {
         document,
         logger,
         mutedPlayersStore: this.mutedPlayersStore,
+        hotkeyStore: this.hotkeyStore,
       });
 
       this.features.push(
@@ -119,6 +125,11 @@ class BlobioExtension {
           roleRegistry: this.roleRegistry,
           friendHighlightStore: this.friendHighlightStore,
           friendRelationService,
+        }),
+        new HotkeyFeature({
+          document,
+          logger,
+          hotkeyStore: this.hotkeyStore,
         }),
         chatSettings,
         new PlayerMuteFeature({
@@ -151,6 +162,8 @@ class BlobioExtension {
     this.mutedPlayersStore = null;
     this.friendHighlightStore?.destroy();
     this.friendHighlightStore = null;
+    this.hotkeyStore?.destroy();
+    this.hotkeyStore = null;
     this.started = false;
   }
 }

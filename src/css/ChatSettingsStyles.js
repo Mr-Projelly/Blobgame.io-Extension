@@ -323,6 +323,148 @@ export const CHAT_SETTINGS_CSS = `
   box-shadow: 0 0 10px rgba(255, 67, 67, 0.22);
 }
 
+.blobio-hotkey-category {
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+}
+
+.blobio-hotkey-text-input {
+  width: 100%;
+  min-height: 36px;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid rgba(123, 255, 162, 0.94);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.84);
+  color: #ffffff;
+  font: 700 13px Arial, sans-serif;
+  outline: none;
+  box-shadow: inset 0 0 10px rgba(67, 255, 122, 0.14), 0 0 13px rgba(67, 255, 122, 0.34);
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.blobio-hotkey-text-input::placeholder {
+  color: rgba(221, 255, 231, 0.62);
+}
+
+.blobio-hotkey-text-input:focus {
+  border-color: rgb(149, 255, 180);
+  box-shadow: inset 0 0 12px rgba(67, 255, 122, 0.2), 0 0 17px rgba(67, 255, 122, 0.52);
+}
+
+.blobio-hotkey-list {
+  display: grid;
+  gap: 7px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 3px;
+}
+
+.blobio-hotkey-empty {
+  padding: 10px;
+  border: 1px dashed rgba(130, 255, 166, 0.36);
+  border-radius: 6px;
+  color: rgba(236, 255, 241, 0.72);
+  font-size: 12px;
+  text-align: center;
+}
+
+.blobio-hotkey-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 42px 42px;
+  gap: 7px;
+  align-items: stretch;
+}
+
+.blobio-hotkey-load,
+.blobio-hotkey-bind,
+.blobio-hotkey-action {
+  box-sizing: border-box;
+  border: 1px solid rgba(130, 255, 166, 0.5);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.74);
+  color: #ecfff1;
+  font-family: Arial, sans-serif;
+  cursor: pointer;
+}
+
+.blobio-hotkey-load {
+  min-width: 0;
+  min-height: 38px;
+  overflow: hidden;
+  padding: 7px 9px;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-shadow: inset 0 0 8px rgba(79, 255, 130, 0.08);
+  transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
+}
+
+.blobio-hotkey-load:hover {
+  border-color: rgba(151, 255, 181, 0.84);
+}
+
+.blobio-hotkey-load.is-selected {
+  border-color: rgba(255, 112, 112, 0.96);
+  background: rgba(88, 17, 17, 0.76);
+  box-shadow: inset 0 0 10px rgba(255, 70, 70, 0.16), 0 0 10px rgba(255, 70, 70, 0.28);
+}
+
+.blobio-hotkey-bind {
+  width: 42px;
+  min-height: 38px;
+  padding: 0;
+  font-size: 12px;
+  font-weight: 900;
+  text-align: center;
+  text-shadow: 0 0 6px rgba(255, 255, 255, 0.7), 0 0 10px rgba(67, 255, 122, 0.52);
+  box-shadow: inset 0 0 8px rgba(79, 255, 130, 0.1);
+  transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+
+.blobio-hotkey-bind:hover,
+.blobio-hotkey-bind.is-listening {
+  border-color: rgba(151, 255, 181, 0.98);
+  background: rgba(9, 68, 31, 0.88);
+  box-shadow: inset 0 0 10px rgba(79, 255, 130, 0.2), 0 0 13px rgba(79, 255, 130, 0.46);
+}
+
+.blobio-hotkey-bind.is-listening {
+  animation: blobio-hotkey-listening 900ms ease-in-out infinite alternate;
+}
+
+.blobio-hotkey-action {
+  display: none;
+  width: 100%;
+  min-height: 33px;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.blobio-hotkey-action.is-visible {
+  display: block;
+}
+
+.blobio-hotkey-apply {
+  border-color: rgba(137, 255, 170, 0.92);
+  background: linear-gradient(135deg, rgba(13, 95, 41, 0.96), rgba(30, 157, 68, 0.82));
+  box-shadow: 0 0 11px rgba(79, 255, 130, 0.28);
+}
+
+.blobio-hotkey-remove {
+  border-color: rgba(255, 124, 124, 0.94);
+  background: linear-gradient(135deg, rgba(112, 17, 17, 0.96), rgba(180, 43, 43, 0.84));
+  box-shadow: 0 0 11px rgba(255, 67, 67, 0.26);
+}
+
+@keyframes blobio-hotkey-listening {
+  from { filter: brightness(0.95); }
+  to { filter: brightness(1.35); }
+}
+
 .blobio-chat-notification-host {
   position: fixed;
   z-index: 95;
@@ -393,8 +535,12 @@ export const CHAT_SETTINGS_CSS = `
   .blobio-chat-font-range,
   .blobio-chat-font-number,
   .blobio-muted-player-chip,
+  .blobio-hotkey-text-input,
+  .blobio-hotkey-load,
+  .blobio-hotkey-bind,
   .blobio-chat-notification {
     transition: none;
+    animation: none;
   }
 }
 `;
