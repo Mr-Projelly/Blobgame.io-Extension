@@ -15,6 +15,7 @@ import { BackgroundFeature } from './features/BackgroundFeature.js';
 import { ChatRoleFeature } from './features/ChatRoleFeature.js';
 import { ChatSettingsFeature } from './features/ChatSettingsFeature.js';
 import { FriendHighlightFeature } from './features/FriendHighlightFeature.js';
+import { GameUiCustomizationFeature } from './features/GameUiCustomizationFeature.js';
 import { HotkeyFeature } from './features/HotkeyFeature.js';
 import { MenuFeature } from './features/MenuFeature.js';
 import { FriendHighlightStore } from './friends/FriendHighlightStore.js';
@@ -30,7 +31,7 @@ import { readVirusMotherCellSettings } from './virus/VirusMotherCellSettings.js'
 import { pageVirusMotherCellBootstrap } from './virus/pageVirusMotherCellBootstrap.js';
 
 const INSTANCE_KEY = '__blobioExtension';
-const EXTENSION_VERSION = '0.1.78';
+const EXTENSION_VERSION = '0.1.79';
 const VIP_BADGE_URL = 'https://raw.githubusercontent.com/SkyViewBlobio/Blobgame.io-Extension/main/assets/VIP_icon_plus.png';
 
 class BlobioExtension {
@@ -122,11 +123,13 @@ class BlobioExtension {
         logger,
         friendHighlightStore: this.friendHighlightStore,
       });
+      const uiCustomization = new GameUiCustomizationFeature({ document, logger });
       const chatSettings = new ChatSettingsFeature({
         document,
         logger,
         mutedPlayersStore: this.mutedPlayersStore,
         hotkeyStore: this.hotkeyStore,
+        uiCustomization,
       });
 
       this.features.push(
@@ -148,6 +151,7 @@ class BlobioExtension {
           logger,
           hotkeyStore: this.hotkeyStore,
         }),
+        uiCustomization,
         chatSettings,
         new PlayerMuteFeature({
           document,

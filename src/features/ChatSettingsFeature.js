@@ -8,6 +8,23 @@ import {
   setChatFontSize,
   setChatFontSizeEnabled,
 } from '../settings/RuntimeSettings.js';
+import {
+  CAPTCHA_LOGO_HIDDEN_KEY,
+  CHAT_BACKGROUND_KEYS,
+  CHAT_OUTLINE_KEYS,
+  IN_GAME_UI_DEFAULTS,
+  LEADERBOARD_BACKGROUND_KEYS,
+  LEADERBOARD_OUTLINE_KEYS,
+  SMOOTH_CHAT_KEY,
+  UI_FONT_SIZE_LIMITS,
+  getBooleanSetting,
+  getColorSetting,
+  getLeaderboardFontSetting,
+  readInGameUiSettings,
+  setBooleanSetting,
+  setColorSetting,
+  setLeaderboardFontSetting,
+} from '../settings/InGameUiSettings.js';
 
 const CHAT_GAP = 10;
 const TOGGLE_WIDTH = 30;
@@ -22,12 +39,14 @@ export class ChatSettingsFeature {
     storage = createBlobioStorage(document),
     mutedPlayersStore = null,
     hotkeyStore = null,
+    uiCustomization = null,
     logger = console,
   } = {}) {
     this.document = document;
     this.storage = storage;
     this.mutedPlayersStore = mutedPlayersStore;
     this.hotkeyStore = hotkeyStore;
+    this.uiCustomization = uiCustomization;
     this.logger = logger;
     this.styleNode = null;
     this.root = null;
@@ -110,12 +129,24 @@ export class ChatSettingsFeature {
     const chatButton = this.createCategoryButton('Chat-Settings', 'chat');
     const mutedButton = this.createCategoryButton('Muted-Players', 'muted');
     const hotkeyButton = this.createCategoryButton('HotKey', 'hotkey');
-    panel.append(chatButton, mutedButton, hotkeyButton);
+    const captchaButton = this.createCategoryButton('Captcha-Logo', 'captcha');
+    const leaderboardButton = this.createCategoryButton('Leaderboard-Settings', 'leaderboard');
+    panel.append(chatButton, mutedButton, hotkeyButton, captchaButton, leaderboardButton);
 
     const chatCategory = this.createChatCategory();
     const mutedCategory = this.createMutedPlayersCategory();
     const hotkeyCategory = this.createHotkeyCategory();
-    root.append(toggle, panel, chatCategory, mutedCategory, hotkeyCategory);
+    const captchaCategory = this.createCaptchaCategory();
+    const leaderboardCategory = this.createLeaderboardCategory();
+    root.append(
+      toggle,
+      panel,
+      chatCategory,
+      mutedCategory,
+      hotkeyCategory,
+      captchaCategory,
+      leaderboardCategory,
+    );
     this.installKeyboardShield(root);
     (this.document.body || this.document.documentElement).appendChild(root);
 
@@ -131,27 +162,12 @@ export class ChatSettingsFeature {
     this.bindCategoryButton(chatButton);
     this.bindCategoryButton(mutedButton);
     this.bindCategoryButton(hotkeyButton);
+    this.bindCategoryButton(captchaButton);
+    this.bindCategoryButton(leaderboardButton);
 
-    const enabledButton = chatCategory.querySelector('.blobio-chat-font-toggle');
-    const range = chatCategory.querySelector('.blobio-chat-font-range');
-    const number = chatCategory.querySelector('.blobio-chat-font-number');
-
-    enabledButton.addEventListener('click', () => {
-      setChatFontSizeEnabled(this.storage, !isChatFontSizeEnabled(this.storage));
-      this.syncControls();
-      this.applyChatFontSize();
-    });
-
-    const updateSize = (value) => {
-      const size = setChatFontSize(this.storage, value);
-      range.value = String(size);
-      number.value = String(size);
-      this.applyChatFontSize();
-    };
-
-    range.addEventListener('input', () => updateSize(range.value));
-    number.addEventListener('input', () => updateSize(number.value));
-    number.addEventListener('change', () => updateSize(number.value));
+    this.bindChatCategory(chatCategory);
+    this.bindCaptchaCategory(captchaCategory);
+    this.bindLeaderboardCategory(leaderboardCategory);
 
     const muteToggle = mutedCategory.querySelector('.blobio-muted-players-toggle');
     const mutedList = mutedCategory.querySelector('.blobio-muted-players-list');
@@ -266,6 +282,7 @@ export class ChatSettingsFeature {
     this.syncControls();
     this.syncMutedPlayersUi();
     this.syncHotkeyUi();
+    this.syncVisualSettingsUi();
     this.syncChatWrapper();
     this.positionUi();
 
@@ -397,39 +414,133 @@ export class ChatSettingsFeature {
 
   createChatCategory() {
     const category = this.document.createElement('div');
-    category.classList.add('blobio-chat-settings-category');
+    category.classList.add('blobio-chat-settings-category', 'blobio-chat-appearance-category');
     category.dataset.category = 'chat';
 
-    const enabledButton = this.document.createElement('button');
-    enabledButton.type = 'button';
-    enabledButton.classList.add('blobio-chat-font-toggle');
+    category.append(
+      this.createFontSetting('chat', 'Font-Size', CHAT_FONT_SIZE_LIMITS),
+      this.createColorSetting('chat-background', 'Chat-BG-Color'),
+      this.createColorSetting('chat-outline', 'Chat-outline-Color'),
+      this.createBooleanSetting('smooth-chat', 'Smooth-Chat'),
+    );
+    return category;
+  }
+
+  createCaptchaCategory() {
+    const category = this.document.createElement('div');
+    category.classList.add('blobio-chat-settings-category', 'blobio-captcha-category');
+    category.dataset.category = 'captcha';
+    category.appendChild(this.createBooleanSetting('captcha-logo', 'Hide Captcha-Logo'));
+    return category;
+  }
+
+  createLeaderboardCategory() {
+    const category = this.document.createElement('div');
+    category.classList.add('blobio-chat-settings-category', 'blobio-leaderboard-category');
+    category.dataset.category = 'leaderboard';
+    category.append(
+      this.createFontSetting('leaderboard', 'Font-Size', UI_FONT_SIZE_LIMITS),
+      this.createColorSetting('leaderboard-background', 'Leaderboard-BG-Color'),
+      this.createColorSetting('leaderboard-outline', 'Leaderboard-outline-Color'),
+    );
+    return category;
+  }
+
+  createFontSetting(name, labelText, limits) {
+    const group = this.document.createElement('div');
+    group.classList.add('blobio-ui-setting-group', 'blobio-ui-font-setting');
+    group.dataset.setting = name;
+
+    const toggle = this.document.createElement('button');
+    toggle.type = 'button';
+    toggle.classList.add('blobio-chat-font-toggle', 'blobio-setting-toggle');
 
     const label = this.document.createElement('div');
     label.classList.add('blobio-chat-font-label');
-    label.textContent = 'Font-Size';
+    label.textContent = labelText;
 
     const controls = this.document.createElement('div');
     controls.classList.add('blobio-chat-font-controls');
 
     const range = this.document.createElement('input');
     range.type = 'range';
-    range.classList.add('blobio-chat-font-range');
-    range.min = String(CHAT_FONT_SIZE_LIMITS.min);
-    range.max = String(CHAT_FONT_SIZE_LIMITS.max);
+    range.classList.add('blobio-chat-font-range', 'blobio-themed-range');
+    range.min = String(limits.min);
+    range.max = String(limits.max);
     range.step = '1';
 
     const number = this.document.createElement('input');
     number.type = 'number';
     number.classList.add('blobio-chat-font-number');
-    number.min = String(CHAT_FONT_SIZE_LIMITS.min);
-    number.max = String(CHAT_FONT_SIZE_LIMITS.max);
+    number.min = String(limits.min);
+    number.max = String(limits.max);
     number.step = '1';
-    number.setAttribute('aria-label', 'Chat font size');
+    number.setAttribute('aria-label', `${labelText} ${name}`);
 
     controls.append(range, number);
-    category.append(enabledButton, label, controls);
-    return category;
+    group.append(toggle, label, controls);
+    return group;
   }
+
+  createBooleanSetting(name, labelText) {
+    const group = this.document.createElement('div');
+    group.classList.add('blobio-ui-setting-group', 'blobio-ui-boolean-setting');
+    group.dataset.setting = name;
+
+    const toggle = this.document.createElement('button');
+    toggle.type = 'button';
+    toggle.classList.add('blobio-chat-font-toggle', 'blobio-setting-toggle');
+
+    const label = this.document.createElement('div');
+    label.classList.add('blobio-chat-font-label');
+    label.textContent = labelText;
+
+    group.append(toggle, label);
+    return group;
+  }
+
+  createColorSetting(name, labelText) {
+    const group = this.document.createElement('div');
+    group.classList.add('blobio-ui-setting-group', 'blobio-ui-color-setting');
+    group.dataset.setting = name;
+
+    const toggle = this.document.createElement('button');
+    toggle.type = 'button';
+    toggle.classList.add('blobio-chat-font-toggle', 'blobio-setting-toggle');
+
+    const label = this.document.createElement('div');
+    label.classList.add('blobio-chat-font-label');
+    label.textContent = labelText;
+
+    const controls = this.document.createElement('div');
+    controls.classList.add('blobio-ui-color-controls');
+
+    const wheel = this.document.createElement('label');
+    wheel.classList.add('blobio-ui-color-wheel');
+    const swatch = this.document.createElement('span');
+    swatch.classList.add('blobio-ui-color-swatch');
+    const color = this.document.createElement('input');
+    color.type = 'color';
+    color.classList.add('blobio-ui-color-input');
+    color.setAttribute('aria-label', labelText);
+    wheel.append(swatch, color);
+
+    const alpha = this.document.createElement('input');
+    alpha.type = 'range';
+    alpha.min = '0';
+    alpha.max = '1';
+    alpha.step = '0.01';
+    alpha.classList.add('blobio-ui-alpha-range', 'blobio-themed-range');
+    alpha.setAttribute('aria-label', `${labelText} alpha`);
+
+    const alphaValue = this.document.createElement('span');
+    alphaValue.classList.add('blobio-ui-alpha-value');
+
+    controls.append(wheel, alpha, alphaValue);
+    group.append(toggle, label, controls);
+    return group;
+  }
+
 
   createMutedPlayersCategory() {
     const category = this.document.createElement('div');
@@ -499,6 +610,118 @@ export class ChatSettingsFeature {
     return category;
   }
 
+  bindChatCategory(category) {
+    const font = category.querySelector('[data-setting="chat"]');
+    const fontToggle = font.querySelector('.blobio-setting-toggle');
+    const range = font.querySelector('.blobio-chat-font-range');
+    const number = font.querySelector('.blobio-chat-font-number');
+
+    fontToggle.addEventListener('click', () => {
+      setChatFontSizeEnabled(this.storage, !isChatFontSizeEnabled(this.storage));
+      this.syncVisualSettingsUi();
+      this.applyRuntimeUi();
+    });
+
+    const updateSize = (value) => {
+      const size = setChatFontSize(this.storage, value);
+      range.value = String(size);
+      number.value = String(size);
+      this.applyRuntimeUi();
+    };
+    range.addEventListener('input', () => updateSize(range.value));
+    number.addEventListener('input', () => updateSize(number.value));
+    number.addEventListener('change', () => updateSize(number.value));
+
+    this.bindColorSetting(category, 'chat-background', CHAT_BACKGROUND_KEYS, IN_GAME_UI_DEFAULTS.chatBackground);
+    this.bindColorSetting(category, 'chat-outline', CHAT_OUTLINE_KEYS, IN_GAME_UI_DEFAULTS.chatOutline);
+
+    const smooth = category.querySelector('[data-setting="smooth-chat"] .blobio-setting-toggle');
+    smooth.addEventListener('click', () => {
+      setBooleanSetting(this.storage, SMOOTH_CHAT_KEY, !getBooleanSetting(this.storage, SMOOTH_CHAT_KEY, true));
+      this.syncVisualSettingsUi();
+      this.applyRuntimeUi();
+    });
+  }
+
+  bindCaptchaCategory(category) {
+    const toggle = category.querySelector('[data-setting="captcha-logo"] .blobio-setting-toggle');
+    toggle.addEventListener('click', () => {
+      setBooleanSetting(
+        this.storage,
+        CAPTCHA_LOGO_HIDDEN_KEY,
+        !getBooleanSetting(this.storage, CAPTCHA_LOGO_HIDDEN_KEY, true),
+      );
+      this.syncVisualSettingsUi();
+      this.applyRuntimeUi();
+    });
+  }
+
+  bindLeaderboardCategory(category) {
+    const font = category.querySelector('[data-setting="leaderboard"]');
+    const fontToggle = font.querySelector('.blobio-setting-toggle');
+    const range = font.querySelector('.blobio-chat-font-range');
+    const number = font.querySelector('.blobio-chat-font-number');
+
+    fontToggle.addEventListener('click', () => {
+      const current = getLeaderboardFontSetting(this.storage);
+      setLeaderboardFontSetting(this.storage, { enabled: !current.enabled });
+      this.syncVisualSettingsUi();
+      this.applyRuntimeUi();
+    });
+
+    const updateSize = (value) => {
+      const setting = setLeaderboardFontSetting(this.storage, { value });
+      range.value = String(setting.value);
+      number.value = String(setting.value);
+      this.applyRuntimeUi();
+    };
+    range.addEventListener('input', () => updateSize(range.value));
+    number.addEventListener('input', () => updateSize(number.value));
+    number.addEventListener('change', () => updateSize(number.value));
+
+    this.bindColorSetting(
+      category,
+      'leaderboard-background',
+      LEADERBOARD_BACKGROUND_KEYS,
+      IN_GAME_UI_DEFAULTS.leaderboardBackground,
+    );
+    this.bindColorSetting(
+      category,
+      'leaderboard-outline',
+      LEADERBOARD_OUTLINE_KEYS,
+      IN_GAME_UI_DEFAULTS.leaderboardOutline,
+    );
+  }
+
+  bindColorSetting(category, name, keys, defaults) {
+    const group = category.querySelector(`[data-setting="${name}"]`);
+    const toggle = group.querySelector('.blobio-setting-toggle');
+    const color = group.querySelector('.blobio-ui-color-input');
+    const alpha = group.querySelector('.blobio-ui-alpha-range');
+
+    toggle.addEventListener('click', () => {
+      const current = getColorSetting(this.storage, keys, defaults);
+      setColorSetting(this.storage, keys, { enabled: !current.enabled }, defaults);
+      this.syncVisualSettingsUi();
+      this.applyRuntimeUi();
+    });
+    color.addEventListener('input', () => {
+      setColorSetting(this.storage, keys, { color: color.value }, defaults);
+      this.syncVisualSettingsUi();
+      this.applyRuntimeUi();
+    });
+    alpha.addEventListener('input', () => {
+      setColorSetting(this.storage, keys, { alpha: alpha.value }, defaults);
+      this.syncVisualSettingsUi();
+      this.applyRuntimeUi();
+    });
+  }
+
+  applyRuntimeUi() {
+    this.applyChatFontSize();
+    this.uiCustomization?.applyAll?.();
+  }
+
   setOpen(open) {
     if (!this.root) {
       return;
@@ -551,25 +774,88 @@ export class ChatSettingsFeature {
   }
 
   syncControls() {
+    this.syncVisualSettingsUi();
+  }
+
+  syncVisualSettingsUi() {
     if (!this.root) {
       return;
     }
 
-    const enabled = isChatFontSizeEnabled(this.storage);
-    const size = getChatFontSize(this.storage);
-    const toggle = this.root.querySelector('.blobio-chat-font-toggle:not(.blobio-muted-players-toggle)');
-    const categoryButton = this.root.querySelector('.blobio-chat-settings-category-button[data-category="chat"]');
-    const range = this.root.querySelector('.blobio-chat-font-range');
-    const number = this.root.querySelector('.blobio-chat-font-number');
+    const settings = readInGameUiSettings(this.storage);
+    this.syncFontSetting('chat', {
+      enabled: isChatFontSizeEnabled(this.storage),
+      value: getChatFontSize(this.storage),
+    });
+    this.syncFontSetting('leaderboard', settings.leaderboardFont);
+    this.syncColorSetting('chat-background', settings.chatBackground);
+    this.syncColorSetting('chat-outline', settings.chatOutline);
+    this.syncColorSetting('leaderboard-background', settings.leaderboardBackground);
+    this.syncColorSetting('leaderboard-outline', settings.leaderboardOutline);
+    this.syncBooleanSetting('smooth-chat', settings.smoothChat);
+    this.syncBooleanSetting('captcha-logo', settings.hideCaptchaLogo);
 
+    const chatActive = isChatFontSizeEnabled(this.storage)
+      || settings.chatBackground.enabled
+      || settings.chatOutline.enabled
+      || settings.smoothChat;
+    const leaderboardActive = settings.leaderboardFont.enabled
+      || settings.leaderboardBackground.enabled
+      || settings.leaderboardOutline.enabled;
+
+    this.root.querySelector('.blobio-chat-settings-category-button[data-category="chat"]')
+      ?.classList.toggle('has-active-setting', chatActive);
+    this.root.querySelector('.blobio-chat-settings-category-button[data-category="captcha"]')
+      ?.classList.toggle('has-active-setting', settings.hideCaptchaLogo);
+    this.root.querySelector('.blobio-chat-settings-category-button[data-category="leaderboard"]')
+      ?.classList.toggle('has-active-setting', leaderboardActive);
+  }
+
+  syncFontSetting(name, setting) {
+    const group = this.root?.querySelector(`[data-setting="${name}"]`);
+    if (!group) {
+      return;
+    }
+    const toggle = group.querySelector('.blobio-setting-toggle');
+    const range = group.querySelector('.blobio-chat-font-range');
+    const number = group.querySelector('.blobio-chat-font-number');
+    toggle.textContent = setting.enabled ? 'true' : 'false';
+    toggle.classList.toggle('is-enabled', setting.enabled);
+    range.value = String(setting.value);
+    range.disabled = !setting.enabled;
+    number.value = String(setting.value);
+    number.disabled = !setting.enabled;
+  }
+
+  syncBooleanSetting(name, enabled) {
+    const toggle = this.root?.querySelector(`[data-setting="${name}"] .blobio-setting-toggle`);
+    if (!toggle) {
+      return;
+    }
     toggle.textContent = enabled ? 'true' : 'false';
     toggle.classList.toggle('is-enabled', enabled);
-    categoryButton.classList.toggle('has-active-setting', enabled);
-    range.value = String(size);
-    range.disabled = !enabled;
-    number.value = String(size);
-    number.disabled = !enabled;
   }
+
+  syncColorSetting(name, setting) {
+    const group = this.root?.querySelector(`[data-setting="${name}"]`);
+    if (!group) {
+      return;
+    }
+    const toggle = group.querySelector('.blobio-setting-toggle');
+    const color = group.querySelector('.blobio-ui-color-input');
+    const swatch = group.querySelector('.blobio-ui-color-swatch');
+    const alpha = group.querySelector('.blobio-ui-alpha-range');
+    const alphaValue = group.querySelector('.blobio-ui-alpha-value');
+
+    toggle.textContent = setting.enabled ? 'true' : 'false';
+    toggle.classList.toggle('is-enabled', setting.enabled);
+    color.value = setting.color;
+    swatch.style.backgroundColor = setting.color;
+    alpha.value = String(setting.alpha);
+    alphaValue.textContent = `${Math.round(setting.alpha * 100)}%`;
+    group.classList.toggle('is-disabled', !setting.enabled);
+  }
+
 
   syncMutedPlayersUi() {
     if (!this.root || !this.mutedPlayersStore) {
@@ -1129,8 +1415,11 @@ export class ChatSettingsFeature {
             continue;
           }
 
-          if (node?.id === 'chat' || node?.id === 'chat-wrapper' || node?.querySelector?.('#chat, #chat-wrapper')) {
-            this.applyChatFontSize();
+          if (node?.id === 'chat'
+            || node?.id === 'chat-wrapper'
+            || node?.id === 'leader-board-wrapper'
+            || node?.querySelector?.('#chat, #chat-wrapper, #leader-board-wrapper')) {
+            this.applyRuntimeUi();
             this.syncChatWrapper();
             this.schedulePositionUi();
             return;

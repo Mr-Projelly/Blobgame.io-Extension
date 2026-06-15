@@ -1,11 +1,13 @@
 // ==UserScript==
 // @name         Blobio Web Script Loader
 // @namespace    https://github.com/SkyViewBlobio/Blobgame.io-Extension
-// @version      0.1.78
+// @version      0.1.79
 // @description  Loads the Blobio modular extension bundle from GitHub.
 // @match        *://blobgame.io/*
 // @match        *://www.blobgame.io/*
 // @match        *://custom.client.blobgame.io/*
+// @match        https://www.google.com/recaptcha/api2/anchor*
+// @match        https://www.recaptcha.net/recaptcha/api2/anchor*
 // @run-at       document-start
 // @sandbox      raw
 // @grant        unsafeWindow
@@ -25,8 +27,10 @@
   'use strict';
 
   const LOG_PREFIX = '[Blobio]';
-  const VERSION = '0.1.78';
+  const VERSION = '0.1.79';
   const CUSTOM_CLIENT_HOST = 'custom.client.blobgame.io';
+  const CAPTCHA_LOGO_HIDDEN_KEY = 'blobio.chat.hideCaptchaLogo';
+  const RECAPTCHA_FRAME_HOSTS = new Set(['www.google.com', 'www.recaptcha.net']);
   const STORAGE_BRIDGE_SOURCE = 'BlobioExtensionStorageBridge';
   const CUSTOM_SKIN_ENABLED_KEY = 'blobio.customSkin.enabled';
   const CUSTOM_SKIN_ACTIVE_KEY = 'blobio.customSkin.activeUrl';
@@ -51,6 +55,58 @@
   const EARLY_HOTKEY_BRIDGE_KEY = '__blobioEarlyHotkeyBridge';
   const INPUT_KEYBOARD_ISOLATION_KEY = '__blobioExtensionInputKeyboardIsolationInstalled';
   const DIRECT_IMGUR_IMAGE_MATCH = /^https:\/\/i\.imgur\.com\/[a-z0-9]+\.(?:png|jpe?g|webp)(?:\?.*)?$/i;
+
+  function isRecaptchaAnchorFrame() {
+    return RECAPTCHA_FRAME_HOSTS.has(location.hostname)
+      && /\/recaptcha\/api2\/anchor(?:$|\/)/.test(location.pathname);
+  }
+
+  function installCaptchaLogoFrameStyle() {
+    const readHidden = (value = undefined) => {
+      try {
+        const stored = value === undefined ? GM_getValue?.(CAPTCHA_LOGO_HIDDEN_KEY, '1') : value;
+        return stored === true || stored === 1 || stored === '1'
+          || String(stored).toLowerCase() === 'true';
+      } catch {
+        return true;
+      }
+    };
+
+    const ensureStyle = () => {
+      const root = document.documentElement;
+      if (!root) {
+        setTimeout(ensureStyle, 0);
+        return;
+      }
+
+      if (!document.getElementById('blobio-captcha-logo-frame-style')) {
+        const style = document.createElement('style');
+        style.id = 'blobio-captcha-logo-frame-style';
+        style.textContent = `
+          html.blobio-hide-captcha-logo .rc-anchor-logo-img,
+          html.blobio-hide-captcha-logo .rc-anchor-logo-img-large {
+            visibility: hidden !important;
+            background-image: none !important;
+          }
+        `;
+        (document.head || root).appendChild(style);
+      }
+
+      root.classList.toggle('blobio-hide-captcha-logo', readHidden());
+    };
+
+    ensureStyle();
+    try {
+      GM_addValueChangeListener?.(CAPTCHA_LOGO_HIDDEN_KEY, (_key, _oldValue, newValue) => {
+        document.documentElement?.classList?.toggle('blobio-hide-captcha-logo', readHidden(newValue));
+      });
+    } catch {}
+  }
+
+  if (isRecaptchaAnchorFrame()) {
+    installCaptchaLogoFrameStyle();
+    return;
+  }
 
   globalThis.__blobioLoaderVersion = VERSION;
 

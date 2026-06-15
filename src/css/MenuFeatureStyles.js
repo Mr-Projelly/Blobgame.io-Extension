@@ -881,32 +881,36 @@ html.${className} app-settings .blobio-virus-mothercell-button-menu {
   background: linear-gradient(145deg, rgba(3, 31, 19, 0.94), rgba(1, 10, 7, 0.94));
   box-shadow: inset 0 0 18px rgba(79, 255, 130, 0.12), 0 0 14px rgba(79, 255, 130, 0.16);
   box-sizing: border-box;
-  max-height: 390px;
-  overflow-y: auto;
+  max-height: 310px;
+  overflow-y: scroll;
   overflow-x: hidden;
   overscroll-behavior: contain;
   scrollbar-width: thin;
   scrollbar-color: rgba(100, 232, 133, 0.88) rgba(0, 18, 10, 0.72);
 }
 
-html.${className} app-settings .blobio-virus-mothercell-button-menu::-webkit-scrollbar {
+html.${className} app-settings .blobio-virus-mothercell-button-menu::-webkit-scrollbar,
+html.${className} app-settings .content-container.scroll::-webkit-scrollbar {
   width: 8px;
 }
 
-html.${className} app-settings .blobio-virus-mothercell-button-menu::-webkit-scrollbar-track {
+html.${className} app-settings .blobio-virus-mothercell-button-menu::-webkit-scrollbar-track,
+html.${className} app-settings .content-container.scroll::-webkit-scrollbar-track {
   border-radius: 8px;
   background: rgba(0, 18, 10, 0.72);
   box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.55);
 }
 
-html.${className} app-settings .blobio-virus-mothercell-button-menu::-webkit-scrollbar-thumb {
+html.${className} app-settings .blobio-virus-mothercell-button-menu::-webkit-scrollbar-thumb,
+html.${className} app-settings .content-container.scroll::-webkit-scrollbar-thumb {
   border: 1px solid rgba(200, 255, 214, 0.52);
   border-radius: 8px;
   background: linear-gradient(180deg, rgba(111, 244, 145, 0.94), rgba(42, 150, 78, 0.94));
   box-shadow: 0 0 7px rgba(79, 255, 130, 0.38);
 }
 
-html.${className} app-settings .blobio-virus-mothercell-button-menu::-webkit-scrollbar-thumb:hover {
+html.${className} app-settings .blobio-virus-mothercell-button-menu::-webkit-scrollbar-thumb:hover,
+html.${className} app-settings .content-container.scroll::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(180deg, rgba(151, 255, 177, 0.98), rgba(57, 182, 94, 0.98));
 }
 
@@ -997,7 +1001,50 @@ html.${className} app-settings .blobio-virus-alpha-control {
 html.${className} app-settings .blobio-virus-alpha-input {
   width: 100%;
   min-width: 0;
-  accent-color: #62e77d;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+html.${className} app-settings .blobio-virus-alpha-input::-webkit-slider-runnable-track {
+  height: 6px;
+  border: 1px solid rgba(147, 255, 177, 0.62);
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(13, 76, 34, 0.94), rgba(91, 238, 124, 0.94));
+  box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.58), 0 0 8px rgba(79, 255, 130, 0.28);
+}
+
+html.${className} app-settings .blobio-virus-alpha-input::-webkit-slider-thumb {
+  width: 16px;
+  height: 16px;
+  margin-top: -6px;
+  border: 1px solid rgba(225, 255, 233, 0.96);
+  border-radius: 50%;
+  appearance: none;
+  -webkit-appearance: none;
+  background: linear-gradient(145deg, #c5ffd2, #37cb69);
+  box-shadow: 0 0 10px rgba(79, 255, 130, 0.72), inset 0 0 5px rgba(255, 255, 255, 0.42);
+}
+
+html.${className} app-settings .blobio-virus-alpha-input::-moz-range-track {
+  height: 6px;
+  border: 1px solid rgba(147, 255, 177, 0.62);
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(13, 76, 34, 0.94), rgba(91, 238, 124, 0.94));
+  box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.58), 0 0 8px rgba(79, 255, 130, 0.28);
+}
+
+html.${className} app-settings .blobio-virus-alpha-input::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: 1px solid rgba(225, 255, 233, 0.96);
+  border-radius: 50%;
+  background: linear-gradient(145deg, #c5ffd2, #37cb69);
+  box-shadow: 0 0 10px rgba(79, 255, 130, 0.72), inset 0 0 5px rgba(255, 255, 255, 0.42);
 }
 
 html.${className} app-settings .blobio-virus-alpha-value {
