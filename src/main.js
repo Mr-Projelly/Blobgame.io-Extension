@@ -30,7 +30,7 @@ import { readVirusMotherCellSettings } from './virus/VirusMotherCellSettings.js'
 import { pageVirusMotherCellBootstrap } from './virus/pageVirusMotherCellBootstrap.js';
 
 const INSTANCE_KEY = '__blobioExtension';
-const EXTENSION_VERSION = '0.1.77';
+const EXTENSION_VERSION = '0.1.78';
 const VIP_BADGE_URL = 'https://raw.githubusercontent.com/SkyViewBlobio/Blobgame.io-Extension/main/assets/VIP_icon_plus.png';
 
 class BlobioExtension {

@@ -4372,33 +4372,44 @@ html.${className} app-settings .blobio-virus-setting-row {
 }
 
 html.${className} app-settings .blobio-virus-dropdown-button {
-  display: grid;
-  place-items: center;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
   width: 32px;
   height: 32px;
-  padding: 5px;
-  border: 1px solid rgba(142, 255, 174, 0.42);
-  border-radius: 7px;
+  padding: 0;
+  border: 1px solid rgba(130, 255, 166, 0.72);
+  border-radius: 5px;
   outline: none;
-  background: rgba(0, 19, 10, 0.72);
-  box-shadow: inset 0 0 8px rgba(79, 255, 130, 0.1);
+  background: rgba(0, 0, 0, 0.74);
+  color: #ecfff1;
+  text-align: center;
+  text-shadow: 0 0 5px rgba(255, 255, 255, 0.76), 0 0 12px rgba(77, 255, 126, 0.74);
+  box-shadow: inset 0 0 9px rgba(79, 255, 130, 0.12), 0 0 12px rgba(79, 255, 130, 0.26);
   cursor: pointer;
 }
 
 html.${className} app-settings .blobio-virus-dropdown-button:hover,
 html.${className} app-settings .blobio-virus-dropdown-button:focus-visible {
-  border-color: rgba(210, 255, 220, 0.85);
-  box-shadow: 0 0 11px rgba(79, 255, 130, 0.28), inset 0 0 8px rgba(79, 255, 130, 0.14);
+  border-color: rgba(151, 255, 181, 0.96);
+  box-shadow: inset 0 0 11px rgba(79, 255, 130, 0.18), 0 0 15px rgba(79, 255, 130, 0.42);
 }
 
 html.${className} app-settings .blobio-virus-dropdown-symbol {
-  display: block;
-  color: #dfffe6;
-  font-size: 23px;
-  font-weight: 800;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0 1px;
+  color: inherit;
+  font-size: 22px;
+  font-weight: 900;
   line-height: 1;
   text-align: center;
-  text-shadow: 0 0 7px rgba(118, 255, 154, 0.58);
+  text-shadow: inherit;
   pointer-events: none;
 }
 
@@ -5488,7 +5499,7 @@ html.${className} .blobio-watermark-extension::after {
   var DEFAULT_CLASS_NAME2 = "blobio-menu-enabled";
   var DEFAULT_STYLE_ID2 = "blobio-menu-style";
   var DEFAULT_TOOLBAR_CLASS = "blobio-menu-toolbar";
-  var DEFAULT_EXTENSION_VERSION = "0.1.77";
+  var DEFAULT_EXTENSION_VERSION = "0.1.78";
   var HIDDEN_CLASS = "blobio-original-hidden";
   var PARTNER_LINK_MATCH = /iogames\.space|iogames\.live|io-games\.zone|silvergames\.com|crazygames\.com/i;
   var FAILED_VIRAL_FRAME_MATCH = /viral\.iogames\.space/i;
@@ -9442,9 +9453,12 @@ html.${className} .blobio-watermark-extension::after {
     const VIRUS_BRANCH_RE = /case 4:case 3:if\(g\.q\)\{if\(g\.P\)\{h=g\.P;([$A-Za-z_][$\w]*)\(\);([$A-Za-z_][$\w]*)\(a\.c,g\.K\);([$A-Za-z_][$\w]*)\(a\.c,h,g\.R-g\.M,g\.S-g\.M,g\.N,g\.N\)\}\}else\{\1\(\);\2\(a\.c,g\.K\);\3\(a\.c,(a\.[$A-Za-z_][$\w]*),g\.R-g\.M,g\.S-g\.M,g\.N,g\.N\)\}break;/;
     const FALLBACK_RENDER_RE = /function ([$A-Za-z_][$\w]*)\(a,b\)\{var c;if\(b\.q\)\{c=b\.P;([$A-Za-z_][$\w]*)\(\);([$A-Za-z_][$\w]*)\(a\.c,b\.K\);([$A-Za-z_][$\w]*)\(a\.c,c,b\.R-b\.M,b\.S-b\.M,b\.N,b\.N\)\}else if\(b\.P\)\{\3\(a\.c,b\.K\);\4\(a\.c,b\.P,b\.R-b\.M,b\.S-b\.M,b\.N,b\.N\)\}else\{b\.K\.a=0\.75;\3\(a\.c,b\.K\);\4\(a\.c,([$A-Za-z_][$\w]*),b\.R-b\.M,b\.S-b\.M,b\.N,b\.N\)\}\}/;
     const ROTATED_DRAW_RE = /function ([$A-Za-z_][$\w]*)\(a,b,c,d,e,f,g,h,i,j,k\)\{var [^;]+;if\(!a\.j\)throw [^;]+;[$A-Za-z_][$\w]*=a\.C;[$A-Za-z_][$\w]*=b\.v;[^{}]*?=c\+e;[^{}]*?=d\+f;[^{}]*?=-e;[^{}]*?=-f;/;
+    const tintedMaskUrl = createTintedMaskUrl(config.maskUrl, config.color);
     const settings = {
       maskId: config.maskId,
-      maskUrl: config.maskUrl,
+      maskUrl: tintedMaskUrl,
+      sourceMaskUrl: config.maskUrl,
+      texturePreTinted: tintedMaskUrl !== config.maskUrl,
       rotate: config.maskId === "rotate" && config.rotate,
       color: config.color,
       alpha: config.alpha,
@@ -9524,6 +9538,14 @@ html.${className} .blobio-watermark-extension::after {
         version: String(value?.version || "")
       };
     }
+    function createTintedMaskUrl(maskUrl, color) {
+      if (!maskUrl || !color || typeof win.encodeURIComponent !== "function") {
+        return maskUrl;
+      }
+      const escapedMaskUrl = maskUrl.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256"><defs><filter id="blobio-tint" color-interpolation-filters="sRGB"><feFlood flood-color="${color}" result="color"/><feComposite in="color" in2="SourceAlpha" operator="in"/></filter></defs><image width="256" height="256" href="${escapedMaskUrl}" filter="url(#blobio-tint)"/></svg>`;
+      return `data:image/svg+xml;charset=utf-8,${win.encodeURIComponent(svg)}`;
+    }
     function preloadCustomGlowMask() {
       getCustomGlowMaskImage();
     }
@@ -9547,6 +9569,13 @@ html.${className} .blobio-watermark-extension::after {
       };
       image.onerror = () => {
         state.customMaskErrors = state.customMaskErrors + 1 || 1;
+        if (settings.texturePreTinted && settings.sourceMaskUrl) {
+          settings.texturePreTinted = false;
+          settings.maskUrl = settings.sourceMaskUrl;
+          customGlowMaskImage = null;
+          customGlowMaskUrl = "";
+          getCustomGlowMaskImage();
+        }
       };
       image.src = settings.maskUrl;
       if (image.complete || image.naturalWidth > 0 || image.width > 0) {
@@ -9705,6 +9734,9 @@ html.${className} .blobio-watermark-extension::after {
           version: state.version,
           enabled: true,
           maskId: settings.maskId,
+          color: settings.color,
+          alpha: settings.alpha,
+          texturePreTinted: settings.texturePreTinted,
           shouldRotate: settings.rotate,
           loaderStatus: { ...loaderStatus },
           callbackCalls: state.callbackCalls,
@@ -9769,7 +9801,7 @@ html.${className} .blobio-watermark-extension::after {
         code = code.replace(VIRUS_BRANCH_RE, (match, initDrawState, setColor, drawRegion, branchVirusTexture, offset, fullCode) => {
           const branchGlowTexture = findGlowTextureFromAsset(fullCode) || findGlowTexture(fullCode, offset + match.length, drawRegion);
           const drawGlow = buildGlowDrawCall(rotatedDrawName, drawRegion, "g", "a.c", branchGlowTexture, "high-detail");
-          return `case 4:case 3:h=$wnd.__blobVirusGlowState;if(h){h.viruses.push({id:g.n,x:g.R,y:g.S,r:g.M,size:g.N,mode:1,type:g.c.M});h.highDetailVirusHits=(h.highDetailVirusHits+1)||1;h.lastUpdate=(new Date).getTime()}h=$wnd.__blobVirusGlowSettings;f=g.K.d;d=g.K.c;b=g.K.b;c=g.K.a;g.K.d=h&&h.r!=null?h.r:1;g.K.c=h&&h.g!=null?h.g:0;g.K.b=h&&h.b!=null?h.b:0;g.K.a=h&&h.alpha!=null?h.alpha:0.85;${initDrawState}();${setColor}(a.c,g.K);${drawGlow};g.K.d=f;g.K.c=d;g.K.b=b;g.K.a=c;break;`;
+          return `case 4:case 3:h=$wnd.__blobVirusGlowState;if(h){h.viruses.push({id:g.n,x:g.R,y:g.S,r:g.M,size:g.N,mode:1,type:g.c.M});h.highDetailVirusHits=(h.highDetailVirusHits+1)||1;h.lastUpdate=(new Date).getTime()}h=$wnd.__blobVirusGlowSettings;f=g.K.d;d=g.K.c;b=g.K.b;c=g.K.a;g.K.d=h&&h.texturePreTinted?1:h&&h.r!=null?h.r:1;g.K.c=h&&h.texturePreTinted?1:h&&h.g!=null?h.g:0;g.K.b=h&&h.texturePreTinted?1:h&&h.b!=null?h.b:0;g.K.a=h&&h.alpha!=null?h.alpha:0.85;${initDrawState}();${setColor}(a.c,g.K);${drawGlow};g.K.d=f;g.K.c=d;g.K.b=b;g.K.a=c;break;`;
         });
         virusBranchPatched = true;
       }
@@ -9777,7 +9809,7 @@ html.${className} .blobio-watermark-extension::after {
         code = code.replace(FALLBACK_RENDER_RE, (match, fallbackName, initDrawState, setColor, drawRegion, defaultTexture, offset, fullCode) => {
           const fallbackGlowTexture = findGlowTextureFromAsset(fullCode) || "a.n";
           const drawGlow = buildGlowDrawCall(rotatedDrawName, drawRegion, "b", "a.c", fallbackGlowTexture, "fallback");
-          return `function ${fallbackName}(a,b){var c,d,e,f,g;if(b.c&&(b.c.M==4||b.c.M==3)){c=$wnd.__blobVirusGlowState;if(c){c.viruses.push({id:b.n,x:b.R,y:b.S,r:b.M,size:b.N,mode:0,type:b.c.M});c.fallbackVirusHits=(c.fallbackVirusHits+1)||1;c.lastUpdate=(new Date).getTime()}c=$wnd.__blobVirusGlowSettings;d=b.K.d;e=b.K.c;f=b.K.b;g=b.K.a;b.K.d=c&&c.r!=null?c.r:1;b.K.c=c&&c.g!=null?c.g:0;b.K.b=c&&c.b!=null?c.b:0;b.K.a=c&&c.alpha!=null?c.alpha:0.85;${initDrawState}();${setColor}(a.c,b.K);${drawGlow};b.K.d=d;b.K.c=e;b.K.b=f;b.K.a=g;return}if(b.q){c=b.P;${initDrawState}();${setColor}(a.c,b.K);${drawRegion}(a.c,c,b.R-b.M,b.S-b.M,b.N,b.N)}else if(b.P){${setColor}(a.c,b.K);${drawRegion}(a.c,b.P,b.R-b.M,b.S-b.M,b.N,b.N)}else{b.K.a=0.75;${setColor}(a.c,b.K);${drawRegion}(a.c,${defaultTexture},b.R-b.M,b.S-b.M,b.N,b.N)}}`;
+          return `function ${fallbackName}(a,b){var c,d,e,f,g;if(b.c&&(b.c.M==4||b.c.M==3)){c=$wnd.__blobVirusGlowState;if(c){c.viruses.push({id:b.n,x:b.R,y:b.S,r:b.M,size:b.N,mode:0,type:b.c.M});c.fallbackVirusHits=(c.fallbackVirusHits+1)||1;c.lastUpdate=(new Date).getTime()}c=$wnd.__blobVirusGlowSettings;d=b.K.d;e=b.K.c;f=b.K.b;g=b.K.a;b.K.d=c&&c.texturePreTinted?1:c&&c.r!=null?c.r:1;b.K.c=c&&c.texturePreTinted?1:c&&c.g!=null?c.g:0;b.K.b=c&&c.texturePreTinted?1:c&&c.b!=null?c.b:0;b.K.a=c&&c.alpha!=null?c.alpha:0.85;${initDrawState}();${setColor}(a.c,b.K);${drawGlow};b.K.d=d;b.K.c=e;b.K.b=f;b.K.a=g;return}if(b.q){c=b.P;${initDrawState}();${setColor}(a.c,b.K);${drawRegion}(a.c,c,b.R-b.M,b.S-b.M,b.N,b.N)}else if(b.P){${setColor}(a.c,b.K);${drawRegion}(a.c,b.P,b.R-b.M,b.S-b.M,b.N,b.N)}else{b.K.a=0.75;${setColor}(a.c,b.K);${drawRegion}(a.c,${defaultTexture},b.R-b.M,b.S-b.M,b.N,b.N)}}`;
         });
         fallbackRenderPatched = true;
       }
@@ -9922,7 +9954,7 @@ html.${className} .blobio-watermark-extension::after {
 
   // src/main.js
   var INSTANCE_KEY = "__blobioExtension";
-  var EXTENSION_VERSION = "0.1.77";
+  var EXTENSION_VERSION = "0.1.78";
   var VIP_BADGE_URL = "https://raw.githubusercontent.com/SkyViewBlobio/Blobgame.io-Extension/main/assets/VIP_icon_plus.png";
   var BlobioExtension = class {
     constructor(windowRef = globalThis) {

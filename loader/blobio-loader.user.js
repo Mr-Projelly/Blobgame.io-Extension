@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Blobio Web Script Loader
 // @namespace    https://github.com/SkyViewBlobio/Blobgame.io-Extension
-// @version      0.1.77
+// @version      0.1.78
 // @description  Loads the Blobio modular extension bundle from GitHub.
 // @match        *://blobgame.io/*
 // @match        *://www.blobgame.io/*
@@ -25,7 +25,7 @@
   'use strict';
 
   const LOG_PREFIX = '[Blobio]';
-  const VERSION = '0.1.77';
+  const VERSION = '0.1.78';
   const CUSTOM_CLIENT_HOST = 'custom.client.blobgame.io';
   const STORAGE_BRIDGE_SOURCE = 'BlobioExtensionStorageBridge';
   const CUSTOM_SKIN_ENABLED_KEY = 'blobio.customSkin.enabled';
@@ -1191,9 +1191,12 @@
     const FALLBACK_RENDER_RE = /function ([$A-Za-z_][$\w]*)\(a,b\)\{var c;if\(b\.q\)\{c=b\.P;([$A-Za-z_][$\w]*)\(\);([$A-Za-z_][$\w]*)\(a\.c,b\.K\);([$A-Za-z_][$\w]*)\(a\.c,c,b\.R-b\.M,b\.S-b\.M,b\.N,b\.N\)\}else if\(b\.P\)\{\3\(a\.c,b\.K\);\4\(a\.c,b\.P,b\.R-b\.M,b\.S-b\.M,b\.N,b\.N\)\}else\{b\.K\.a=0\.75;\3\(a\.c,b\.K\);\4\(a\.c,([$A-Za-z_][$\w]*),b\.R-b\.M,b\.S-b\.M,b\.N,b\.N\)\}\}/;
     const ROTATED_DRAW_RE = /function ([$A-Za-z_][$\w]*)\(a,b,c,d,e,f,g,h,i,j,k\)\{var [^;]+;if\(!a\.j\)throw [^;]+;[$A-Za-z_][$\w]*=a\.C;[$A-Za-z_][$\w]*=b\.v;[^{}]*?=c\+e;[^{}]*?=d\+f;[^{}]*?=-e;[^{}]*?=-f;/;
 
+    const tintedMaskUrl = createTintedMaskUrl(config.maskUrl, config.color);
     const settings = {
       maskId: config.maskId,
-      maskUrl: config.maskUrl,
+      maskUrl: tintedMaskUrl,
+      sourceMaskUrl: config.maskUrl,
+      texturePreTinted: tintedMaskUrl !== config.maskUrl,
       rotate: config.maskId === 'rotate' && config.rotate,
       color: config.color,
       alpha: config.alpha,
@@ -1282,6 +1285,18 @@
       };
     }
 
+    function createTintedMaskUrl(maskUrl, color) {
+      if (!maskUrl || !color || typeof win.encodeURIComponent !== 'function') {
+        return maskUrl;
+      }
+
+      const escapedMaskUrl = maskUrl
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;');
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256"><defs><filter id="blobio-tint" color-interpolation-filters="sRGB"><feFlood flood-color="${color}" result="color"/><feComposite in="color" in2="SourceAlpha" operator="in"/></filter></defs><image width="256" height="256" href="${escapedMaskUrl}" filter="url(#blobio-tint)"/></svg>`;
+      return `data:image/svg+xml;charset=utf-8,${win.encodeURIComponent(svg)}`;
+    }
+
     function preloadCustomGlowMask() {
       getCustomGlowMaskImage();
     }
@@ -1308,6 +1323,13 @@
       };
       image.onerror = () => {
         state.customMaskErrors = (state.customMaskErrors + 1) || 1;
+        if (settings.texturePreTinted && settings.sourceMaskUrl) {
+          settings.texturePreTinted = false;
+          settings.maskUrl = settings.sourceMaskUrl;
+          customGlowMaskImage = null;
+          customGlowMaskUrl = '';
+          getCustomGlowMaskImage();
+        }
       };
       image.src = settings.maskUrl;
 
@@ -1482,6 +1504,9 @@
           version: state.version,
           enabled: true,
           maskId: settings.maskId,
+          color: settings.color,
+          alpha: settings.alpha,
+          texturePreTinted: settings.texturePreTinted,
           shouldRotate: settings.rotate,
           loaderStatus: { ...loaderStatus },
           callbackCalls: state.callbackCalls,
@@ -1556,7 +1581,7 @@
             + 'h=$wnd.__blobVirusGlowState;'
             + 'if(h){h.viruses.push({id:g.n,x:g.R,y:g.S,r:g.M,size:g.N,mode:1,type:g.c.M});h.highDetailVirusHits=(h.highDetailVirusHits+1)||1;h.lastUpdate=(new Date).getTime()}'
             + 'h=$wnd.__blobVirusGlowSettings;f=g.K.d;d=g.K.c;b=g.K.b;c=g.K.a;'
-            + 'g.K.d=h&&h.r!=null?h.r:1;g.K.c=h&&h.g!=null?h.g:0;g.K.b=h&&h.b!=null?h.b:0;g.K.a=h&&h.alpha!=null?h.alpha:0.85;'
+            + 'g.K.d=h&&h.texturePreTinted?1:h&&h.r!=null?h.r:1;g.K.c=h&&h.texturePreTinted?1:h&&h.g!=null?h.g:0;g.K.b=h&&h.texturePreTinted?1:h&&h.b!=null?h.b:0;g.K.a=h&&h.alpha!=null?h.alpha:0.85;'
             + `${initDrawState}();${setColor}(a.c,g.K);${drawGlow};`
             + 'g.K.d=f;g.K.c=d;g.K.b=b;g.K.a=c;break;';
         });
@@ -1571,7 +1596,7 @@
             + 'c=$wnd.__blobVirusGlowState;'
             + 'if(c){c.viruses.push({id:b.n,x:b.R,y:b.S,r:b.M,size:b.N,mode:0,type:b.c.M});c.fallbackVirusHits=(c.fallbackVirusHits+1)||1;c.lastUpdate=(new Date).getTime()}'
             + 'c=$wnd.__blobVirusGlowSettings;d=b.K.d;e=b.K.c;f=b.K.b;g=b.K.a;'
-            + 'b.K.d=c&&c.r!=null?c.r:1;b.K.c=c&&c.g!=null?c.g:0;b.K.b=c&&c.b!=null?c.b:0;b.K.a=c&&c.alpha!=null?c.alpha:0.85;'
+            + 'b.K.d=c&&c.texturePreTinted?1:c&&c.r!=null?c.r:1;b.K.c=c&&c.texturePreTinted?1:c&&c.g!=null?c.g:0;b.K.b=c&&c.texturePreTinted?1:c&&c.b!=null?c.b:0;b.K.a=c&&c.alpha!=null?c.alpha:0.85;'
             + `${initDrawState}();${setColor}(a.c,b.K);${drawGlow};`
             + 'b.K.d=d;b.K.c=e;b.K.b=f;b.K.a=g;return}'
             + `if(b.q){c=b.P;${initDrawState}();${setColor}(a.c,b.K);${drawRegion}(a.c,c,b.R-b.M,b.S-b.M,b.N,b.N)}`

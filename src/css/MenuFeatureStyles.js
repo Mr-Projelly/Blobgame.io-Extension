@@ -829,33 +829,44 @@ html.${className} app-settings .blobio-virus-setting-row {
 }
 
 html.${className} app-settings .blobio-virus-dropdown-button {
-  display: grid;
-  place-items: center;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
   width: 32px;
   height: 32px;
-  padding: 5px;
-  border: 1px solid rgba(142, 255, 174, 0.42);
-  border-radius: 7px;
+  padding: 0;
+  border: 1px solid rgba(130, 255, 166, 0.72);
+  border-radius: 5px;
   outline: none;
-  background: rgba(0, 19, 10, 0.72);
-  box-shadow: inset 0 0 8px rgba(79, 255, 130, 0.1);
+  background: rgba(0, 0, 0, 0.74);
+  color: #ecfff1;
+  text-align: center;
+  text-shadow: 0 0 5px rgba(255, 255, 255, 0.76), 0 0 12px rgba(77, 255, 126, 0.74);
+  box-shadow: inset 0 0 9px rgba(79, 255, 130, 0.12), 0 0 12px rgba(79, 255, 130, 0.26);
   cursor: pointer;
 }
 
 html.${className} app-settings .blobio-virus-dropdown-button:hover,
 html.${className} app-settings .blobio-virus-dropdown-button:focus-visible {
-  border-color: rgba(210, 255, 220, 0.85);
-  box-shadow: 0 0 11px rgba(79, 255, 130, 0.28), inset 0 0 8px rgba(79, 255, 130, 0.14);
+  border-color: rgba(151, 255, 181, 0.96);
+  box-shadow: inset 0 0 11px rgba(79, 255, 130, 0.18), 0 0 15px rgba(79, 255, 130, 0.42);
 }
 
 html.${className} app-settings .blobio-virus-dropdown-symbol {
-  display: block;
-  color: #dfffe6;
-  font-size: 23px;
-  font-weight: 800;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0 1px;
+  color: inherit;
+  font-size: 22px;
+  font-weight: 900;
   line-height: 1;
   text-align: center;
-  text-shadow: 0 0 7px rgba(118, 255, 154, 0.58);
+  text-shadow: inherit;
   pointer-events: none;
 }
 
