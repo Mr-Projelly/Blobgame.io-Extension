@@ -54,6 +54,10 @@ export class GameUiCustomizationFeature {
     this.chatShiftAnimation = null;
     this.chatShiftFrame = null;
     this.chatShiftTimer = null;
+    this.chatMutationFrame = null;
+    this.pendingChatMessages = [];
+    this.pendingChatShift = 0;
+    this.pendingChatWasNearBottom = null;
     this.messageTimers = new Set();
     this.leaderboardWrapper = null;
     this.leaderboardResizeHandle = null;
@@ -64,6 +68,8 @@ export class GameUiCustomizationFeature {
       addedMessages: 0,
       smoothScrollCalls: 0,
       shiftAnimations: 0,
+      continuedShiftAnimations: 0,
+      mutationFlushes: 0,
       lastShiftPx: 0,
       lastMutationAt: 0,
     };
@@ -329,6 +335,8 @@ export class GameUiCustomizationFeature {
       let changed = false;
       for (const logo of documentRef?.querySelectorAll?.('.rc-anchor-logo-img, .rc-anchor-logo-img-large') || []) {
         logo.classList.toggle('blobio-captcha-logo-hidden', Boolean(hidden));
+        logo.closest?.('.rc-anchor-logo-portrait, .rc-anchor-logo-landscape')
+          ?.classList?.toggle('blobio-captcha-logo-block-hidden', Boolean(hidden));
         changed = true;
       }
       return changed;
@@ -386,23 +394,22 @@ export class GameUiCustomizationFeature {
     const previousHeight = this.lastChatScrollHeight;
     const wasNearBottom = this.nearChatBottom;
     const addedMessages = [];
-    let addedCount = 0;
+
     for (const mutation of mutations) {
       for (const node of mutation.addedNodes || []) {
-        if (node?.nodeType !== 1 || String(node.tagName || '').toLowerCase() !== 'li') {
-          continue;
+        if (node?.nodeType === 1 && String(node.tagName || '').toLowerCase() === 'li') {
+          addedMessages.push(node);
         }
-        addedCount += 1;
-        addedMessages.push(node);
       }
     }
 
-    if (addedCount === 0) {
+    if (addedMessages.length === 0) {
       return;
     }
 
-    this.stats.addedMessages += addedCount;
+    this.stats.addedMessages += addedMessages.length;
     this.stats.lastMutationAt = Date.now();
+
     const currentHeight = Number(this.chatElement?.scrollHeight) || previousHeight;
     const measuredAddedHeight = addedMessages.reduce((total, message) => {
       const rectHeight = Number(message.getBoundingClientRect?.().height) || 0;
@@ -411,16 +418,61 @@ export class GameUiCustomizationFeature {
     }, 0);
     const shift = Math.max(0, currentHeight - previousHeight, measuredAddedHeight);
 
+    if (this.pendingChatWasNearBottom === null) {
+      this.pendingChatWasNearBottom = wasNearBottom;
+    }
+    this.pendingChatMessages.push(...addedMessages);
+    this.pendingChatShift += shift;
+
+    this.lastChatScrollHeight = currentHeight;
+    this.lastChatScrollTop = Number(this.chatElement?.scrollTop) || 0;
+    this.nearChatBottom = this.isNearChatBottom();
+    this.scheduleChatMutationFlush();
+  }
+
+  scheduleChatMutationFlush() {
+    if (this.chatMutationFrame !== null) {
+      return;
+    }
+
+    const win = this.document.defaultView || globalThis;
+    const flush = () => {
+      this.chatMutationFrame = null;
+      this.flushChatMutations();
+    };
+
+    if (typeof win.requestAnimationFrame === 'function') {
+      this.chatMutationFrame = win.requestAnimationFrame(flush);
+    } else {
+      flush();
+    }
+  }
+
+  flushChatMutations() {
+    const messages = [...new Set(this.pendingChatMessages)];
+    const shift = this.pendingChatShift;
+    const wasNearBottom = this.pendingChatWasNearBottom !== false;
+
+    this.pendingChatMessages = [];
+    this.pendingChatShift = 0;
+    this.pendingChatWasNearBottom = null;
+
+    if (messages.length === 0) {
+      return;
+    }
+
+    this.stats.mutationFlushes += 1;
+
     if (wasNearBottom) {
       this.scrollChatToBottom();
-      this.animateChatShift(shift, addedMessages);
+      this.animateChatShift(shift, messages);
     } else {
-      for (const message of addedMessages) {
+      for (const message of messages) {
         this.animateMessage(message);
       }
     }
 
-    this.lastChatScrollHeight = currentHeight;
+    this.lastChatScrollHeight = Number(this.chatElement?.scrollHeight) || this.lastChatScrollHeight;
     this.lastChatScrollTop = Number(this.chatElement?.scrollTop) || 0;
     this.nearChatBottom = this.isNearChatBottom();
   }
@@ -455,14 +507,23 @@ export class GameUiCustomizationFeature {
       return;
     }
 
+    const currentOffset = this.readCurrentChatShiftOffset();
+    if (currentOffset >= 1) {
+      this.stats.continuedShiftAnimations += 1;
+    }
+    const startOffset = Math.max(0, Math.min(
+      currentOffset + distance,
+      Number(this.chatElement?.clientHeight) || currentOffset + distance,
+    ));
+
     this.cancelChatShiftAnimation();
     this.stats.shiftAnimations += 1;
-    this.stats.lastShiftPx = Math.round(distance);
+    this.stats.lastShiftPx = Math.round(startOffset);
 
     if (typeof list.animate === 'function') {
       const animation = list.animate(
         [
-          { transform: `translateY(${distance}px)` },
+          { transform: `translateY(${startOffset}px)` },
           { transform: 'translateY(0)' },
         ],
         {
@@ -480,7 +541,7 @@ export class GameUiCustomizationFeature {
       return;
     }
 
-    setCssVariable(list, '--blobio-chat-shift-distance', `${distance}px`);
+    setCssVariable(list, '--blobio-chat-shift-distance', `${startOffset}px`);
     list.classList?.add('blobio-chat-list-shift-start');
     void list.offsetHeight;
 
@@ -500,6 +561,47 @@ export class GameUiCustomizationFeature {
     } else {
       run();
     }
+  }
+
+  readCurrentChatShiftOffset() {
+    const list = this.chatList;
+    if (!list) {
+      return 0;
+    }
+
+    const win = this.document.defaultView || globalThis;
+    let transform = '';
+    try {
+      transform = win.getComputedStyle?.(list)?.transform || list.style?.transform || '';
+    } catch {
+      transform = list.style?.transform || '';
+    }
+
+    if (!transform || transform === 'none') {
+      return 0;
+    }
+
+    const matrix3d = transform.match(/^matrix3d\((.+)\)$/);
+    if (matrix3d) {
+      const values = matrix3d[1].split(',').map(Number);
+      return Number.isFinite(values[13]) ? Math.max(0, values[13]) : 0;
+    }
+
+    const matrix = transform.match(/^matrix\((.+)\)$/);
+    if (matrix) {
+      const values = matrix[1].split(',').map(Number);
+      return Number.isFinite(values[5]) ? Math.max(0, values[5]) : 0;
+    }
+
+    const translateY = transform.match(/translateY\(\s*(-?\d+(?:\.\d+)?)px\s*\)/);
+    if (translateY) {
+      return Math.max(0, Number(translateY[1]) || 0);
+    }
+
+    const translate3d = transform.match(
+      /translate3d\(\s*-?\d+(?:\.\d+)?px\s*,\s*(-?\d+(?:\.\d+)?)px/,
+    );
+    return translate3d ? Math.max(0, Number(translate3d[1]) || 0) : 0;
   }
 
   cancelChatShiftAnimation() {
@@ -545,6 +647,15 @@ export class GameUiCustomizationFeature {
   disconnectSmoothChat() {
     this.chatObserver?.disconnect();
     this.chatObserver = null;
+
+    const win = this.document.defaultView || globalThis;
+    if (this.chatMutationFrame !== null) {
+      win.cancelAnimationFrame?.(this.chatMutationFrame);
+      this.chatMutationFrame = null;
+    }
+    this.pendingChatMessages = [];
+    this.pendingChatShift = 0;
+    this.pendingChatWasNearBottom = null;
     this.cancelChatShiftAnimation();
     if (this.chatElement && this.chatScrollHandler) {
       this.chatElement.removeEventListener?.('scroll', this.chatScrollHandler);

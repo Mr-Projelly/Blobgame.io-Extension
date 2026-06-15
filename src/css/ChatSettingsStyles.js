@@ -719,9 +719,27 @@ export const CHAT_SETTINGS_CSS = `
 
 #leader-board-wrapper.blobio-leaderboard-custom-size #leader-board {
   width: 100% !important;
+  max-width: none !important;
   height: 100% !important;
   overflow: auto !important;
   box-sizing: border-box !important;
+}
+
+#leader-board-wrapper.blobio-leaderboard-custom-size #leader-board ul {
+  width: 100% !important;
+  max-width: none !important;
+  box-sizing: border-box !important;
+}
+
+#leader-board-wrapper.blobio-leaderboard-custom-size #leader-board li {
+  display: block !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
 }
 
 .blobio-leaderboard-resize-handle {
@@ -762,8 +780,20 @@ export const CHAT_SETTINGS_CSS = `
 
 .rc-anchor-logo-img.blobio-captcha-logo-hidden,
 .rc-anchor-logo-img-large.blobio-captcha-logo-hidden {
+  display: none !important;
   visibility: hidden !important;
+  opacity: 0 !important;
+  background: none !important;
   background-image: none !important;
+  background-color: transparent !important;
+}
+
+.rc-anchor-logo-portrait.blobio-captcha-logo-block-hidden,
+.rc-anchor-logo-landscape.blobio-captcha-logo-block-hidden {
+  display: none !important;
+  visibility: hidden !important;
+  background: none !important;
+  background-color: transparent !important;
 }
 
 #chat.blobio-smooth-chat li.blobio-chat-message-enter {
