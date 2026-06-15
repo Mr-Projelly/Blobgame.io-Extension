@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Blobio Web Script Loader
 // @namespace    https://github.com/SkyViewBlobio/Blobgame.io-Extension
-// @version      0.1.83
+// @version      0.1.85
 // @description  Loads the Blobio modular extension bundle from GitHub.
 // @match        *://blobgame.io/*
 // @match        *://www.blobgame.io/*
@@ -83,6 +83,9 @@
       html.blobio-hide-captcha-logo .rc-anchor-normal-footer,
       html.blobio-hide-captcha-logo .rc-anchor-compact-footer,
       html.blobio-hide-captcha-logo .rc-anchor-logo-text,
+      html.blobio-hide-captcha-logo .rc-anchor-invisible,
+      html.blobio-hide-captcha-logo .rc-anchor-invisible-text,
+      html.blobio-hide-captcha-logo .rc-anchor-invisible-hover,
       html.blobio-hide-captcha-logo .rc-anchor-pt {
         display: none !important;
         visibility: hidden !important;
@@ -105,7 +108,8 @@
         '.rc-anchor-logo-img, .rc-anchor-logo-img-large, '
         + '.rc-anchor-logo-portrait, .rc-anchor-logo-landscape, '
         + '.rc-anchor-normal-footer, .rc-anchor-compact-footer, '
-        + '.rc-anchor-logo-text, .rc-anchor-pt',
+        + '.rc-anchor-logo-text, .rc-anchor-invisible, '
+        + '.rc-anchor-invisible-text, .rc-anchor-invisible-hover, .rc-anchor-pt',
       ) || [];
 
       for (const target of targets) {

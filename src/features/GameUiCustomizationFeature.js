@@ -355,10 +355,17 @@ export class GameUiCustomizationFeature {
     };
 
     let changed = applyInDocument(this.document);
+    for (const badge of this.document.querySelectorAll?.('.grecaptcha-badge, .grecaptcha-logo') || []) {
+      badge.classList?.toggle('blobio-captcha-anchor-hidden', hiddenState);
+      changed = true;
+    }
+
     for (const frame of this.document.querySelectorAll?.('iframe[src*="recaptcha"]') || []) {
       if (isRecaptchaAnchorFrame(frame)) {
         frame.classList?.toggle('blobio-captcha-anchor-hidden', hiddenState);
         frame.closest?.('.grecaptcha-badge')
+          ?.classList?.toggle('blobio-captcha-anchor-hidden', hiddenState);
+        frame.closest?.('.grecaptcha-logo')
           ?.classList?.toggle('blobio-captcha-anchor-hidden', hiddenState);
         changed = true;
       }
@@ -529,7 +536,7 @@ export class GameUiCustomizationFeature {
 
     this.stats.mutationFlushes += 1;
 
-    if (wasNearBottom) {
+    if (wasNearBottom || this.isNearChatBottom()) {
       const measuredAddedHeight = this.measureChatMessages(messages);
       const bottomDistance = this.getChatBottomDistance();
       const shift = Math.max(pendingShift, measuredAddedHeight, bottomDistance);
@@ -749,8 +756,10 @@ export class GameUiCustomizationFeature {
             || node?.id === 'chat-wrapper'
             || node?.id === 'leader-board-wrapper'
             || (String(node?.tagName || '').toLowerCase() === 'ul' && node?.parentElement?.id === 'chat')
+            || (String(node?.tagName || '').toLowerCase() === 'iframe' && isRecaptchaAnchorFrame(node))
+            || node?.matches?.('.grecaptcha-badge, .grecaptcha-logo')
             || node?.matches?.('.rc-anchor-logo-img, .rc-anchor-logo-img-large')
-            || node?.querySelector?.('#chat, #chat-wrapper, #leader-board-wrapper, .rc-anchor-logo-img, .rc-anchor-logo-img-large')) {
+            || node?.querySelector?.('#chat, #chat-wrapper, #leader-board-wrapper, iframe[src*="recaptcha"], .grecaptcha-badge, .grecaptcha-logo, .rc-anchor-logo-img, .rc-anchor-logo-img-large')) {
             this.applyAll();
             return;
           }

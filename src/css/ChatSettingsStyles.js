@@ -723,6 +723,14 @@ export const CHAT_SETTINGS_CSS = `
   height: 100% !important;
   overflow: auto !important;
   box-sizing: border-box !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+#leader-board-wrapper.blobio-leaderboard-custom-size #leader-board::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 #leader-board-wrapper.blobio-leaderboard-custom-size #leader-board ul {
@@ -797,7 +805,8 @@ export const CHAT_SETTINGS_CSS = `
 }
 
 iframe.blobio-captcha-anchor-hidden,
-.grecaptcha-badge.blobio-captcha-anchor-hidden {
+.grecaptcha-badge.blobio-captcha-anchor-hidden,
+.grecaptcha-logo.blobio-captcha-anchor-hidden {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;

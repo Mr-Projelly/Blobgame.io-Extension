@@ -1927,6 +1927,14 @@ html.${this.className} body::before {
   height: 100% !important;
   overflow: auto !important;
   box-sizing: border-box !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+#leader-board-wrapper.blobio-leaderboard-custom-size #leader-board::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 #leader-board-wrapper.blobio-leaderboard-custom-size #leader-board ul {
@@ -2001,7 +2009,8 @@ html.${this.className} body::before {
 }
 
 iframe.blobio-captcha-anchor-hidden,
-.grecaptcha-badge.blobio-captcha-anchor-hidden {
+.grecaptcha-badge.blobio-captcha-anchor-hidden,
+.grecaptcha-logo.blobio-captcha-anchor-hidden {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;
@@ -4282,10 +4291,15 @@ iframe.blobio-captcha-anchor-hidden,
         return changed2;
       };
       let changed = applyInDocument(this.document);
+      for (const badge of this.document.querySelectorAll?.(".grecaptcha-badge, .grecaptcha-logo") || []) {
+        badge.classList?.toggle("blobio-captcha-anchor-hidden", hiddenState);
+        changed = true;
+      }
       for (const frame of this.document.querySelectorAll?.('iframe[src*="recaptcha"]') || []) {
         if (isRecaptchaAnchorFrame(frame)) {
           frame.classList?.toggle("blobio-captcha-anchor-hidden", hiddenState);
           frame.closest?.(".grecaptcha-badge")?.classList?.toggle("blobio-captcha-anchor-hidden", hiddenState);
+          frame.closest?.(".grecaptcha-logo")?.classList?.toggle("blobio-captcha-anchor-hidden", hiddenState);
           changed = true;
         }
         try {
@@ -4422,7 +4436,7 @@ iframe.blobio-captcha-anchor-hidden,
         return;
       }
       this.stats.mutationFlushes += 1;
-      if (wasNearBottom) {
+      if (wasNearBottom || this.isNearChatBottom()) {
         const measuredAddedHeight = this.measureChatMessages(messages);
         const bottomDistance = this.getChatBottomDistance();
         const shift = Math.max(pendingShift, measuredAddedHeight, bottomDistance);
@@ -4603,7 +4617,7 @@ iframe.blobio-captcha-anchor-hidden,
       this.pageObserver = new MutationObserver((mutations) => {
         for (const mutation of mutations) {
           for (const node of mutation.addedNodes || []) {
-            if (node?.id === "chat" || node?.id === "chat-wrapper" || node?.id === "leader-board-wrapper" || String(node?.tagName || "").toLowerCase() === "ul" && node?.parentElement?.id === "chat" || node?.matches?.(".rc-anchor-logo-img, .rc-anchor-logo-img-large") || node?.querySelector?.("#chat, #chat-wrapper, #leader-board-wrapper, .rc-anchor-logo-img, .rc-anchor-logo-img-large")) {
+            if (node?.id === "chat" || node?.id === "chat-wrapper" || node?.id === "leader-board-wrapper" || String(node?.tagName || "").toLowerCase() === "ul" && node?.parentElement?.id === "chat" || String(node?.tagName || "").toLowerCase() === "iframe" && isRecaptchaAnchorFrame(node) || node?.matches?.(".grecaptcha-badge, .grecaptcha-logo") || node?.matches?.(".rc-anchor-logo-img, .rc-anchor-logo-img-large") || node?.querySelector?.('#chat, #chat-wrapper, #leader-board-wrapper, iframe[src*="recaptcha"], .grecaptcha-badge, .grecaptcha-logo, .rc-anchor-logo-img, .rc-anchor-logo-img-large')) {
               this.applyAll();
               return;
             }
