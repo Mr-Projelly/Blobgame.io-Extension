@@ -2,11 +2,12 @@ import { buildMenuCss } from '../css/MenuFeatureStyles.js';
 import { createBlobioStorage } from '../storage/BlobioStorage.js';
 import { isHideAdminMdEnabled, setHideAdminMdEnabled } from '../roles/RoleSettings.js';
 import { isFpsUncapEnabled, setFpsUncapEnabled } from '../settings/RuntimeSettings.js';
+import { VirusMotherCellSettingsUi } from '../virus/VirusMotherCellSettingsUi.js';
 
 const DEFAULT_CLASS_NAME = 'blobio-menu-enabled';
 const DEFAULT_STYLE_ID = 'blobio-menu-style';
 const DEFAULT_TOOLBAR_CLASS = 'blobio-menu-toolbar';
-const DEFAULT_EXTENSION_VERSION = '0.1.74';
+const DEFAULT_EXTENSION_VERSION = '0.1.75';
 const HIDDEN_CLASS = 'blobio-original-hidden';
 const PARTNER_LINK_MATCH = /iogames\.space|iogames\.live|io-games\.zone|silvergames\.com|crazygames\.com/i;
 const FAILED_VIRAL_FRAME_MATCH = /viral\.iogames\.space/i;
@@ -163,6 +164,7 @@ export class MenuFeature {
     this.unsubscribeAdminRoles = null;
     this.unsubscribeAdminUid = null;
     this.unsubscribeFriendHighlight = null;
+    this.virusMotherCellSettingsUi = null;
   }
 
   start() {
@@ -245,6 +247,8 @@ export class MenuFeature {
     this.unsubscribeAdminRoles = null;
     this.unsubscribeAdminUid = null;
     this.unsubscribeFriendHighlight = null;
+    this.virusMotherCellSettingsUi?.destroy?.();
+    this.virusMotherCellSettingsUi = null;
     this.cleanupExtensionSettings();
     this.cleanupCustomSkinUi();
 
@@ -954,6 +958,15 @@ export class MenuFeature {
         },
       }),
     );
+
+    this.virusMotherCellSettingsUi?.destroy?.();
+    this.virusMotherCellSettingsUi = new VirusMotherCellSettingsUi({
+      document: this.document,
+      storage: this.storage,
+      assets: this.assets,
+      logger: this.logger,
+    });
+    categoryPanels.get('theme').appendChild(this.virusMotherCellSettingsUi.create());
 
     categoryPanels.get('text').append(
       this.createExtensionSwitchRow({

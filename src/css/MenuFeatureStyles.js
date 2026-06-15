@@ -814,6 +814,222 @@ html.${className} app-settings .blobio-admin-only-setting-row.is-hidden {
   display: none !important;
 }
 
+html.${className} app-settings .blobio-virus-setting-group {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 8px;
+  min-width: 0;
+}
+
+html.${className} app-settings .blobio-virus-setting-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 34px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+html.${className} app-settings .blobio-virus-dropdown-button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 5px;
+  border: 1px solid rgba(142, 255, 174, 0.42);
+  border-radius: 7px;
+  outline: none;
+  background: rgba(0, 19, 10, 0.72);
+  box-shadow: inset 0 0 8px rgba(79, 255, 130, 0.1);
+  cursor: pointer;
+}
+
+html.${className} app-settings .blobio-virus-dropdown-button:hover,
+html.${className} app-settings .blobio-virus-dropdown-button:focus-visible {
+  border-color: rgba(210, 255, 220, 0.85);
+  box-shadow: 0 0 11px rgba(79, 255, 130, 0.28), inset 0 0 8px rgba(79, 255, 130, 0.14);
+}
+
+html.${className} app-settings .blobio-virus-dropdown-arrow {
+  width: 19px;
+  height: 19px;
+  object-fit: contain;
+  transition: transform 160ms ease;
+  pointer-events: none;
+}
+
+html.${className} app-settings .blobio-virus-dropdown-arrow.is-open {
+  transform: rotate(180deg);
+}
+
+html.${className} app-settings .blobio-virus-mothercell-button-menu {
+  display: grid;
+  gap: 11px;
+  width: 100%;
+  min-width: 0;
+  padding: 11px;
+  border: 1px solid rgba(142, 255, 174, 0.38);
+  border-radius: 9px;
+  background: linear-gradient(145deg, rgba(3, 31, 19, 0.94), rgba(1, 10, 7, 0.94));
+  box-shadow: inset 0 0 18px rgba(79, 255, 130, 0.12), 0 0 14px rgba(79, 255, 130, 0.16);
+  box-sizing: border-box;
+}
+
+html.${className} app-settings .blobio-virus-mothercell-button-menu[hidden] {
+  display: none !important;
+}
+
+html.${className} app-settings .blobio-virus-preview {
+  position: relative;
+  width: 100%;
+  min-height: 188px;
+  overflow: hidden;
+  border: 1px solid rgba(190, 255, 206, 0.38);
+  border-radius: 8px;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.48), 0 0 10px rgba(79, 255, 130, 0.14);
+}
+
+html.${className} app-settings .blobio-virus-preview-canvas {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 156px;
+  height: 156px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+html.${className} app-settings .blobio-virus-controls {
+  display: grid;
+  grid-template-columns: minmax(84px, 0.7fr) minmax(150px, 1.3fr);
+  gap: 10px;
+}
+
+html.${className} app-settings .blobio-virus-control {
+  display: grid;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  color: #dfffe6;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+html.${className} app-settings .blobio-virus-color-control {
+  grid-template-columns: auto 42px;
+}
+
+html.${className} app-settings .blobio-virus-color-wheel {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  overflow: hidden;
+  border: 1px solid rgba(232, 255, 238, 0.7);
+  border-radius: 50%;
+  background: conic-gradient(#ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000);
+  box-shadow: 0 0 10px rgba(79, 255, 130, 0.24);
+}
+
+html.${className} app-settings .blobio-virus-color-swatch {
+  width: 17px;
+  height: 17px;
+  border: 2px solid rgba(0, 0, 0, 0.78);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.62);
+  pointer-events: none;
+}
+
+html.${className} app-settings .blobio-virus-color-input {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+  padding: 0 !important;
+  border: 0 !important;
+  opacity: 0;
+  cursor: pointer;
+}
+
+html.${className} app-settings .blobio-virus-alpha-control {
+  grid-template-columns: auto minmax(70px, 1fr) 36px;
+}
+
+html.${className} app-settings .blobio-virus-alpha-input {
+  width: 100%;
+  min-width: 0;
+  accent-color: #62e77d;
+}
+
+html.${className} app-settings .blobio-virus-alpha-value {
+  color: #c8ffd4;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+html.${className} app-settings .blobio-virus-mask-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+html.${className} app-settings .blobio-virus-mask-button {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  height: 66px;
+  padding: 5px;
+  border: 1px solid rgba(142, 255, 174, 0.32);
+  border-radius: 8px;
+  outline: none;
+  background: rgba(0, 18, 10, 0.72);
+  box-shadow: inset 0 0 10px rgba(79, 255, 130, 0.08);
+  cursor: pointer;
+}
+
+html.${className} app-settings .blobio-virus-mask-button:hover,
+html.${className} app-settings .blobio-virus-mask-button:focus-visible {
+  border-color: rgba(196, 255, 211, 0.72);
+}
+
+html.${className} app-settings .blobio-virus-mask-button.is-selected {
+  border-color: rgba(215, 255, 224, 0.94);
+  background: rgba(11, 74, 38, 0.88);
+  box-shadow: 0 0 13px rgba(79, 255, 130, 0.36), inset 0 0 11px rgba(79, 255, 130, 0.16);
+}
+
+html.${className} app-settings .blobio-virus-mask-button img {
+  display: block;
+  width: 54px;
+  height: 54px;
+  max-width: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+html.${className} app-settings .blobio-virus-rotate-row {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 8px;
+  color: #dfffe6;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+html.${className} app-settings .blobio-virus-rotate-row[hidden] {
+  display: none !important;
+}
+
+html.${className} app-settings .blobio-virus-rotate-input {
+  width: 16px !important;
+  height: 16px !important;
+  accent-color: #62e77d;
+}
+
 html.${className} app-settings .blobio-extension-setting-row .slider {
   border: 1px solid rgba(214, 255, 224, 0.72);
   background-color: rgba(23, 96, 48, 0.86);

@@ -6,6 +6,11 @@ import socialsButtonUrl from '../assets/socal_icon_n.png';
 import updatesButtonUrl from '../assets/update_notes_n_.png';
 import youtubeIconUrl from '../assets/youtube_icon.png';
 import recommendedButtonUrl from '../assets/yt_recommended_n.png';
+import dropdownArrowUrl from '../assets/dropdown_ext_arrow.png';
+import virusPreviewUrl from '../assets/virus_preview.png';
+import virusHaloUrl from '../assets/virus_glow_1 _mask.png';
+import virusRingUrl from '../assets/virus_glow_3 _mask.png';
+import virusRotateUrl from '../assets/viurs_glow_2_random_rotate_mask.png';
 import { MutedPlayersStore } from './chat/MutedPlayersStore.js';
 import { BackgroundFeature } from './features/BackgroundFeature.js';
 import { ChatRoleFeature } from './features/ChatRoleFeature.js';
@@ -23,7 +28,7 @@ import { ProfileUidDetector } from './roles/ProfileUidDetector.js';
 import { RoleRegistry } from './roles/RoleRegistry.js';
 
 const INSTANCE_KEY = '__blobioExtension';
-const EXTENSION_VERSION = '0.1.74';
+const EXTENSION_VERSION = '0.1.75';
 const VIP_BADGE_URL = 'https://raw.githubusercontent.com/SkyViewBlobio/Blobgame.io-Extension/main/assets/VIP_icon_plus.png';
 
 class BlobioExtension {
@@ -73,6 +78,11 @@ class BlobioExtension {
       discordIcon: discordIconUrl,
       facebookIcon: facebookIconUrl,
       instagramIcon: instagramIconUrl,
+      dropdownArrow: dropdownArrowUrl,
+      virusPreview: virusPreviewUrl,
+      virusHalo: virusHaloUrl,
+      virusRotate: virusRotateUrl,
+      virusRing: virusRingUrl,
     };
 
     if (hostMode === 'frontpage') {
