@@ -2007,7 +2007,7 @@ html.${this.className} body::before {
 
 #chat.blobio-smooth-chat > ul.blobio-chat-list-shifting,
 #chat.blobio-smooth-chat ul.blobio-chat-list-shifting {
-  transform: translateY(var(--blobio-chat-shift-offset, 0));
+  transform: translate3d(0, var(--blobio-chat-shift-offset, 0), 0);
   will-change: transform;
 }
 
@@ -2035,15 +2035,11 @@ html.${this.className} body::before {
   .blobio-hotkey-bind,
   .blobio-chat-notification,
   .blobio-leaderboard-resize-handle,
-  #chat.blobio-smooth-chat ul.blobio-chat-list-shifting,
   #chat.blobio-smooth-chat li.blobio-chat-message-enter {
     transition: none;
     animation: none;
   }
 
-  #chat.blobio-smooth-chat ul.blobio-chat-list-shifting {
-    transform: none !important;
-  }
 }
 `;
 
@@ -3970,6 +3966,9 @@ html.${this.className} body::before {
   var CHAT_NEAR_BOTTOM_PX = 36;
   var MESSAGE_ANIMATION_MS = 560;
   var CHAT_SHIFT_ANIMATION_MS = 620;
+  var CHAT_SHIFT_DECAY_MS = CHAT_SHIFT_ANIMATION_MS / Math.log(100);
+  var CHAT_SHIFT_SETTLE_PX = 0.5;
+  var CHAT_MESSAGE_FALLBACK_HEIGHT = 24;
   function hexToRgba(color, alpha) {
     const value = String(color || "#000000").replace("#", "");
     const red = Number.parseInt(value.slice(0, 2), 16) || 0;
@@ -4011,8 +4010,8 @@ html.${this.className} body::before {
       this.lastChatScrollTop = 0;
       this.chatShiftFrame = null;
       this.chatShiftOffset = 0;
-      this.chatShiftStartOffset = 0;
-      this.chatShiftStartedAt = null;
+      this.chatShiftLastFrameAt = null;
+      this.lastChatMessageHeight = 0;
       this.chatMutationFrame = null;
       this.pendingChatMessages = [];
       this.pendingChatShift = 0;
@@ -4030,6 +4029,9 @@ html.${this.className} body::before {
         continuedShiftAnimations: 0,
         mutationFlushes: 0,
         lastShiftPx: 0,
+        lastMeasuredAddedHeight: 0,
+        lastBottomDistance: 0,
+        zeroShiftFlushes: 0,
         lastMutationAt: 0
       };
       this.started = false;
@@ -4317,11 +4319,7 @@ html.${this.className} body::before {
       this.stats.addedMessages += addedMessages.length;
       this.stats.lastMutationAt = Date.now();
       const currentHeight = Number(this.chatElement?.scrollHeight) || previousHeight;
-      const measuredAddedHeight = addedMessages.reduce((total, message) => {
-        const rectHeight = Number(message.getBoundingClientRect?.().height) || 0;
-        const elementHeight = Number(message.offsetHeight) || Number(message.scrollHeight) || 0;
-        return total + Math.max(rectHeight, elementHeight);
-      }, 0);
+      const measuredAddedHeight = this.measureChatMessages(addedMessages);
       const shift = Math.max(0, currentHeight - previousHeight, measuredAddedHeight);
       if (this.pendingChatWasNearBottom === null) {
         this.pendingChatWasNearBottom = wasNearBottom;
@@ -4332,6 +4330,47 @@ html.${this.className} body::before {
       this.lastChatScrollTop = Number(this.chatElement?.scrollTop) || 0;
       this.nearChatBottom = this.isNearChatBottom();
       this.scheduleChatMutationFlush();
+    }
+    measureChatMessages(messages) {
+      let total = 0;
+      for (const message of messages) {
+        const rectHeight = Number(message?.getBoundingClientRect?.().height) || 0;
+        const elementHeight = Math.max(
+          Number(message?.offsetHeight) || 0,
+          Number(message?.scrollHeight) || 0
+        );
+        let contentHeight = 0;
+        let contentTop = Infinity;
+        let contentBottom = -Infinity;
+        for (const child of message?.children || []) {
+          const rect = child?.getBoundingClientRect?.();
+          const top = Number(rect?.top);
+          const bottom = Number(rect?.bottom);
+          if (Number.isFinite(top) && Number.isFinite(bottom) && bottom > top) {
+            contentTop = Math.min(contentTop, top);
+            contentBottom = Math.max(contentBottom, bottom);
+          }
+        }
+        if (Number.isFinite(contentTop) && Number.isFinite(contentBottom)) {
+          contentHeight = contentBottom - contentTop;
+        }
+        const win = this.document.defaultView || globalThis;
+        let style = null;
+        try {
+          style = win.getComputedStyle?.(message) || null;
+        } catch {
+          style = null;
+        }
+        const marginHeight = Math.max(0, Number.parseFloat(style?.marginTop) || 0) + Math.max(0, Number.parseFloat(style?.marginBottom) || 0);
+        const fontSize = Number.parseFloat(style?.fontSize) || 0;
+        const lineHeight = Number.parseFloat(style?.lineHeight) || (fontSize > 0 ? fontSize * 1.2 : 0);
+        const measuredHeight = Math.max(rectHeight, elementHeight, contentHeight, lineHeight);
+        if (measuredHeight >= 1) {
+          this.lastChatMessageHeight = measuredHeight + marginHeight;
+        }
+        total += measuredHeight >= 1 ? measuredHeight + marginHeight : this.lastChatMessageHeight || CHAT_MESSAGE_FALLBACK_HEIGHT;
+      }
+      return total;
     }
     scheduleChatMutationFlush() {
       if (this.chatMutationFrame !== null) {
@@ -4350,7 +4389,7 @@ html.${this.className} body::before {
     }
     flushChatMutations() {
       const messages = [...new Set(this.pendingChatMessages)];
-      const shift = this.pendingChatShift;
+      const pendingShift = this.pendingChatShift;
       const wasNearBottom = this.pendingChatWasNearBottom !== false;
       this.pendingChatMessages = [];
       this.pendingChatShift = 0;
@@ -4360,6 +4399,14 @@ html.${this.className} body::before {
       }
       this.stats.mutationFlushes += 1;
       if (wasNearBottom) {
+        const measuredAddedHeight = this.measureChatMessages(messages);
+        const bottomDistance = this.getChatBottomDistance();
+        const shift = Math.max(pendingShift, measuredAddedHeight, bottomDistance);
+        this.stats.lastMeasuredAddedHeight = Math.round(measuredAddedHeight);
+        this.stats.lastBottomDistance = Math.round(bottomDistance);
+        if (shift < 1) {
+          this.stats.zeroShiftFlushes += 1;
+        }
         this.scrollChatToBottom();
         this.animateChatShift(shift, messages);
       } else {
@@ -4395,24 +4442,20 @@ html.${this.className} body::before {
         return;
       }
       const win = this.document.defaultView || globalThis;
-      if (win.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
-        return;
-      }
-      if (this.chatShiftOffset >= 1 || this.chatShiftFrame !== null) {
+      const isContinuing = this.chatShiftFrame !== null || this.chatShiftOffset >= CHAT_SHIFT_SETTLE_PX;
+      if (isContinuing) {
         this.stats.continuedShiftAnimations += 1;
       }
-      const startOffset = this.chatShiftOffset + distance;
-      this.chatShiftOffset = startOffset;
-      this.chatShiftStartOffset = startOffset;
-      this.chatShiftStartedAt = null;
+      this.chatShiftOffset += distance;
       this.stats.shiftAnimations += 1;
-      this.stats.lastShiftPx = Math.round(startOffset);
-      setCssVariable(list, "--blobio-chat-shift-offset", `${startOffset}px`);
+      this.stats.lastShiftPx = Math.round(this.chatShiftOffset);
+      setCssVariable(list, "--blobio-chat-shift-offset", `${this.chatShiftOffset}px`);
       list.classList?.add("blobio-chat-list-shifting");
-      if (this.chatShiftFrame !== null || typeof win.requestAnimationFrame !== "function") {
-        if (typeof win.requestAnimationFrame !== "function") {
-          this.finishChatShiftAnimation();
-        }
+      if (this.chatShiftFrame !== null) {
+        return;
+      }
+      if (typeof win.requestAnimationFrame !== "function") {
+        this.finishChatShiftAnimation();
         return;
       }
       const run = (timestamp) => {
@@ -4421,14 +4464,15 @@ html.${this.className} body::before {
           this.finishChatShiftAnimation();
           return;
         }
-        if (this.chatShiftStartedAt === null) {
-          this.chatShiftStartedAt = Number(timestamp) || 0;
+        const frameTime = Number(timestamp) || 0;
+        if (this.chatShiftLastFrameAt === null) {
+          this.chatShiftLastFrameAt = frameTime;
+        } else {
+          const elapsed = Math.max(0, frameTime - this.chatShiftLastFrameAt);
+          this.chatShiftLastFrameAt = frameTime;
+          this.chatShiftOffset *= Math.exp(-elapsed / CHAT_SHIFT_DECAY_MS);
         }
-        const elapsed = Math.max(0, (Number(timestamp) || 0) - this.chatShiftStartedAt);
-        const progress = Math.min(1, elapsed / CHAT_SHIFT_ANIMATION_MS);
-        const easedProgress = 1 - (1 - progress) ** 3;
-        this.chatShiftOffset = this.chatShiftStartOffset * (1 - easedProgress);
-        if (progress >= 1 || this.chatShiftOffset < 0.5) {
+        if (this.chatShiftOffset < CHAT_SHIFT_SETTLE_PX) {
           this.finishChatShiftAnimation();
           return;
         }
@@ -4447,10 +4491,20 @@ html.${this.className} body::before {
     }
     finishChatShiftAnimation() {
       this.chatShiftOffset = 0;
-      this.chatShiftStartOffset = 0;
-      this.chatShiftStartedAt = null;
+      this.chatShiftLastFrameAt = null;
       this.chatList?.classList?.remove("blobio-chat-list-shifting");
       removeCssVariable(this.chatList, "--blobio-chat-shift-offset");
+    }
+    getChatBottomDistance() {
+      const chat = this.chatElement;
+      if (!chat) {
+        return 0;
+      }
+      const target = Math.max(
+        0,
+        (Number(chat.scrollHeight) || 0) - (Number(chat.clientHeight) || 0)
+      );
+      return Math.max(0, target - (Number(chat.scrollTop) || 0));
     }
     scrollChatToBottom() {
       const chat = this.chatElement;
@@ -4458,7 +4512,20 @@ html.${this.className} body::before {
         return;
       }
       this.stats.smoothScrollCalls += 1;
-      chat.scrollTop = Math.max(0, Number(chat.scrollHeight) || 0);
+      const target = Math.max(
+        0,
+        (Number(chat.scrollHeight) || 0) - (Number(chat.clientHeight) || 0)
+      );
+      const style = chat.style;
+      const previousBehavior = style?.getPropertyValue?.("scroll-behavior") || "";
+      const previousPriority = style?.getPropertyPriority?.("scroll-behavior") || "";
+      style?.setProperty?.("scroll-behavior", "auto", "important");
+      chat.scrollTop = target;
+      if (previousBehavior) {
+        style?.setProperty?.("scroll-behavior", previousBehavior, previousPriority);
+      } else {
+        style?.removeProperty?.("scroll-behavior");
+      }
     }
     isNearChatBottom() {
       const chat = this.chatElement;
@@ -4489,6 +4556,7 @@ html.${this.className} body::before {
       this.chatScrollHandler = null;
       this.lastChatScrollHeight = 0;
       this.lastChatScrollTop = 0;
+      this.lastChatMessageHeight = 0;
     }
     watchPage() {
       const MutationObserver = this.document.defaultView?.MutationObserver || globalThis.MutationObserver;
@@ -4517,7 +4585,8 @@ html.${this.className} body::before {
         nearBottom: this.nearChatBottom,
         scrollHeight: Number(this.chatElement?.scrollHeight) || 0,
         scrollTop: Number(this.chatElement?.scrollTop) || 0,
-        shiftActive: this.chatShiftFrame !== null,
+        shiftActive: this.chatShiftFrame !== null || this.chatShiftOffset >= CHAT_SHIFT_SETTLE_PX,
+        reducedMotion: Boolean(win.matchMedia?.("(prefers-reduced-motion: reduce)").matches),
         currentShiftPx: Math.round(this.chatShiftOffset),
         pendingMessages: this.pendingChatMessages.length,
         ...this.stats
@@ -6908,7 +6977,7 @@ html.${className} .blobio-watermark-extension::after {
   var DEFAULT_CLASS_NAME2 = "blobio-menu-enabled";
   var DEFAULT_STYLE_ID2 = "blobio-menu-style";
   var DEFAULT_TOOLBAR_CLASS = "blobio-menu-toolbar";
-  var DEFAULT_EXTENSION_VERSION = "0.1.82";
+  var DEFAULT_EXTENSION_VERSION = "0.1.83";
   var HIDDEN_CLASS = "blobio-original-hidden";
   var PARTNER_LINK_MATCH = /iogames\.space|iogames\.live|io-games\.zone|silvergames\.com|crazygames\.com/i;
   var FAILED_VIRAL_FRAME_MATCH = /viral\.iogames\.space/i;
@@ -11363,7 +11432,7 @@ html.${className} .blobio-watermark-extension::after {
 
   // src/main.js
   var INSTANCE_KEY = "__blobioExtension";
-  var EXTENSION_VERSION = "0.1.82";
+  var EXTENSION_VERSION = "0.1.83";
   var VIP_BADGE_URL = "https://raw.githubusercontent.com/SkyViewBlobio/Blobgame.io-Extension/main/assets/VIP_icon_plus.png";
   var BlobioExtension = class {
     constructor(windowRef = globalThis) {

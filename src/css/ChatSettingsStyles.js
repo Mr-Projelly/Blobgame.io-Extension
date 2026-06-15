@@ -803,7 +803,7 @@ export const CHAT_SETTINGS_CSS = `
 
 #chat.blobio-smooth-chat > ul.blobio-chat-list-shifting,
 #chat.blobio-smooth-chat ul.blobio-chat-list-shifting {
-  transform: translateY(var(--blobio-chat-shift-offset, 0));
+  transform: translate3d(0, var(--blobio-chat-shift-offset, 0), 0);
   will-change: transform;
 }
 
@@ -831,14 +831,10 @@ export const CHAT_SETTINGS_CSS = `
   .blobio-hotkey-bind,
   .blobio-chat-notification,
   .blobio-leaderboard-resize-handle,
-  #chat.blobio-smooth-chat ul.blobio-chat-list-shifting,
   #chat.blobio-smooth-chat li.blobio-chat-message-enter {
     transition: none;
     animation: none;
   }
 
-  #chat.blobio-smooth-chat ul.blobio-chat-list-shifting {
-    transform: none !important;
-  }
 }
 `;
