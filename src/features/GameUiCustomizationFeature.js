@@ -51,9 +51,10 @@ export class GameUiCustomizationFeature {
     this.nearChatBottom = true;
     this.lastChatScrollHeight = 0;
     this.lastChatScrollTop = 0;
-    this.chatShiftAnimation = null;
     this.chatShiftFrame = null;
-    this.chatShiftTimer = null;
+    this.chatShiftOffset = 0;
+    this.chatShiftStartOffset = 0;
+    this.chatShiftStartedAt = null;
     this.chatMutationFrame = null;
     this.pendingChatMessages = [];
     this.pendingChatShift = 0;
@@ -499,127 +500,79 @@ export class GameUiCustomizationFeature {
       this.animateMessage(message);
     }
 
-    const distance = Math.max(0, Math.min(
-      Number(shift) || 0,
-      Number(this.chatElement?.clientHeight) || Number(shift) || 0,
-    ));
+    const distance = Math.max(0, Number(shift) || 0);
     if (distance < 1) {
       return;
     }
 
-    const currentOffset = this.readCurrentChatShiftOffset();
-    if (currentOffset >= 1) {
-      this.stats.continuedShiftAnimations += 1;
-    }
-    const startOffset = Math.max(0, Math.min(
-      currentOffset + distance,
-      Number(this.chatElement?.clientHeight) || currentOffset + distance,
-    ));
-
-    this.cancelChatShiftAnimation();
-    this.stats.shiftAnimations += 1;
-    this.stats.lastShiftPx = Math.round(startOffset);
-
-    if (typeof list.animate === 'function') {
-      const animation = list.animate(
-        [
-          { transform: `translateY(${startOffset}px)` },
-          { transform: 'translateY(0)' },
-        ],
-        {
-          duration: CHAT_SHIFT_ANIMATION_MS,
-          easing: 'cubic-bezier(0.2, 0.72, 0.22, 1)',
-        },
-      );
-      this.chatShiftAnimation = animation;
-      animation.onfinish = () => {
-        if (this.chatShiftAnimation === animation) {
-          this.chatShiftAnimation = null;
-        }
-      };
-      animation.oncancel = animation.onfinish;
+    const win = this.document.defaultView || globalThis;
+    if (win.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
       return;
     }
 
-    setCssVariable(list, '--blobio-chat-shift-distance', `${startOffset}px`);
-    list.classList?.add('blobio-chat-list-shift-start');
-    void list.offsetHeight;
+    if (this.chatShiftOffset >= 1 || this.chatShiftFrame !== null) {
+      this.stats.continuedShiftAnimations += 1;
+    }
 
-    const win = this.document.defaultView || globalThis;
-    const run = () => {
+    const startOffset = this.chatShiftOffset + distance;
+    this.chatShiftOffset = startOffset;
+    this.chatShiftStartOffset = startOffset;
+    this.chatShiftStartedAt = null;
+    this.stats.shiftAnimations += 1;
+    this.stats.lastShiftPx = Math.round(startOffset);
+
+    setCssVariable(list, '--blobio-chat-shift-offset', `${startOffset}px`);
+    list.classList?.add('blobio-chat-list-shifting');
+    if (this.chatShiftFrame !== null || typeof win.requestAnimationFrame !== 'function') {
+      if (typeof win.requestAnimationFrame !== 'function') {
+        this.finishChatShiftAnimation();
+      }
+      return;
+    }
+
+    const run = (timestamp) => {
       this.chatShiftFrame = null;
-      list.classList?.add('blobio-chat-list-shift-running');
-      this.chatShiftTimer = win.setTimeout?.(() => {
-        this.chatShiftTimer = null;
-        list.classList?.remove('blobio-chat-list-shift-start', 'blobio-chat-list-shift-running');
-        removeCssVariable(list, '--blobio-chat-shift-distance');
-      }, CHAT_SHIFT_ANIMATION_MS + 40);
+      if (!this.chatList || this.chatList !== list) {
+        this.finishChatShiftAnimation();
+        return;
+      }
+
+      if (this.chatShiftStartedAt === null) {
+        this.chatShiftStartedAt = Number(timestamp) || 0;
+      }
+
+      const elapsed = Math.max(0, (Number(timestamp) || 0) - this.chatShiftStartedAt);
+      const progress = Math.min(1, elapsed / CHAT_SHIFT_ANIMATION_MS);
+      const easedProgress = 1 - ((1 - progress) ** 3);
+      this.chatShiftOffset = this.chatShiftStartOffset * (1 - easedProgress);
+
+      if (progress >= 1 || this.chatShiftOffset < 0.5) {
+        this.finishChatShiftAnimation();
+        return;
+      }
+
+      setCssVariable(list, '--blobio-chat-shift-offset', `${this.chatShiftOffset}px`);
+      this.chatShiftFrame = win.requestAnimationFrame(run);
     };
 
-    if (typeof win.requestAnimationFrame === 'function') {
-      this.chatShiftFrame = win.requestAnimationFrame(run);
-    } else {
-      run();
-    }
-  }
-
-  readCurrentChatShiftOffset() {
-    const list = this.chatList;
-    if (!list) {
-      return 0;
-    }
-
-    const win = this.document.defaultView || globalThis;
-    let transform = '';
-    try {
-      transform = win.getComputedStyle?.(list)?.transform || list.style?.transform || '';
-    } catch {
-      transform = list.style?.transform || '';
-    }
-
-    if (!transform || transform === 'none') {
-      return 0;
-    }
-
-    const matrix3d = transform.match(/^matrix3d\((.+)\)$/);
-    if (matrix3d) {
-      const values = matrix3d[1].split(',').map(Number);
-      return Number.isFinite(values[13]) ? Math.max(0, values[13]) : 0;
-    }
-
-    const matrix = transform.match(/^matrix\((.+)\)$/);
-    if (matrix) {
-      const values = matrix[1].split(',').map(Number);
-      return Number.isFinite(values[5]) ? Math.max(0, values[5]) : 0;
-    }
-
-    const translateY = transform.match(/translateY\(\s*(-?\d+(?:\.\d+)?)px\s*\)/);
-    if (translateY) {
-      return Math.max(0, Number(translateY[1]) || 0);
-    }
-
-    const translate3d = transform.match(
-      /translate3d\(\s*-?\d+(?:\.\d+)?px\s*,\s*(-?\d+(?:\.\d+)?)px/,
-    );
-    return translate3d ? Math.max(0, Number(translate3d[1]) || 0) : 0;
+    this.chatShiftFrame = win.requestAnimationFrame(run);
   }
 
   cancelChatShiftAnimation() {
-    this.chatShiftAnimation?.cancel?.();
-    this.chatShiftAnimation = null;
-
     const win = this.document.defaultView || globalThis;
     if (this.chatShiftFrame !== null) {
       win.cancelAnimationFrame?.(this.chatShiftFrame);
       this.chatShiftFrame = null;
     }
-    if (this.chatShiftTimer !== null) {
-      win.clearTimeout?.(this.chatShiftTimer);
-      this.chatShiftTimer = null;
-    }
+    this.finishChatShiftAnimation();
+  }
 
-    this.chatList?.classList?.remove('blobio-chat-list-shift-start', 'blobio-chat-list-shift-running');
-    removeCssVariable(this.chatList, '--blobio-chat-shift-distance');
+  finishChatShiftAnimation() {
+    this.chatShiftOffset = 0;
+    this.chatShiftStartOffset = 0;
+    this.chatShiftStartedAt = null;
+    this.chatList?.classList?.remove('blobio-chat-list-shifting');
+    removeCssVariable(this.chatList, '--blobio-chat-shift-offset');
   }
 
   scrollChatToBottom() {
@@ -701,6 +654,9 @@ export class GameUiCustomizationFeature {
       nearBottom: this.nearChatBottom,
       scrollHeight: Number(this.chatElement?.scrollHeight) || 0,
       scrollTop: Number(this.chatElement?.scrollTop) || 0,
+      shiftActive: this.chatShiftFrame !== null,
+      currentShiftPx: Math.round(this.chatShiftOffset),
+      pendingMessages: this.pendingChatMessages.length,
       ...this.stats,
     });
   }

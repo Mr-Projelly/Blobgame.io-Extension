@@ -801,15 +801,10 @@ export const CHAT_SETTINGS_CSS = `
   transform-origin: left bottom;
 }
 
-#chat.blobio-smooth-chat > ul.blobio-chat-list-shift-start,
-#chat.blobio-smooth-chat ul.blobio-chat-list-shift-start {
-  transform: translateY(var(--blobio-chat-shift-distance, 0));
-}
-
-#chat.blobio-smooth-chat > ul.blobio-chat-list-shift-running,
-#chat.blobio-smooth-chat ul.blobio-chat-list-shift-running {
-  transform: translateY(0);
-  transition: transform 620ms cubic-bezier(0.2, 0.72, 0.22, 1);
+#chat.blobio-smooth-chat > ul.blobio-chat-list-shifting,
+#chat.blobio-smooth-chat ul.blobio-chat-list-shifting {
+  transform: translateY(var(--blobio-chat-shift-offset, 0));
+  will-change: transform;
 }
 
 @keyframes blobio-chat-message-enter {
@@ -836,10 +831,14 @@ export const CHAT_SETTINGS_CSS = `
   .blobio-hotkey-bind,
   .blobio-chat-notification,
   .blobio-leaderboard-resize-handle,
-  #chat.blobio-smooth-chat ul.blobio-chat-list-shift-running,
+  #chat.blobio-smooth-chat ul.blobio-chat-list-shifting,
   #chat.blobio-smooth-chat li.blobio-chat-message-enter {
     transition: none;
     animation: none;
+  }
+
+  #chat.blobio-smooth-chat ul.blobio-chat-list-shifting {
+    transform: none !important;
   }
 }
 `;
