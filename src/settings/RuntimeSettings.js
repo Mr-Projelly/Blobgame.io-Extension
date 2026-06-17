@@ -4,6 +4,23 @@ export const CHAT_FONT_SIZE_VALUE_KEY = 'blobio.chat.fontSizePx';
 export const ANIMATION_SPEED_KEYS = {
   enabled: 'blobio.settings.animationSpeed.enabled',
   slider: 'blobio.settings.animationSpeed.slider',
+  mode: 'blobio.settings.animationSpeed.mode',
+};
+
+export const ANIMATION_SPEED_MODES = {
+  friendly: 'friendly',
+  unsafe: 'unsafe',
+};
+
+export const ANIMATION_SPEED_MODE_INFO = {
+  [ANIMATION_SPEED_MODES.friendly]: {
+    label: 'FPS-Friendly',
+    description: 'FPS-Friendly changes game animation timing without changing the render/FPS clock or VIP shader time.',
+  },
+  [ANIMATION_SPEED_MODES.unsafe]: {
+    label: 'FPS-Unsafe',
+    description: 'FPS-Unsafe uses the old Date.now timing patch. It can lower FPS and affect timing-heavy effects.',
+  },
 };
 
 const DEFAULT_CHAT_FONT_SIZE = 16;
@@ -87,6 +104,11 @@ function readAnimationSpeedEnabled(storage) {
   }
 }
 
+export function normalizeAnimationSpeedMode(value) {
+  const mode = String(value || '').trim().toLowerCase();
+  return mode === ANIMATION_SPEED_MODES.unsafe ? ANIMATION_SPEED_MODES.unsafe : ANIMATION_SPEED_MODES.friendly;
+}
+
 export function normalizeAnimationSpeedSlider(value) {
   const number = Math.round(Number(value));
   if (!Number.isFinite(number)) {
@@ -98,18 +120,21 @@ export function normalizeAnimationSpeedSlider(value) {
 
 export function getAnimationSpeedSetting(storage) {
   let slider = DEFAULT_ANIMATION_SPEED_SLIDER;
+  let mode = ANIMATION_SPEED_MODES.friendly;
 
   try {
     const value = storage?.getItem?.(ANIMATION_SPEED_KEYS.slider);
     if (value !== null && value !== undefined && value !== '') {
       slider = normalizeAnimationSpeedSlider(value);
     }
+    mode = normalizeAnimationSpeedMode(storage?.getItem?.(ANIMATION_SPEED_KEYS.mode));
   } catch {}
 
   return {
     enabled: readAnimationSpeedEnabled(storage),
     slider,
     speed: slider / 10,
+    mode,
   };
 }
 
@@ -118,11 +143,13 @@ export function setAnimationSpeedSetting(storage, changes = {}) {
   const next = {
     enabled: changes.enabled === undefined ? current.enabled : Boolean(changes.enabled),
     slider: changes.slider === undefined ? current.slider : normalizeAnimationSpeedSlider(changes.slider),
+    mode: changes.mode === undefined ? current.mode : normalizeAnimationSpeedMode(changes.mode),
   };
 
   try {
     storage?.setItem?.(ANIMATION_SPEED_KEYS.enabled, next.enabled ? '1' : '0');
     storage?.setItem?.(ANIMATION_SPEED_KEYS.slider, String(next.slider));
+    storage?.setItem?.(ANIMATION_SPEED_KEYS.mode, next.mode);
   } catch {}
 
   return {

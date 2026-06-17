@@ -42,6 +42,11 @@
   const ANIMATION_SPEED_KEYS = {
     enabled: 'blobio.settings.animationSpeed.enabled',
     slider: 'blobio.settings.animationSpeed.slider',
+    mode: 'blobio.settings.animationSpeed.mode',
+  };
+  const ANIMATION_SPEED_MODES = {
+    friendly: 'friendly',
+    unsafe: 'unsafe',
   };
   const GAME_BACKGROUND_KEYS = {
     enabled: 'blobio.settings.backgroundColor.enabled',
@@ -270,10 +275,21 @@
     return Math.max(1, Math.min(180, number));
   }
 
-  function readAnimationSpeedRuntimeValue() {
+  function normalizeAnimationSpeedMode(value) {
+    return String(value || '').trim().toLowerCase() === ANIMATION_SPEED_MODES.unsafe
+      ? ANIMATION_SPEED_MODES.unsafe
+      : ANIMATION_SPEED_MODES.friendly;
+  }
+
+  function readAnimationSpeedRuntimeSettings() {
     const enabled = readBooleanValue(getSharedValue(ANIMATION_SPEED_KEYS.enabled), false);
     const slider = clampAnimationSpeedSlider(getSharedValue(ANIMATION_SPEED_KEYS.slider) || 10);
-    return enabled ? slider / 10 : 1;
+    return {
+      enabled,
+      slider,
+      speed: enabled ? slider / 10 : 1,
+      mode: normalizeAnimationSpeedMode(getSharedValue(ANIMATION_SPEED_KEYS.mode)),
+    };
   }
 
   function normalizeHexColor(value, fallback) {
@@ -938,7 +954,7 @@
     });
   }
 
-  function pageAnimationSpeedBootstrap(initialSpeed, pageWindow) {
+  function pageAnimationSpeedBootstrap(initialSettings, pageWindow) {
     'use strict';
 
     const win = pageWindow || globalThis;
@@ -947,30 +963,65 @@
     }
 
     if (win.__blobioAnimationSpeedInstalled) {
-      win.__blobioAnimationSpeedRefresh?.(initialSpeed);
+      win.__blobioAnimationSpeedRefresh?.(initialSettings);
       return true;
     }
 
+    const MODE_FRIENDLY = ANIMATION_SPEED_MODES.friendly;
+    const MODE_UNSAFE = ANIMATION_SPEED_MODES.unsafe;
+    const CACHE_SCRIPT_RE = /\/html\/[A-F0-9]{32}\.cache\.js(?:[?#].*)?$/i;
+    const SCHEDULER_RE = /var a=([A-Za-z_$][A-Za-z0-9_$]*)\(\);b\.tc\(a\)/g;
+    const DELTA_ASSIGN_RE = /a\.c=([^;]+);a\.i=b;a\.j\+=a\.c/g;
+    const LEGACY_DELTA_ASSIGN_RE = /a\.b=([^;]+);a\.f=b;a\.g\+=a\.b/g;
+    const GAME_TIME_RE = /([A-Za-z_$][A-Za-z0-9_$]*\.r=)\(([A-Za-z_$][A-Za-z0-9_$]*)\(\),([A-Za-z_$][A-Za-z0-9_$]*\([A-Za-z_$][A-Za-z0-9_$]*\(\)\))\);(?=(?:if\(q>0\)|[A-Za-z_$][A-Za-z0-9_$]*\.i=false))/g;
+    const SHADER_CLOCK_RE = /a\.w\+=\$b\.c;c=null;([A-Za-z_$][A-Za-z0-9_$]*\([A-Za-z_$][A-Za-z0-9_$]*\))/g;
     const nativeNow = win.Date.now.__blobioAnimationNativeNow || win.Date.now.bind(win.Date);
     let realAnchor = nativeNow();
     let virtualAnchor = realAnchor;
-    let speed = clampSpeed(initialSpeed);
+    let settings = normalizeSettings(initialSettings);
     let shaderTimeActive = false;
     let shaderRealAnchor = 0;
     let shaderUniformAnchor = 0;
     const shaderLocations = typeof win.WeakSet === 'function' ? new win.WeakSet() : null;
     const shaderLocationList = [];
     const patchedWindows = typeof win.WeakSet === 'function' ? new win.WeakSet() : null;
-      const state = {
-        installed: true,
-        speed,
-        patchedWindows: 0,
-        patchedFrames: 0,
-        frameHookInstalled: false,
-        shaderUniforms: 0,
-        shaderWrites: 0,
-        lastError: '',
-      };
+    const state = {
+      installed: true,
+      enabled: settings.enabled,
+      speed: settings.speed,
+      mode: settings.mode,
+      sourceHookInstalled: false,
+      wrappedCallback: false,
+      wrapReason: '',
+      seenCacheScripts: 0,
+      callbackCalls: 0,
+      patchResults: [],
+      lastPatchResult: null,
+      frameCalls: 0,
+      lastRealNow: 0,
+      lastVirtualNow: 0,
+      lastRealDelta: 0,
+      lastVirtualDelta: 0,
+      deltaCalls: 0,
+      fpsDeltaCalls: 0,
+      shaderDeltaCalls: 0,
+      lastRawDelta: 0,
+      lastScaledDelta: 0,
+      lastFpsDelta: 0,
+      lastShaderDelta: 0,
+      gameTimeCalls: 0,
+      lastGameRealDelta: 0,
+      lastGameVirtualDelta: 0,
+      lastGameRealNow: 0,
+      lastGameVirtualNow: 0,
+      patchedWindows: 0,
+      patchedFrames: 0,
+      frameHookInstalled: false,
+      shaderUniforms: 0,
+      shaderWrites: 0,
+      errors: [],
+      lastError: '',
+    };
     win.__blobioAnimationSpeedState = state;
 
     function clampSpeed(value) {
@@ -981,19 +1032,308 @@
       return Math.max(0.1, Math.min(18, number));
     }
 
-    function virtualNow(realNow = nativeNow()) {
-      return virtualAnchor + (realNow - realAnchor) * speed;
+    function normalizeMode(value) {
+      return String(value || '').trim().toLowerCase() === MODE_UNSAFE ? MODE_UNSAFE : MODE_FRIENDLY;
     }
 
-    function setSpeed(value) {
-      const nextSpeed = clampSpeed(value);
-      const now = nativeNow();
+    function normalizeSettings(value) {
+      const source = value && typeof value === 'object' ? value : { speed: value };
+      const speed = clampSpeed(source.speed);
+      return {
+        enabled: source.enabled === undefined ? speed !== 1 : Boolean(source.enabled),
+        speed,
+        mode: normalizeMode(source.mode),
+      };
+    }
+
+    function activeSpeed() {
+      return settings.enabled ? settings.speed : 1;
+    }
+
+    function isFriendlyAnimationMode() {
+      return settings.enabled && settings.mode === MODE_FRIENDLY;
+    }
+
+    function isUnsafeAnimationMode() {
+      return settings.enabled && settings.mode === MODE_UNSAFE;
+    }
+
+    function virtualNow(realNow = nativeNow()) {
+      if (!settings.enabled) {
+        return realNow;
+      }
+
+      return virtualAnchor + Math.max(0, realNow - realAnchor) * activeSpeed();
+    }
+
+    function syncClockTo(now) {
       virtualAnchor = virtualNow(now);
       realAnchor = now;
-      speed = nextSpeed;
-      state.speed = speed;
+    }
+
+    function setSettings(value) {
+      syncClockTo(nativeNow());
+      settings = normalizeSettings(value);
+      state.enabled = settings.enabled;
+      state.speed = settings.speed;
+      state.mode = settings.mode;
       state.lastError = '';
-      return speed;
+      return settings;
+    }
+
+    function normalizeDelta(rawDelta) {
+      const input = Number(rawDelta);
+      return Number.isFinite(input) && input > 0 ? input : 0;
+    }
+
+    function animationNow(realNow) {
+      let input = Number(realNow);
+      let output;
+
+      if (!Number.isFinite(input)) {
+        input = nativeNow();
+      }
+
+      output = isFriendlyAnimationMode() ? virtualNow(input) : input;
+      state.frameCalls += 1;
+      state.lastRealDelta = state.lastRealNow ? input - state.lastRealNow : 0;
+      state.lastVirtualDelta = state.lastVirtualNow ? output - state.lastVirtualNow : 0;
+      state.lastRealNow = input;
+      state.lastVirtualNow = output;
+      return Math.floor(output);
+    }
+
+    function gameNow(realNow) {
+      let input = Number(realNow);
+      let output;
+
+      if (!Number.isFinite(input)) {
+        input = nativeNow();
+      }
+
+      output = isFriendlyAnimationMode() ? virtualNow(input) : input;
+      state.gameTimeCalls += 1;
+      state.lastGameRealDelta = state.lastGameRealNow ? input - state.lastGameRealNow : 0;
+      state.lastGameVirtualDelta = state.lastGameVirtualNow ? output - state.lastGameVirtualNow : 0;
+      state.lastGameRealNow = input;
+      state.lastGameVirtualNow = output;
+      return Math.floor(output);
+    }
+
+    function scaleDelta(rawDelta) {
+      const input = normalizeDelta(rawDelta);
+      const scaled = isFriendlyAnimationMode() ? input * activeSpeed() : input;
+
+      state.deltaCalls += 1;
+      state.lastRawDelta = input;
+      state.lastScaledDelta = scaled;
+      return scaled;
+    }
+
+    function fpsDelta(rawDelta) {
+      const input = normalizeDelta(rawDelta);
+      state.fpsDeltaCalls += 1;
+      state.lastFpsDelta = input;
+      return input;
+    }
+
+    function shaderDelta(rawDelta) {
+      const input = normalizeDelta(rawDelta);
+      state.shaderDeltaCalls += 1;
+      state.lastShaderDelta = input;
+      return input;
+    }
+
+    function rememberError(source, error) {
+      const message = error?.message || String(error);
+      state.lastError = message;
+      state.errors.push({ source, message, time: nativeNow() });
+      state.errors = state.errors.slice(-10);
+    }
+
+    function patchCacheSource(source) {
+      let patched = source;
+      let schedulerHits = 0;
+      let deltaHits = 0;
+      let gameTimeHits = 0;
+      let shaderHits = 0;
+
+      if (typeof source !== 'string') {
+        return { changed: false, schedulerHits, deltaHits, gameTimeHits, shaderHits, source };
+      }
+
+      if (patched.includes('requestAnimationFrame') && patched.includes('.tc(a)')) {
+        patched = patched.replace(SCHEDULER_RE, (match, timeFunction) => {
+          if (match.includes('__blobioAnimationNow')) {
+            return match;
+          }
+
+          schedulerHits += 1;
+          return `var a=$wnd.__blobioAnimationNow(${timeFunction}());b.tc(a)`;
+        });
+      }
+
+      if (patched.includes('a.j+=a.c')) {
+        patched = patched.replace(DELTA_ASSIGN_RE, (match, deltaExpression) => {
+          if (match.includes('__blobioAnimationDelta')) {
+            return match;
+          }
+
+          deltaHits += 1;
+          return `a.c=${deltaExpression};a.i=b;a.j+=$wnd.__blobioAnimationFpsDelta(a.c);$wnd.__blobioAnimationDelta(a.c)`;
+        });
+      }
+
+      if (patched.includes('a.g+=a.b')) {
+        patched = patched.replace(LEGACY_DELTA_ASSIGN_RE, (match, deltaExpression) => {
+          if (match.includes('__blobioAnimationDelta')) {
+            return match;
+          }
+
+          deltaHits += 1;
+          return `a.b=${deltaExpression};a.f=b;a.g+=$wnd.__blobioAnimationFpsDelta(a.b);$wnd.__blobioAnimationDelta(a.b)`;
+        });
+      }
+
+      if (patched.includes('.r=')) {
+        patched = patched.replace(GAME_TIME_RE, (match, assignment, namespaceName, timeExpression) => {
+          if (match.includes('__blobioAnimationGameNow')) {
+            return match;
+          }
+
+          gameTimeHits += 1;
+          return `${assignment}(${namespaceName}(),$wnd.__blobioAnimationGameNow(${timeExpression}));`;
+        });
+      }
+
+      if (patched.includes("'u_time'") && patched.includes('a.w+=$b.c')) {
+        patched = patched.replace(SHADER_CLOCK_RE, (match, nextCall) => {
+          if (match.includes('__blobioAnimationShaderDelta')) {
+            return match;
+          }
+
+          shaderHits += 1;
+          return `a.w+=$wnd.__blobioAnimationShaderDelta($b.c);c=null;${nextCall}`;
+        });
+      }
+
+      return {
+        changed: schedulerHits > 0 || deltaHits > 0 || gameTimeHits > 0 || shaderHits > 0,
+        schedulerHits,
+        deltaHits,
+        gameTimeHits,
+        shaderHits,
+        source: patched,
+      };
+    }
+
+    function rememberPatchResult(result) {
+      const summary = {
+        changed: Boolean(result.changed),
+        schedulerHits: result.schedulerHits || 0,
+        deltaHits: result.deltaHits || 0,
+        gameTimeHits: result.gameTimeHits || 0,
+        shaderHits: result.shaderHits || 0,
+        time: nativeNow(),
+      };
+
+      state.lastPatchResult = summary;
+      state.patchResults.push(summary);
+      state.patchResults = state.patchResults.slice(-10);
+    }
+
+    function wrapHtmlCallback(reason) {
+      const html = win.html;
+      if (!html || typeof html.onScriptDownloaded !== 'function') {
+        return false;
+      }
+
+      if (html.onScriptDownloaded.__blobioAnimationWrapped) {
+        state.wrappedCallback = true;
+        return true;
+      }
+
+      const original = html.onScriptDownloaded;
+      html.onScriptDownloaded = function blobioAnimationOnScriptDownloaded(chunks) {
+        let source;
+        let result;
+
+        state.callbackCalls += 1;
+
+        try {
+          source = Array.isArray(chunks) ? chunks.join('') : String(chunks || '');
+          result = patchCacheSource(source);
+          rememberPatchResult(result);
+
+          if (result.changed) {
+            return original.call(this, [result.source]);
+          }
+        } catch (error) {
+          rememberError('onScriptDownloaded', error);
+        }
+
+        return original.apply(this, arguments);
+      };
+
+      html.onScriptDownloaded.__blobioAnimationWrapped = true;
+      html.onScriptDownloaded.__blobioAnimationOriginal = original;
+      state.wrappedCallback = true;
+      state.wrapReason = reason || 'direct';
+      return true;
+    }
+
+    function isCacheScript(node) {
+      const src = node?.src || node?.getAttribute?.('src') || '';
+      return node?.tagName === 'SCRIPT' && CACHE_SCRIPT_RE.test(src);
+    }
+
+    function handlePossibleCacheScript(node, reason) {
+      if (!isCacheScript(node)) {
+        return;
+      }
+
+      state.seenCacheScripts += 1;
+      wrapHtmlCallback(reason);
+      win.setTimeout?.(() => wrapHtmlCallback(`${reason}:retry`), 0);
+    }
+
+    function installSourceHooks() {
+      const prototype = win.Node?.prototype;
+      if (!prototype || prototype.__blobioAnimationSourceHooked) {
+        return false;
+      }
+
+      const nativeAppendChild = prototype.appendChild;
+      const nativeInsertBefore = prototype.insertBefore;
+
+      if (typeof nativeAppendChild === 'function') {
+        prototype.appendChild = function blobioAnimationAppendChild(node) {
+          handlePossibleCacheScript(node, 'appendChild:before');
+          return nativeAppendChild.apply(this, arguments);
+        };
+      }
+
+      if (typeof nativeInsertBefore === 'function') {
+        prototype.insertBefore = function blobioAnimationInsertBefore(node) {
+          handlePossibleCacheScript(node, 'insertBefore:before');
+          return nativeInsertBefore.apply(this, arguments);
+        };
+      }
+
+      prototype.__blobioAnimationSourceHooked = true;
+      state.sourceHookInstalled = true;
+      return true;
+    }
+
+    function installCallbackPolling() {
+      let attempts = 0;
+      const timer = win.setInterval?.(() => {
+        attempts += 1;
+
+        if (wrapHtmlCallback('poll') || attempts > 400) {
+          win.clearInterval?.(timer);
+        }
+      }, 25);
     }
 
     function rememberShaderTimeLocation(location) {
@@ -1058,7 +1398,7 @@
       };
 
       prototype.uniform1f = function blobAnimationUniform1f(location, value) {
-        if (isShaderTimeLocation(location)) {
+        if (isShaderTimeLocation(location) && isUnsafeAnimationMode()) {
           return nativeUniform1f.call(this, location, shaderTimeValue(value));
         }
         return nativeUniform1f.apply(this, arguments);
@@ -1079,7 +1419,7 @@
         }
 
         const patchedNow = function blobAnimationNow() {
-          return Math.round(virtualNow());
+          return Math.round(isUnsafeAnimationMode() ? virtualNow() : nativeNow());
         };
         patchedNow.__blobioAnimationPatched = true;
         patchedNow.__blobioAnimationNativeNow = nativeNow;
@@ -1173,18 +1513,31 @@
       return true;
     }
 
-    win.__blobioAnimationSpeedRefresh = setSpeed;
+    win.__blobioAnimationNow = animationNow;
+    win.__blobioAnimationDelta = scaleDelta;
+    win.__blobioAnimationFpsDelta = fpsDelta;
+    win.__blobioAnimationGameNow = gameNow;
+    win.__blobioAnimationShaderDelta = shaderDelta;
+    win.__blobioAnimationSpeedRefresh = setSettings;
     win.__blobioAnimationSpeedDebug = () => ({
       ...state,
+      settings: { ...settings },
       realNow: nativeNow(),
       virtualNow: win.Date.now(),
     });
     win.blobSpeedDebug = win.__blobioAnimationSpeedDebug;
     win.blobSpeedSet = (nextSpeed) => {
-      setSpeed(nextSpeed);
+      setSettings({ enabled: Number(nextSpeed) !== 1, speed: nextSpeed, mode: settings.mode });
+      return win.__blobioAnimationSpeedDebug();
+    };
+    win.blobSpeedMode = (mode) => {
+      setSettings({ ...settings, mode });
       return win.__blobioAnimationSpeedDebug();
     };
 
+    installSourceHooks();
+    installCallbackPolling();
+    wrapHtmlCallback('direct');
     patchWindow(win);
     installAnimationSpeedFrameHooks();
     patchExistingFrames();
@@ -2802,7 +3155,7 @@
     const pageWindow = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
 
     try {
-      pageAnimationSpeedBootstrap(readAnimationSpeedRuntimeValue(), pageWindow);
+      pageAnimationSpeedBootstrap(readAnimationSpeedRuntimeSettings(), pageWindow);
     } catch (error) {
       logError('Failed to install animation speed runtime.', error);
       return;
@@ -2810,7 +3163,7 @@
 
     const refresh = () => {
       try {
-        pageWindow.__blobioAnimationSpeedRefresh?.(readAnimationSpeedRuntimeValue());
+        pageWindow.__blobioAnimationSpeedRefresh?.(readAnimationSpeedRuntimeSettings());
       } catch (error) {
         logError('Failed to refresh animation speed runtime.', error);
       }

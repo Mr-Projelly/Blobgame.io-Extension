@@ -645,6 +645,33 @@ export const CHAT_SETTINGS_CSS = `
   font-variant-numeric: tabular-nums;
 }
 
+.blobio-animation-speed-mode {
+  grid-column: 1 / -1;
+  justify-self: stretch;
+  min-height: 28px;
+  border: 1px solid rgba(147, 255, 177, 0.58);
+  border-radius: 6px;
+  background: rgba(0, 22, 13, 0.84);
+  color: #ecfff1;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: inset 0 0 8px rgba(79, 255, 130, 0.12), 0 0 9px rgba(79, 255, 130, 0.2);
+}
+
+.blobio-animation-speed-mode:hover,
+.blobio-animation-speed-mode:focus-visible {
+  border-color: rgba(196, 255, 211, 0.82);
+  background: rgba(5, 48, 25, 0.92);
+}
+
+.blobio-animation-speed-mode[data-mode="unsafe"] {
+  border-color: rgba(255, 190, 113, 0.76);
+  background: rgba(48, 26, 5, 0.88);
+  box-shadow: inset 0 0 8px rgba(255, 170, 67, 0.13), 0 0 9px rgba(255, 170, 67, 0.22);
+}
+
 .blobio-animation-speed-range-label {
   grid-column: 1 / -1;
   color: rgba(223, 255, 230, 0.82);

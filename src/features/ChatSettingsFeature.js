@@ -3,6 +3,8 @@ import { createBlobioStorage } from '../storage/BlobioStorage.js';
 import { HOTKEY_TEXT_LIMIT } from '../hotkeys/HotkeyStore.js';
 import {
   ANIMATION_SPEED_LIMITS,
+  ANIMATION_SPEED_MODE_INFO,
+  ANIMATION_SPEED_MODES,
   CHAT_FONT_SIZE_LIMITS,
   getAnimationSpeedSetting,
   getChatFontSize,
@@ -659,6 +661,11 @@ export class ChatSettingsFeature {
     const controls = this.document.createElement('div');
     controls.classList.add('blobio-animation-speed-controls');
 
+    const modeButton = this.document.createElement('button');
+    modeButton.type = 'button';
+    modeButton.classList.add('blobio-animation-speed-mode');
+    modeButton.setAttribute('aria-label', 'Animation speed mode');
+
     const slider = this.document.createElement('input');
     slider.type = 'range';
     slider.classList.add('blobio-animation-speed-range', 'blobio-themed-range');
@@ -679,7 +686,7 @@ export class ChatSettingsFeature {
     reset.classList.add('blobio-animation-speed-reset');
     reset.textContent = 'Reset to default';
 
-    controls.append(slider, value, rangeLabel, reset);
+    controls.append(modeButton, slider, value, rangeLabel, reset);
     group.append(toggle, label, controls);
     category.appendChild(group);
     return category;
@@ -771,12 +778,23 @@ export class ChatSettingsFeature {
   bindAnimationSpeedCategory(category) {
     const group = category.querySelector('[data-setting="animation-speed"]');
     const toggle = group.querySelector('.blobio-setting-toggle');
+    const modeButton = group.querySelector('.blobio-animation-speed-mode');
     const slider = group.querySelector('.blobio-animation-speed-range');
     const reset = group.querySelector('.blobio-animation-speed-reset');
 
     toggle.addEventListener('click', () => {
       const current = getAnimationSpeedSetting(this.storage);
       setAnimationSpeedSetting(this.storage, { enabled: !current.enabled });
+      this.syncVisualSettingsUi();
+      this.applyAnimationSpeed();
+    });
+
+    modeButton.addEventListener('click', () => {
+      const current = getAnimationSpeedSetting(this.storage);
+      const mode = current.mode === ANIMATION_SPEED_MODES.friendly
+        ? ANIMATION_SPEED_MODES.unsafe
+        : ANIMATION_SPEED_MODES.friendly;
+      setAnimationSpeedSetting(this.storage, { mode });
       this.syncVisualSettingsUi();
       this.applyAnimationSpeed();
     });
@@ -827,7 +845,11 @@ export class ChatSettingsFeature {
   applyAnimationSpeed() {
     const win = this.document.defaultView || globalThis;
     const setting = getAnimationSpeedSetting(this.storage);
-    win.__blobioAnimationSpeedRefresh?.(setting.enabled ? setting.speed : 1);
+    win.__blobioAnimationSpeedRefresh?.({
+      enabled: setting.enabled,
+      speed: setting.enabled ? setting.speed : 1,
+      mode: setting.mode,
+    });
   }
 
   setOpen(open) {
@@ -930,11 +952,16 @@ export class ChatSettingsFeature {
     }
 
     const toggle = group.querySelector('.blobio-setting-toggle');
+    const modeButton = group.querySelector('.blobio-animation-speed-mode');
     const slider = group.querySelector('.blobio-animation-speed-range');
     const value = group.querySelector('.blobio-animation-speed-value');
+    const modeInfo = ANIMATION_SPEED_MODE_INFO[setting.mode] || ANIMATION_SPEED_MODE_INFO[ANIMATION_SPEED_MODES.friendly];
 
     toggle.textContent = setting.enabled ? 'true' : 'false';
     toggle.classList.toggle('is-enabled', setting.enabled);
+    modeButton.textContent = modeInfo.label;
+    modeButton.title = modeInfo.description;
+    modeButton.dataset.mode = setting.mode;
     slider.value = String(setting.slider);
     value.textContent = `${setting.speed.toFixed(1)}x`;
     group.classList.toggle('is-disabled', !setting.enabled);
@@ -1612,7 +1639,7 @@ export class ChatSettingsFeature {
     }
 
     this.document.querySelector?.('#chat')?.classList?.remove('blobio-chat-font-size-enabled');
-    win.__blobioAnimationSpeedRefresh?.(1);
+    win.__blobioAnimationSpeedRefresh?.({ enabled: false, speed: 1 });
     this.root?.remove();
     this.notificationHost?.remove();
     this.root = null;

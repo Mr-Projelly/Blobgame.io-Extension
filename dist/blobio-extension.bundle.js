@@ -1849,6 +1849,33 @@ html.${this.className} body::before {
   font-variant-numeric: tabular-nums;
 }
 
+.blobio-animation-speed-mode {
+  grid-column: 1 / -1;
+  justify-self: stretch;
+  min-height: 28px;
+  border: 1px solid rgba(147, 255, 177, 0.58);
+  border-radius: 6px;
+  background: rgba(0, 22, 13, 0.84);
+  color: #ecfff1;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: inset 0 0 8px rgba(79, 255, 130, 0.12), 0 0 9px rgba(79, 255, 130, 0.2);
+}
+
+.blobio-animation-speed-mode:hover,
+.blobio-animation-speed-mode:focus-visible {
+  border-color: rgba(196, 255, 211, 0.82);
+  background: rgba(5, 48, 25, 0.92);
+}
+
+.blobio-animation-speed-mode[data-mode="unsafe"] {
+  border-color: rgba(255, 190, 113, 0.76);
+  background: rgba(48, 26, 5, 0.88);
+  box-shadow: inset 0 0 8px rgba(255, 170, 67, 0.13), 0 0 9px rgba(255, 170, 67, 0.22);
+}
+
 .blobio-animation-speed-range-label {
   grid-column: 1 / -1;
   color: rgba(223, 255, 230, 0.82);
@@ -2343,7 +2370,22 @@ iframe.blobio-captcha-anchor-hidden,
   var CHAT_FONT_SIZE_VALUE_KEY = "blobio.chat.fontSizePx";
   var ANIMATION_SPEED_KEYS = {
     enabled: "blobio.settings.animationSpeed.enabled",
-    slider: "blobio.settings.animationSpeed.slider"
+    slider: "blobio.settings.animationSpeed.slider",
+    mode: "blobio.settings.animationSpeed.mode"
+  };
+  var ANIMATION_SPEED_MODES = {
+    friendly: "friendly",
+    unsafe: "unsafe"
+  };
+  var ANIMATION_SPEED_MODE_INFO = {
+    [ANIMATION_SPEED_MODES.friendly]: {
+      label: "FPS-Friendly",
+      description: "FPS-Friendly changes game animation timing without changing the render/FPS clock or VIP shader time."
+    },
+    [ANIMATION_SPEED_MODES.unsafe]: {
+      label: "FPS-Unsafe",
+      description: "FPS-Unsafe uses the old Date.now timing patch. It can lower FPS and affect timing-heavy effects."
+    }
   };
   var DEFAULT_CHAT_FONT_SIZE = 16;
   var MIN_CHAT_FONT_SIZE = 8;
@@ -2415,6 +2457,10 @@ iframe.blobio-captcha-anchor-hidden,
       return false;
     }
   }
+  function normalizeAnimationSpeedMode(value) {
+    const mode = String(value || "").trim().toLowerCase();
+    return mode === ANIMATION_SPEED_MODES.unsafe ? ANIMATION_SPEED_MODES.unsafe : ANIMATION_SPEED_MODES.friendly;
+  }
   function normalizeAnimationSpeedSlider(value) {
     const number = Math.round(Number(value));
     if (!Number.isFinite(number)) {
@@ -2424,28 +2470,33 @@ iframe.blobio-captcha-anchor-hidden,
   }
   function getAnimationSpeedSetting(storage) {
     let slider = DEFAULT_ANIMATION_SPEED_SLIDER;
+    let mode = ANIMATION_SPEED_MODES.friendly;
     try {
       const value = storage?.getItem?.(ANIMATION_SPEED_KEYS.slider);
       if (value !== null && value !== void 0 && value !== "") {
         slider = normalizeAnimationSpeedSlider(value);
       }
+      mode = normalizeAnimationSpeedMode(storage?.getItem?.(ANIMATION_SPEED_KEYS.mode));
     } catch {
     }
     return {
       enabled: readAnimationSpeedEnabled(storage),
       slider,
-      speed: slider / 10
+      speed: slider / 10,
+      mode
     };
   }
   function setAnimationSpeedSetting(storage, changes = {}) {
     const current = getAnimationSpeedSetting(storage);
     const next = {
       enabled: changes.enabled === void 0 ? current.enabled : Boolean(changes.enabled),
-      slider: changes.slider === void 0 ? current.slider : normalizeAnimationSpeedSlider(changes.slider)
+      slider: changes.slider === void 0 ? current.slider : normalizeAnimationSpeedSlider(changes.slider),
+      mode: changes.mode === void 0 ? current.mode : normalizeAnimationSpeedMode(changes.mode)
     };
     try {
       storage?.setItem?.(ANIMATION_SPEED_KEYS.enabled, next.enabled ? "1" : "0");
       storage?.setItem?.(ANIMATION_SPEED_KEYS.slider, String(next.slider));
+      storage?.setItem?.(ANIMATION_SPEED_KEYS.mode, next.mode);
     } catch {
     }
     return {
@@ -3198,6 +3249,10 @@ iframe.blobio-captcha-anchor-hidden,
       label.textContent = "Animation Speed";
       const controls = this.document.createElement("div");
       controls.classList.add("blobio-animation-speed-controls");
+      const modeButton = this.document.createElement("button");
+      modeButton.type = "button";
+      modeButton.classList.add("blobio-animation-speed-mode");
+      modeButton.setAttribute("aria-label", "Animation speed mode");
       const slider = this.document.createElement("input");
       slider.type = "range";
       slider.classList.add("blobio-animation-speed-range", "blobio-themed-range");
@@ -3214,7 +3269,7 @@ iframe.blobio-captcha-anchor-hidden,
       reset.type = "button";
       reset.classList.add("blobio-animation-speed-reset");
       reset.textContent = "Reset to default";
-      controls.append(slider, value, rangeLabel, reset);
+      controls.append(modeButton, slider, value, rangeLabel, reset);
       group.append(toggle, label, controls);
       category.appendChild(group);
       return category;
@@ -3295,11 +3350,19 @@ iframe.blobio-captcha-anchor-hidden,
     bindAnimationSpeedCategory(category) {
       const group = category.querySelector('[data-setting="animation-speed"]');
       const toggle = group.querySelector(".blobio-setting-toggle");
+      const modeButton = group.querySelector(".blobio-animation-speed-mode");
       const slider = group.querySelector(".blobio-animation-speed-range");
       const reset = group.querySelector(".blobio-animation-speed-reset");
       toggle.addEventListener("click", () => {
         const current = getAnimationSpeedSetting(this.storage);
         setAnimationSpeedSetting(this.storage, { enabled: !current.enabled });
+        this.syncVisualSettingsUi();
+        this.applyAnimationSpeed();
+      });
+      modeButton.addEventListener("click", () => {
+        const current = getAnimationSpeedSetting(this.storage);
+        const mode = current.mode === ANIMATION_SPEED_MODES.friendly ? ANIMATION_SPEED_MODES.unsafe : ANIMATION_SPEED_MODES.friendly;
+        setAnimationSpeedSetting(this.storage, { mode });
         this.syncVisualSettingsUi();
         this.applyAnimationSpeed();
       });
@@ -3344,7 +3407,11 @@ iframe.blobio-captcha-anchor-hidden,
     applyAnimationSpeed() {
       const win = this.document.defaultView || globalThis;
       const setting = getAnimationSpeedSetting(this.storage);
-      win.__blobioAnimationSpeedRefresh?.(setting.enabled ? setting.speed : 1);
+      win.__blobioAnimationSpeedRefresh?.({
+        enabled: setting.enabled,
+        speed: setting.enabled ? setting.speed : 1,
+        mode: setting.mode
+      });
     }
     setOpen(open) {
       if (!this.root) {
@@ -3424,10 +3491,15 @@ iframe.blobio-captcha-anchor-hidden,
         return;
       }
       const toggle = group.querySelector(".blobio-setting-toggle");
+      const modeButton = group.querySelector(".blobio-animation-speed-mode");
       const slider = group.querySelector(".blobio-animation-speed-range");
       const value = group.querySelector(".blobio-animation-speed-value");
+      const modeInfo = ANIMATION_SPEED_MODE_INFO[setting.mode] || ANIMATION_SPEED_MODE_INFO[ANIMATION_SPEED_MODES.friendly];
       toggle.textContent = setting.enabled ? "true" : "false";
       toggle.classList.toggle("is-enabled", setting.enabled);
+      modeButton.textContent = modeInfo.label;
+      modeButton.title = modeInfo.description;
+      modeButton.dataset.mode = setting.mode;
       slider.value = String(setting.slider);
       value.textContent = `${setting.speed.toFixed(1)}x`;
       group.classList.toggle("is-disabled", !setting.enabled);
@@ -4015,7 +4087,7 @@ iframe.blobio-captcha-anchor-hidden,
         this.positionFrame = null;
       }
       this.document.querySelector?.("#chat")?.classList?.remove("blobio-chat-font-size-enabled");
-      win.__blobioAnimationSpeedRefresh?.(1);
+      win.__blobioAnimationSpeedRefresh?.({ enabled: false, speed: 1 });
       this.root?.remove();
       this.notificationHost?.remove();
       this.root = null;
