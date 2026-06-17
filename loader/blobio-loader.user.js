@@ -1248,7 +1248,7 @@
         return false;
       }
 
-      if (html.onScriptDownloaded.__blobioAnimationWrapped) {
+      if (html.__blobioAnimationWrapped || html.onScriptDownloaded.__blobioAnimationWrapped) {
         state.wrappedCallback = true;
         return true;
       }
@@ -1277,6 +1277,7 @@
 
       html.onScriptDownloaded.__blobioAnimationWrapped = true;
       html.onScriptDownloaded.__blobioAnimationOriginal = original;
+      html.__blobioAnimationWrapped = true;
       state.wrappedCallback = true;
       state.wrapReason = reason || 'direct';
       return true;
