@@ -546,7 +546,8 @@ export const CHAT_SETTINGS_CSS = `
 }
 
 .blobio-chat-appearance-category,
-.blobio-leaderboard-category {
+.blobio-leaderboard-category,
+.blobio-hud-info-category {
   display: block;
 }
 
@@ -703,6 +704,53 @@ export const CHAT_SETTINGS_CSS = `
 }
 
 .blobio-animation-speed-setting.is-disabled .blobio-animation-speed-controls {
+  opacity: 0.68;
+}
+
+.blobio-hud-mode-setting {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.blobio-hud-mode-button {
+  width: 100%;
+  min-height: 28px;
+  border: 1px solid rgba(147, 255, 177, 0.58);
+  border-radius: 6px;
+  background: rgba(0, 22, 13, 0.84);
+  color: #ecfff1;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: inset 0 0 8px rgba(79, 255, 130, 0.12), 0 0 9px rgba(79, 255, 130, 0.2);
+}
+
+.blobio-hud-mode-button:hover,
+.blobio-hud-mode-button:focus-visible {
+  border-color: rgba(196, 255, 211, 0.82);
+  background: rgba(5, 48, 25, 0.92);
+}
+
+.blobio-hud-mode-button[data-mode="advanced"] {
+  border-color: rgba(255, 224, 95, 0.86);
+  background: rgba(58, 45, 4, 0.9);
+  color: #fff1a6;
+  box-shadow: inset 0 0 8px rgba(255, 217, 76, 0.16), 0 0 10px rgba(255, 217, 76, 0.22);
+}
+
+.blobio-hud-mode-button[data-mode="dev"] {
+  border-color: rgba(255, 109, 109, 0.84);
+  background: rgba(62, 8, 8, 0.9);
+  color: #ffd1d1;
+  box-shadow: inset 0 0 8px rgba(255, 82, 82, 0.16), 0 0 10px rgba(255, 82, 82, 0.24);
+}
+
+.blobio-hud-size-setting,
+.blobio-hud-color-setting {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.blobio-hud-info-category.is-disabled .blobio-ui-setting-group:not([data-setting="hud-info-enabled"]) {
   opacity: 0.68;
 }
 

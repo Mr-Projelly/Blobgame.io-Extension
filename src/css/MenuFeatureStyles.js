@@ -814,6 +814,98 @@ html.${className} app-settings .blobio-admin-only-setting-row.is-hidden {
   display: none !important;
 }
 
+html.${className} app-settings .blobio-jelly-setting-group {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 8px;
+  min-width: 0;
+}
+
+html.${className} app-settings .blobio-jelly-setting-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 34px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+html.${className} app-settings .blobio-jelly-dropdown-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid rgba(130, 255, 166, 0.72);
+  border-radius: 5px;
+  outline: none;
+  background: rgba(0, 0, 0, 0.74);
+  color: #ecfff1;
+  text-align: center;
+  text-shadow: 0 0 5px rgba(255, 255, 255, 0.76), 0 0 12px rgba(77, 255, 126, 0.74);
+  box-shadow: inset 0 0 9px rgba(79, 255, 130, 0.12), 0 0 12px rgba(79, 255, 130, 0.26);
+  cursor: pointer;
+}
+
+html.${className} app-settings .blobio-jelly-dropdown-button:hover,
+html.${className} app-settings .blobio-jelly-dropdown-button:focus-visible {
+  border-color: rgba(151, 255, 181, 0.96);
+  box-shadow: inset 0 0 11px rgba(79, 255, 130, 0.18), 0 0 15px rgba(79, 255, 130, 0.42);
+}
+
+html.${className} app-settings .blobio-jelly-dropdown-symbol {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0 1px;
+  color: inherit;
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1;
+  text-align: center;
+  text-shadow: inherit;
+  pointer-events: none;
+}
+
+html.${className} app-settings .blobio-jelly-button-menu {
+  display: grid;
+  gap: 9px;
+  width: 100%;
+  min-width: 0;
+  padding: 11px;
+  border: 1px solid rgba(142, 255, 174, 0.38);
+  border-radius: 9px;
+  background: linear-gradient(145deg, rgba(3, 31, 19, 0.94), rgba(1, 10, 7, 0.94));
+  box-shadow: inset 0 0 18px rgba(79, 255, 130, 0.12), 0 0 14px rgba(79, 255, 130, 0.16);
+  box-sizing: border-box;
+}
+
+html.${className} app-settings .blobio-jelly-button-menu[hidden] {
+  display: none !important;
+}
+
+html.${className} app-settings .blobio-jelly-option-row {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  color: #dfffe6;
+  font-size: 12px;
+  font-weight: 800;
+  text-shadow: 0 0 7px rgba(77, 255, 126, 0.5);
+  cursor: pointer;
+}
+
+html.${className} app-settings .blobio-jelly-option-row input {
+  width: 16px !important;
+  height: 16px !important;
+  margin: 0 !important;
+  accent-color: rgb(74, 229, 111);
+}
+
 html.${className} app-settings .blobio-virus-setting-group {
   display: grid;
   grid-column: 1 / -1;

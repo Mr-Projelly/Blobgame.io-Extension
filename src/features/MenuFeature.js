@@ -2,6 +2,7 @@ import { buildMenuCss } from '../css/MenuFeatureStyles.js';
 import { GameBackgroundSettingsUi } from '../background/GameBackgroundSettingsUi.js';
 import { VirusPelletColorSettingsUi } from '../cellColors/VirusPelletColorSettingsUi.js';
 import { createBlobioStorage } from '../storage/BlobioStorage.js';
+import { JellyShaderSettingsUi } from '../jelly/JellyShaderSettingsUi.js';
 import { isHideAdminMdEnabled, setHideAdminMdEnabled } from '../roles/RoleSettings.js';
 import { isFpsUncapEnabled, setFpsUncapEnabled } from '../settings/RuntimeSettings.js';
 import { VirusMotherCellSettingsUi } from '../virus/VirusMotherCellSettingsUi.js';
@@ -169,6 +170,7 @@ export class MenuFeature {
     this.virusMotherCellSettingsUi = null;
     this.gameBackgroundSettingsUi = null;
     this.virusPelletColorSettingsUi = null;
+    this.jellyShaderSettingsUi = null;
   }
 
   start() {
@@ -257,6 +259,8 @@ export class MenuFeature {
     this.gameBackgroundSettingsUi = null;
     this.virusPelletColorSettingsUi?.destroy?.();
     this.virusPelletColorSettingsUi = null;
+    this.jellyShaderSettingsUi?.destroy?.();
+    this.jellyShaderSettingsUi = null;
     this.cleanupExtensionSettings();
     this.cleanupCustomSkinUi();
 
@@ -1004,6 +1008,17 @@ export class MenuFeature {
     });
     categoryPanels.get('theme').appendChild(this.virusPelletColorSettingsUi.create());
 
+    this.jellyShaderSettingsUi?.destroy?.();
+    this.jellyShaderSettingsUi = new JellyShaderSettingsUi({
+      document: this.document,
+      storage: this.storage,
+      showTooltip: (row, event) => this.showExtensionTooltip(row, event),
+      moveTooltip: (event) => this.moveExtensionTooltip(event),
+      hideTooltip: () => this.hideExtensionTooltip(),
+      onOpen: (ui) => this.closeExtensionSettingMenus(ui),
+    });
+    categoryPanels.get('animation').appendChild(this.jellyShaderSettingsUi.create());
+
     categoryPanels.get('text').append(
       this.createExtensionSwitchRow({
         id: 'config-switch-watermark',
@@ -1047,7 +1062,12 @@ export class MenuFeature {
   }
 
   closeExtensionSettingMenus(except = null) {
-    for (const ui of [this.virusMotherCellSettingsUi, this.gameBackgroundSettingsUi, this.virusPelletColorSettingsUi]) {
+    for (const ui of [
+      this.virusMotherCellSettingsUi,
+      this.gameBackgroundSettingsUi,
+      this.virusPelletColorSettingsUi,
+      this.jellyShaderSettingsUi,
+    ]) {
       if (ui && ui !== except) {
         ui.setOpen?.(false);
       }
@@ -1218,6 +1238,7 @@ export class MenuFeature {
       hideAdminMd.checked = isHideAdminMdEnabled(this.storage);
     }
 
+    this.jellyShaderSettingsUi?.sync?.();
     this.syncAdminSettingVisibility(panel);
   }
 

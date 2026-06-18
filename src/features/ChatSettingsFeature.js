@@ -14,6 +14,17 @@ import {
   setChatFontSizeEnabled,
 } from '../settings/RuntimeSettings.js';
 import {
+  HUD_INFO_DATA_MODES,
+  HUD_INFO_FONT_LIMITS,
+  HUD_INFO_LAYOUT_MODES,
+  HUD_INFO_POSITION_MODES,
+  HUD_INFO_STYLE_MODES,
+  hudInfoModeLabel,
+  nextHudInfoMode,
+  readHudInfoSettings,
+  saveHudInfoSettings,
+} from '../settings/HudInfoSettings.js';
+import {
   CAPTCHA_LOGO_HIDDEN_KEY,
   CHAT_BACKGROUND_KEYS,
   CHAT_OUTLINE_KEYS,
@@ -93,6 +104,7 @@ export class ChatSettingsFeature {
     this.unsubscribeHotkeys = this.hotkeyStore?.subscribe?.(() => this.syncHotkeyUi()) || null;
     this.applyChatFontSize();
     this.applyAnimationSpeed();
+    this.applyHudInfo();
     this.watchPage();
     return true;
   }
@@ -115,6 +127,7 @@ export class ChatSettingsFeature {
     if (this.root?.parentNode) {
       this.ensureHotkeyLauncher();
       this.ensureAnimationSpeedLauncher();
+      this.ensureHudInfoLauncher();
       this.syncChatWrapper();
       this.positionUi();
       return;
@@ -137,14 +150,16 @@ export class ChatSettingsFeature {
     const mutedButton = this.createCategoryButton('Muted-Players', 'muted');
     const hotkeyButton = this.createCategoryButton('HotKey', 'hotkey');
     const animationButton = this.createCategoryButton('Anim-Speed', 'animation');
+    const hudButton = this.createCategoryButton('HUD-Info', 'hud-info');
     const captchaButton = this.createCategoryButton('Captcha-Logo', 'captcha');
     const leaderboardButton = this.createCategoryButton('Leaderboard-Settings', 'leaderboard');
-    panel.append(chatButton, mutedButton, hotkeyButton, animationButton, captchaButton, leaderboardButton);
+    panel.append(chatButton, mutedButton, hotkeyButton, animationButton, hudButton, captchaButton, leaderboardButton);
 
     const chatCategory = this.createChatCategory();
     const mutedCategory = this.createMutedPlayersCategory();
     const hotkeyCategory = this.createHotkeyCategory();
     const animationCategory = this.createAnimationSpeedCategory();
+    const hudCategory = this.createHudInfoCategory();
     const captchaCategory = this.createCaptchaCategory();
     const leaderboardCategory = this.createLeaderboardCategory();
     root.append(
@@ -154,6 +169,7 @@ export class ChatSettingsFeature {
       mutedCategory,
       hotkeyCategory,
       animationCategory,
+      hudCategory,
       captchaCategory,
       leaderboardCategory,
     );
@@ -173,12 +189,14 @@ export class ChatSettingsFeature {
     this.bindCategoryButton(mutedButton);
     this.bindCategoryButton(hotkeyButton);
     this.bindCategoryButton(animationButton);
+    this.bindCategoryButton(hudButton);
     this.bindCategoryButton(captchaButton);
     this.bindCategoryButton(leaderboardButton);
 
     this.bindChatCategory(chatCategory);
     this.bindCaptchaCategory(captchaCategory);
     this.bindAnimationSpeedCategory(animationCategory);
+    this.bindHudInfoCategory(hudCategory);
     this.bindLeaderboardCategory(leaderboardCategory);
 
     const muteToggle = mutedCategory.querySelector('.blobio-muted-players-toggle');
@@ -443,6 +461,24 @@ export class ChatSettingsFeature {
     return button;
   }
 
+  ensureHudInfoLauncher() {
+    const panel = this.root?.querySelector?.('.blobio-chat-settings-panel');
+    if (!panel) {
+      return null;
+    }
+
+    let button = Array.from(panel.querySelectorAll?.('.blobio-chat-settings-category-button') || [])
+      .find((item) => item.dataset.category === 'hud-info');
+    if (!button) {
+      button = this.createCategoryButton('HUD-Info', 'hud-info');
+      const animation = panel.querySelector('.blobio-chat-settings-category-button[data-category="animation"]');
+      panel.insertBefore(button, animation?.nextSibling || null);
+    }
+
+    this.bindCategoryButton(button);
+    return button;
+  }
+
   createChatCategory() {
     const category = this.document.createElement('div');
     category.classList.add('blobio-chat-settings-category', 'blobio-chat-appearance-category');
@@ -692,6 +728,117 @@ export class ChatSettingsFeature {
     return category;
   }
 
+  createHudInfoCategory() {
+    const category = this.document.createElement('div');
+    category.classList.add('blobio-chat-settings-category', 'blobio-hud-info-category');
+    category.dataset.category = 'hud-info';
+
+    category.append(
+      this.createBooleanSetting('hud-info-enabled', 'HUD-text on screen'),
+      this.createBooleanSetting('hud-info-fps', 'FPS'),
+      this.createBooleanSetting('hud-info-score', 'Score'),
+      this.createBooleanSetting('hud-info-cells', 'Cells'),
+      this.createBooleanSetting('hud-info-ping', 'Ping'),
+      this.createHudModeSetting('hud-position', 'Position'),
+      this.createHudModeSetting('hud-layout', 'Layout'),
+      this.createHudModeSetting('hud-style', 'Style'),
+      this.createHudModeSetting('hud-fps-mode', 'FPS mode'),
+      this.createHudModeSetting('hud-score-mode', 'Score mode'),
+      this.createHudModeSetting('hud-ping-mode', 'Ping mode'),
+      this.createHudSizeSetting(),
+      this.createHudColorSetting(),
+    );
+    return category;
+  }
+
+  createHudModeSetting(name, labelText) {
+    const group = this.document.createElement('div');
+    group.classList.add('blobio-ui-setting-group', 'blobio-hud-mode-setting');
+    group.dataset.setting = name;
+
+    const label = this.document.createElement('div');
+    label.classList.add('blobio-chat-font-label');
+    label.textContent = labelText;
+
+    const button = this.document.createElement('button');
+    button.type = 'button';
+    button.classList.add('blobio-hud-mode-button');
+    button.setAttribute('aria-label', labelText);
+
+    group.append(label, button);
+    return group;
+  }
+
+  createHudSizeSetting() {
+    const group = this.document.createElement('div');
+    group.classList.add('blobio-ui-setting-group', 'blobio-hud-size-setting');
+    group.dataset.setting = 'hud-font-size';
+
+    const label = this.document.createElement('div');
+    label.classList.add('blobio-chat-font-label');
+    label.textContent = 'HUD Font-Size';
+
+    const controls = this.document.createElement('div');
+    controls.classList.add('blobio-chat-font-controls');
+
+    const range = this.document.createElement('input');
+    range.type = 'range';
+    range.classList.add('blobio-chat-font-range', 'blobio-themed-range');
+    range.min = String(HUD_INFO_FONT_LIMITS.min);
+    range.max = String(HUD_INFO_FONT_LIMITS.max);
+    range.step = '1';
+
+    const number = this.document.createElement('input');
+    number.type = 'number';
+    number.classList.add('blobio-chat-font-number');
+    number.min = String(HUD_INFO_FONT_LIMITS.min);
+    number.max = String(HUD_INFO_FONT_LIMITS.max);
+    number.step = '1';
+    number.setAttribute('aria-label', 'HUD font size');
+
+    controls.append(range, number);
+    group.append(label, controls);
+    return group;
+  }
+
+  createHudColorSetting() {
+    const group = this.document.createElement('div');
+    group.classList.add('blobio-ui-setting-group', 'blobio-hud-color-setting');
+    group.dataset.setting = 'hud-color';
+
+    const label = this.document.createElement('div');
+    label.classList.add('blobio-chat-font-label');
+    label.textContent = 'HUD Text-Color';
+
+    const controls = this.document.createElement('div');
+    controls.classList.add('blobio-ui-color-controls');
+
+    const wheel = this.document.createElement('label');
+    wheel.classList.add('blobio-ui-color-wheel');
+    const swatch = this.document.createElement('span');
+    swatch.classList.add('blobio-ui-color-swatch');
+    const color = this.document.createElement('input');
+    color.type = 'color';
+    color.classList.add('blobio-ui-color-input');
+    color.setAttribute('aria-label', 'HUD text color');
+    wheel.append(swatch, color);
+
+    const alpha = this.document.createElement('input');
+    alpha.type = 'range';
+    alpha.min = '0';
+    alpha.max = '1';
+    alpha.step = '0.01';
+    alpha.classList.add('blobio-ui-alpha-range', 'blobio-themed-range');
+    alpha.setAttribute('aria-label', 'HUD text alpha');
+
+    const alphaValue = this.document.createElement('span');
+    alphaValue.classList.add('blobio-ui-alpha-value');
+
+    controls.append(wheel, alpha, alphaValue);
+    group.append(label, controls);
+    return group;
+  }
+
   bindChatCategory(category) {
     const font = category.querySelector('[data-setting="chat"]');
     const fontToggle = font.querySelector('.blobio-setting-toggle');
@@ -812,6 +959,74 @@ export class ChatSettingsFeature {
     });
   }
 
+  bindHudInfoCategory(category) {
+    const booleanBindings = [
+      ['hud-info-enabled', 'enabled'],
+      ['hud-info-fps', 'showFps'],
+      ['hud-info-score', 'showScore'],
+      ['hud-info-cells', 'showCells'],
+      ['hud-info-ping', 'showPing'],
+    ];
+
+    for (const [settingName, key] of booleanBindings) {
+      const toggle = category.querySelector(`[data-setting="${settingName}"] .blobio-setting-toggle`);
+      toggle?.addEventListener('click', () => {
+        const current = readHudInfoSettings(this.storage);
+        saveHudInfoSettings(this.storage, { ...current, [key]: !current[key] });
+        this.syncVisualSettingsUi();
+        this.applyHudInfo();
+      });
+    }
+
+    this.bindHudModeButton(category, 'hud-position', 'positionMode', HUD_INFO_POSITION_MODES);
+    this.bindHudModeButton(category, 'hud-layout', 'layoutMode', HUD_INFO_LAYOUT_MODES);
+    this.bindHudModeButton(category, 'hud-style', 'styleMode', HUD_INFO_STYLE_MODES);
+    this.bindHudModeButton(category, 'hud-fps-mode', 'fpsMode', HUD_INFO_DATA_MODES);
+    this.bindHudModeButton(category, 'hud-score-mode', 'scoreMode', HUD_INFO_DATA_MODES);
+    this.bindHudModeButton(category, 'hud-ping-mode', 'pingMode', HUD_INFO_DATA_MODES);
+
+    const sizeGroup = category.querySelector('[data-setting="hud-font-size"]');
+    const range = sizeGroup.querySelector('.blobio-chat-font-range');
+    const number = sizeGroup.querySelector('.blobio-chat-font-number');
+    const updateSize = (value) => {
+      const current = readHudInfoSettings(this.storage);
+      const next = saveHudInfoSettings(this.storage, { ...current, fontSize: value });
+      range.value = String(next.fontSize);
+      number.value = String(next.fontSize);
+      this.applyHudInfo();
+    };
+    range.addEventListener('input', () => updateSize(range.value));
+    number.addEventListener('input', () => updateSize(number.value));
+    number.addEventListener('change', () => updateSize(number.value));
+
+    const colorGroup = category.querySelector('[data-setting="hud-color"]');
+    const color = colorGroup.querySelector('.blobio-ui-color-input');
+    const alpha = colorGroup.querySelector('.blobio-ui-alpha-range');
+    color.addEventListener('input', () => {
+      const current = readHudInfoSettings(this.storage);
+      saveHudInfoSettings(this.storage, { ...current, color: color.value });
+      this.syncVisualSettingsUi();
+      this.applyHudInfo();
+    });
+    alpha.addEventListener('input', () => {
+      const current = readHudInfoSettings(this.storage);
+      saveHudInfoSettings(this.storage, { ...current, alpha: alpha.value });
+      this.syncVisualSettingsUi();
+      this.applyHudInfo();
+    });
+  }
+
+  bindHudModeButton(category, settingName, key, options) {
+    const button = category.querySelector(`[data-setting="${settingName}"] .blobio-hud-mode-button`);
+    button?.addEventListener('click', () => {
+      const current = readHudInfoSettings(this.storage);
+      const value = nextHudInfoMode(current[key], options);
+      saveHudInfoSettings(this.storage, { ...current, [key]: value });
+      this.syncVisualSettingsUi();
+      this.applyHudInfo();
+    });
+  }
+
   bindColorSetting(category, name, keys, defaults) {
     const group = category.querySelector(`[data-setting="${name}"]`);
     const toggle = group.querySelector('.blobio-setting-toggle');
@@ -839,6 +1054,7 @@ export class ChatSettingsFeature {
   applyRuntimeUi() {
     this.applyChatFontSize();
     this.applyAnimationSpeed();
+    this.applyHudInfo();
     this.uiCustomization?.applyAll?.();
   }
 
@@ -852,6 +1068,11 @@ export class ChatSettingsFeature {
     });
   }
 
+  applyHudInfo() {
+    const win = this.document.defaultView || globalThis;
+    win.__blobioHudInfoRefresh?.(readHudInfoSettings(this.storage));
+  }
+
   setOpen(open) {
     if (!this.root) {
       return;
@@ -860,6 +1081,7 @@ export class ChatSettingsFeature {
     if (open) {
       this.ensureHotkeyLauncher();
       this.ensureAnimationSpeedLauncher();
+      this.ensureHudInfoLauncher();
     }
 
     const toggle = this.root.querySelector('.blobio-chat-settings-toggle');
@@ -924,6 +1146,7 @@ export class ChatSettingsFeature {
     this.syncColorSetting('leaderboard-background', settings.leaderboardBackground);
     this.syncColorSetting('leaderboard-outline', settings.leaderboardOutline);
     this.syncAnimationSpeedSetting(getAnimationSpeedSetting(this.storage));
+    this.syncHudInfoSetting(readHudInfoSettings(this.storage));
     this.syncBooleanSetting('smooth-chat', settings.smoothChat);
     this.syncBooleanSetting('captcha-logo', settings.hideCaptchaLogo);
 
@@ -943,6 +1166,8 @@ export class ChatSettingsFeature {
       ?.classList.toggle('has-active-setting', leaderboardActive);
     this.root.querySelector('.blobio-chat-settings-category-button[data-category="animation"]')
       ?.classList.toggle('has-active-setting', getAnimationSpeedSetting(this.storage).enabled);
+    this.root.querySelector('.blobio-chat-settings-category-button[data-category="hud-info"]')
+      ?.classList.toggle('has-active-setting', readHudInfoSettings(this.storage).enabled);
   }
 
   syncAnimationSpeedSetting(setting) {
@@ -965,6 +1190,62 @@ export class ChatSettingsFeature {
     slider.value = String(setting.slider);
     value.textContent = `${setting.speed.toFixed(1)}x`;
     group.classList.toggle('is-disabled', !setting.enabled);
+  }
+
+  syncHudInfoSetting(setting) {
+    this.syncBooleanSetting('hud-info-enabled', setting.enabled);
+    this.syncBooleanSetting('hud-info-fps', setting.showFps);
+    this.syncBooleanSetting('hud-info-score', setting.showScore);
+    this.syncBooleanSetting('hud-info-cells', setting.showCells);
+    this.syncBooleanSetting('hud-info-ping', setting.showPing);
+    this.syncHudModeSetting('hud-position', setting.positionMode, HUD_INFO_POSITION_MODES);
+    this.syncHudModeSetting('hud-layout', setting.layoutMode, HUD_INFO_LAYOUT_MODES);
+    this.syncHudModeSetting('hud-style', setting.styleMode, HUD_INFO_STYLE_MODES);
+    this.syncHudModeSetting('hud-fps-mode', setting.fpsMode, HUD_INFO_DATA_MODES);
+    this.syncHudModeSetting('hud-score-mode', setting.scoreMode, HUD_INFO_DATA_MODES);
+    this.syncHudModeSetting('hud-ping-mode', setting.pingMode, HUD_INFO_DATA_MODES);
+
+    const sizeGroup = this.root?.querySelector('[data-setting="hud-font-size"]');
+    const range = sizeGroup?.querySelector('.blobio-chat-font-range');
+    const number = sizeGroup?.querySelector('.blobio-chat-font-number');
+    if (range) {
+      range.value = String(setting.fontSize);
+    }
+    if (number) {
+      number.value = String(setting.fontSize);
+    }
+
+    const colorGroup = this.root?.querySelector('[data-setting="hud-color"]');
+    const color = colorGroup?.querySelector('.blobio-ui-color-input');
+    const swatch = colorGroup?.querySelector('.blobio-ui-color-swatch');
+    const alpha = colorGroup?.querySelector('.blobio-ui-alpha-range');
+    const alphaValue = colorGroup?.querySelector('.blobio-ui-alpha-value');
+    if (color) {
+      color.value = setting.color;
+    }
+    if (swatch) {
+      swatch.style.backgroundColor = setting.color;
+    }
+    if (alpha) {
+      alpha.value = String(setting.alpha);
+    }
+    if (alphaValue) {
+      alphaValue.textContent = `${Math.round(setting.alpha * 100)}%`;
+    }
+
+    const category = this.root?.querySelector('.blobio-chat-settings-category[data-category="hud-info"]');
+    category?.classList.toggle('is-disabled', !setting.enabled);
+  }
+
+  syncHudModeSetting(name, value, options) {
+    const button = this.root?.querySelector(`[data-setting="${name}"] .blobio-hud-mode-button`);
+    if (!button) {
+      return;
+    }
+    button.textContent = hudInfoModeLabel(value, options);
+    button.dataset.mode = value;
+    button.classList.toggle('is-advanced', value === 'advanced');
+    button.classList.toggle('is-dev', value === 'dev');
   }
 
   syncFontSetting(name, setting) {

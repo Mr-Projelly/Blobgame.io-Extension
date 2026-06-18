@@ -8,6 +8,8 @@ const outputFile = resolve(rootDir, 'dist/blobio-extension.bundle.js');
 const loaderFile = resolve(rootDir, 'loader/blobio-loader.user.js');
 const virusRuntimeFile = resolve(rootDir, 'src/virus/pageVirusMotherCellBootstrap.js');
 const virusPelletColorRuntimeFile = resolve(rootDir, 'src/cellColors/pageVirusPelletColorsBootstrap.js');
+const jellyShaderRuntimeFile = resolve(rootDir, 'src/jelly/pageJellyShaderBootstrap.js');
+const hudInfoRuntimeFile = resolve(rootDir, 'src/hud/pageHudInfoBootstrap.js');
 const virusAssetFiles = {
   halo: resolve(rootDir, 'assets/virus_glow_1 _mask.png'),
   rotate: resolve(rootDir, 'assets/viurs_glow_2_random_rotate_mask.png'),
@@ -34,6 +36,8 @@ const [
   loaderSource,
   runtimeSource,
   virusPelletColorRuntimeSource,
+  jellyShaderRuntimeSource,
+  hudInfoRuntimeSource,
   virusHalo,
   virusRotate,
   virusRing,
@@ -41,10 +45,29 @@ const [
   readFile(loaderFile, 'utf8'),
   readFile(virusRuntimeFile, 'utf8'),
   readFile(virusPelletColorRuntimeFile, 'utf8'),
+  readFile(jellyShaderRuntimeFile, 'utf8'),
+  readFile(hudInfoRuntimeFile, 'utf8'),
   readFile(virusAssetFiles.halo),
   readFile(virusAssetFiles.rotate),
   readFile(virusAssetFiles.ring),
 ]);
+
+function embedRuntime(loader, startMarker, endMarker, source, exportName) {
+  const startIndex = loader.indexOf(startMarker);
+  const endIndex = loader.indexOf(endMarker);
+  if (startIndex === -1 || endIndex === -1 || endIndex < startIndex) {
+    throw new Error(`${exportName} runtime markers are missing from the loader.`);
+  }
+
+  const embedded = source
+    .replace(new RegExp(`export\\s+function\\s+${exportName}`), `function ${exportName}`)
+    .trim()
+    .split('\n')
+    .map((line) => `  ${line}`)
+    .join('\n');
+
+  return `${loader.slice(0, startIndex)}${startMarker}\n${embedded}\n${endMarker}${loader.slice(endIndex + endMarker.length)}`;
+}
 
 const runtimeStartMarker = '  /* VIRUS_RUNTIME_START */';
 const runtimeEndMarker = '  /* VIRUS_RUNTIME_END */';
@@ -83,6 +106,22 @@ const embeddedVirusPelletColorRuntime = virusPelletColorRuntimeSource
   .join('\n');
 
 nextLoader = `${nextLoader.slice(0, virusPelletColorRuntimeStartIndex)}${virusPelletColorRuntimeStartMarker}\n${embeddedVirusPelletColorRuntime}\n${virusPelletColorRuntimeEndMarker}${nextLoader.slice(virusPelletColorRuntimeEndIndex + virusPelletColorRuntimeEndMarker.length)}`;
+
+nextLoader = embedRuntime(
+  nextLoader,
+  '  /* JELLY_SHADER_RUNTIME_START */',
+  '  /* JELLY_SHADER_RUNTIME_END */',
+  jellyShaderRuntimeSource,
+  'pageJellyShaderBootstrap',
+);
+
+nextLoader = embedRuntime(
+  nextLoader,
+  '  /* HUD_INFO_RUNTIME_START */',
+  '  /* HUD_INFO_RUNTIME_END */',
+  hudInfoRuntimeSource,
+  'pageHudInfoBootstrap',
+);
 
 const assetStartMarker = '  /* VIRUS_ASSETS_START */';
 const assetEndMarker = '  /* VIRUS_ASSETS_END */';

@@ -2538,7 +2538,8 @@ html.${this.className} body::before {
 }
 
 .blobio-chat-appearance-category,
-.blobio-leaderboard-category {
+.blobio-leaderboard-category,
+.blobio-hud-info-category {
   display: block;
 }
 
@@ -2695,6 +2696,53 @@ html.${this.className} body::before {
 }
 
 .blobio-animation-speed-setting.is-disabled .blobio-animation-speed-controls {
+  opacity: 0.68;
+}
+
+.blobio-hud-mode-setting {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.blobio-hud-mode-button {
+  width: 100%;
+  min-height: 28px;
+  border: 1px solid rgba(147, 255, 177, 0.58);
+  border-radius: 6px;
+  background: rgba(0, 22, 13, 0.84);
+  color: #ecfff1;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: inset 0 0 8px rgba(79, 255, 130, 0.12), 0 0 9px rgba(79, 255, 130, 0.2);
+}
+
+.blobio-hud-mode-button:hover,
+.blobio-hud-mode-button:focus-visible {
+  border-color: rgba(196, 255, 211, 0.82);
+  background: rgba(5, 48, 25, 0.92);
+}
+
+.blobio-hud-mode-button[data-mode="advanced"] {
+  border-color: rgba(255, 224, 95, 0.86);
+  background: rgba(58, 45, 4, 0.9);
+  color: #fff1a6;
+  box-shadow: inset 0 0 8px rgba(255, 217, 76, 0.16), 0 0 10px rgba(255, 217, 76, 0.22);
+}
+
+.blobio-hud-mode-button[data-mode="dev"] {
+  border-color: rgba(255, 109, 109, 0.84);
+  background: rgba(62, 8, 8, 0.9);
+  color: #ffd1d1;
+  box-shadow: inset 0 0 8px rgba(255, 82, 82, 0.16), 0 0 10px rgba(255, 82, 82, 0.24);
+}
+
+.blobio-hud-size-setting,
+.blobio-hud-color-setting {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.blobio-hud-info-category.is-disabled .blobio-ui-setting-group:not([data-setting="hud-info-enabled"]) {
   opacity: 0.68;
 }
 
@@ -3303,6 +3351,161 @@ iframe.blobio-captcha-anchor-hidden,
     max: MAX_ANIMATION_SPEED_SLIDER
   };
 
+  // src/settings/HudInfoSettings.js
+  var HUD_INFO_KEYS = {
+    enabled: "blobio.chat.hudInfo.enabled",
+    showFps: "blobio.chat.hudInfo.showFps",
+    showScore: "blobio.chat.hudInfo.showScore",
+    showCells: "blobio.chat.hudInfo.showCells",
+    showPing: "blobio.chat.hudInfo.showPing",
+    positionMode: "blobio.chat.hudInfo.positionMode",
+    layoutMode: "blobio.chat.hudInfo.layoutMode",
+    styleMode: "blobio.chat.hudInfo.styleMode",
+    fpsMode: "blobio.chat.hudInfo.fpsMode",
+    scoreMode: "blobio.chat.hudInfo.scoreMode",
+    pingMode: "blobio.chat.hudInfo.pingMode",
+    fontSize: "blobio.chat.hudInfo.fontSize",
+    color: "blobio.chat.hudInfo.color",
+    alpha: "blobio.chat.hudInfo.alpha"
+  };
+  var HUD_INFO_POSITION_MODES = [
+    ["top-left", "Top-Left"],
+    ["top-center", "Top-Center"],
+    ["top-right", "Top-Right"],
+    ["bottom-left", "Bottom-Left"],
+    ["bottom-center", "Bottom-Center"],
+    ["bottom-right", "Bottom-Right"]
+  ];
+  var HUD_INFO_LAYOUT_MODES = [
+    ["below", "Below"],
+    ["line", "Line"]
+  ];
+  var HUD_INFO_STYLE_MODES = [
+    ["simple", "Simple"],
+    ["solid", "Solid"]
+  ];
+  var HUD_INFO_DATA_MODES = [
+    ["default", "Default"],
+    ["advanced", "Advanced"],
+    ["dev", "DEV"]
+  ];
+  var HUD_INFO_FONT_LIMITS = {
+    min: 10,
+    max: 32,
+    defaultValue: 17
+  };
+  var DEFAULT_HUD_INFO_SETTINGS = Object.freeze({
+    enabled: true,
+    showFps: true,
+    showScore: true,
+    showCells: true,
+    showPing: true,
+    positionMode: "top-left",
+    layoutMode: "below",
+    styleMode: "simple",
+    fpsMode: "default",
+    scoreMode: "default",
+    pingMode: "default",
+    fontSize: HUD_INFO_FONT_LIMITS.defaultValue,
+    color: "#ffffff",
+    alpha: 1
+  });
+  function readBoolean(storage, key, fallback) {
+    try {
+      const value = storage?.getItem?.(key);
+      if (value === null || value === void 0 || value === "") {
+        return fallback;
+      }
+      return value === "1" || String(value).toLowerCase() === "true";
+    } catch {
+      return fallback;
+    }
+  }
+  function normalizeColor3(value, fallback = DEFAULT_HUD_INFO_SETTINGS.color) {
+    const color = String(value || "").trim().toLowerCase();
+    return /^#[0-9a-f]{6}$/.test(color) ? color : fallback;
+  }
+  function normalizeAlpha3(value, fallback = DEFAULT_HUD_INFO_SETTINGS.alpha) {
+    if (value === null || value === void 0 || value === "") {
+      return fallback;
+    }
+    const alpha = Number(value);
+    return Number.isFinite(alpha) ? Math.max(0, Math.min(1, alpha)) : fallback;
+  }
+  function normalizeFontSize(value) {
+    const size = Math.round(Number(value) || HUD_INFO_FONT_LIMITS.defaultValue);
+    return Math.max(HUD_INFO_FONT_LIMITS.min, Math.min(HUD_INFO_FONT_LIMITS.max, size));
+  }
+  function normalizeMode(value, options, fallback) {
+    const mode = String(value || "").trim().toLowerCase();
+    return options.some(([key]) => key === mode) ? mode : fallback;
+  }
+  function hudInfoModeLabel(value, options) {
+    return options.find(([key]) => key === value)?.[1] || options[0]?.[1] || "";
+  }
+  function nextHudInfoMode(value, options) {
+    const index = Math.max(0, options.findIndex(([key]) => key === value));
+    return options[(index + 1) % options.length]?.[0] || options[0]?.[0] || "";
+  }
+  function normalizeHudInfoSettings(settings = {}) {
+    const source = settings && typeof settings === "object" ? settings : {};
+    return {
+      enabled: source.enabled === void 0 ? DEFAULT_HUD_INFO_SETTINGS.enabled : Boolean(source.enabled),
+      showFps: source.showFps === void 0 ? DEFAULT_HUD_INFO_SETTINGS.showFps : Boolean(source.showFps),
+      showScore: source.showScore === void 0 ? DEFAULT_HUD_INFO_SETTINGS.showScore : Boolean(source.showScore),
+      showCells: source.showCells === void 0 ? DEFAULT_HUD_INFO_SETTINGS.showCells : Boolean(source.showCells),
+      showPing: source.showPing === void 0 ? DEFAULT_HUD_INFO_SETTINGS.showPing : Boolean(source.showPing),
+      positionMode: normalizeMode(source.positionMode, HUD_INFO_POSITION_MODES, DEFAULT_HUD_INFO_SETTINGS.positionMode),
+      layoutMode: normalizeMode(source.layoutMode, HUD_INFO_LAYOUT_MODES, DEFAULT_HUD_INFO_SETTINGS.layoutMode),
+      styleMode: normalizeMode(source.styleMode, HUD_INFO_STYLE_MODES, DEFAULT_HUD_INFO_SETTINGS.styleMode),
+      fpsMode: normalizeMode(source.fpsMode, HUD_INFO_DATA_MODES, DEFAULT_HUD_INFO_SETTINGS.fpsMode),
+      scoreMode: normalizeMode(source.scoreMode, HUD_INFO_DATA_MODES, DEFAULT_HUD_INFO_SETTINGS.scoreMode),
+      pingMode: normalizeMode(source.pingMode, HUD_INFO_DATA_MODES, DEFAULT_HUD_INFO_SETTINGS.pingMode),
+      fontSize: normalizeFontSize(source.fontSize),
+      color: normalizeColor3(source.color),
+      alpha: normalizeAlpha3(source.alpha)
+    };
+  }
+  function readHudInfoSettings(storage) {
+    return normalizeHudInfoSettings({
+      enabled: readBoolean(storage, HUD_INFO_KEYS.enabled, DEFAULT_HUD_INFO_SETTINGS.enabled),
+      showFps: readBoolean(storage, HUD_INFO_KEYS.showFps, DEFAULT_HUD_INFO_SETTINGS.showFps),
+      showScore: readBoolean(storage, HUD_INFO_KEYS.showScore, DEFAULT_HUD_INFO_SETTINGS.showScore),
+      showCells: readBoolean(storage, HUD_INFO_KEYS.showCells, DEFAULT_HUD_INFO_SETTINGS.showCells),
+      showPing: readBoolean(storage, HUD_INFO_KEYS.showPing, DEFAULT_HUD_INFO_SETTINGS.showPing),
+      positionMode: storage?.getItem?.(HUD_INFO_KEYS.positionMode),
+      layoutMode: storage?.getItem?.(HUD_INFO_KEYS.layoutMode),
+      styleMode: storage?.getItem?.(HUD_INFO_KEYS.styleMode),
+      fpsMode: storage?.getItem?.(HUD_INFO_KEYS.fpsMode),
+      scoreMode: storage?.getItem?.(HUD_INFO_KEYS.scoreMode),
+      pingMode: storage?.getItem?.(HUD_INFO_KEYS.pingMode),
+      fontSize: storage?.getItem?.(HUD_INFO_KEYS.fontSize),
+      color: storage?.getItem?.(HUD_INFO_KEYS.color),
+      alpha: storage?.getItem?.(HUD_INFO_KEYS.alpha)
+    });
+  }
+  function saveHudInfoSettings(storage, settings) {
+    const next = normalizeHudInfoSettings(settings);
+    try {
+      storage?.setItem?.(HUD_INFO_KEYS.enabled, next.enabled ? "1" : "0");
+      storage?.setItem?.(HUD_INFO_KEYS.showFps, next.showFps ? "1" : "0");
+      storage?.setItem?.(HUD_INFO_KEYS.showScore, next.showScore ? "1" : "0");
+      storage?.setItem?.(HUD_INFO_KEYS.showCells, next.showCells ? "1" : "0");
+      storage?.setItem?.(HUD_INFO_KEYS.showPing, next.showPing ? "1" : "0");
+      storage?.setItem?.(HUD_INFO_KEYS.positionMode, next.positionMode);
+      storage?.setItem?.(HUD_INFO_KEYS.layoutMode, next.layoutMode);
+      storage?.setItem?.(HUD_INFO_KEYS.styleMode, next.styleMode);
+      storage?.setItem?.(HUD_INFO_KEYS.fpsMode, next.fpsMode);
+      storage?.setItem?.(HUD_INFO_KEYS.scoreMode, next.scoreMode);
+      storage?.setItem?.(HUD_INFO_KEYS.pingMode, next.pingMode);
+      storage?.setItem?.(HUD_INFO_KEYS.fontSize, String(next.fontSize));
+      storage?.setItem?.(HUD_INFO_KEYS.color, next.color);
+      storage?.setItem?.(HUD_INFO_KEYS.alpha, String(next.alpha));
+    } catch {
+    }
+    return next;
+  }
+
   // src/settings/InGameUiSettings.js
   var CAPTCHA_LOGO_HIDDEN_KEY = "blobio.chat.hideCaptchaLogo";
   var SMOOTH_CHAT_KEY = "blobio.chat.smoothChat";
@@ -3351,7 +3554,7 @@ iframe.blobio-captcha-anchor-hidden,
     leaderboardBackground: { enabled: false, color: "#000000", alpha: 0.72 },
     leaderboardOutline: { enabled: false, color: "#53ff82", alpha: 0.72 }
   };
-  function readBoolean(storage, key, fallback) {
+  function readBoolean2(storage, key, fallback) {
     try {
       const value = storage?.getItem?.(key);
       if (value === null || value === void 0 || value === "") {
@@ -3369,15 +3572,15 @@ iframe.blobio-captcha-anchor-hidden,
     }
     return Boolean(enabled);
   }
-  function normalizeColor3(value, fallback) {
+  function normalizeColor4(value, fallback) {
     const color = String(value || "").trim().toLowerCase();
     return /^#[0-9a-f]{6}$/.test(color) ? color : fallback;
   }
-  function normalizeAlpha3(value, fallback) {
+  function normalizeAlpha4(value, fallback) {
     const alpha = Number(value);
     return Number.isFinite(alpha) ? Math.max(0, Math.min(1, alpha)) : fallback;
   }
-  function normalizeFontSize(value) {
+  function normalizeFontSize2(value) {
     const size = Math.round(Number(value) || UI_FONT_SIZE_LIMITS.defaultValue);
     return Math.max(UI_FONT_SIZE_LIMITS.min, Math.min(UI_FONT_SIZE_LIMITS.max, size));
   }
@@ -3386,7 +3589,7 @@ iframe.blobio-captcha-anchor-hidden,
     return Number.isFinite(size) && size >= min ? Math.min(max, size) : null;
   }
   function getBooleanSetting(storage, key, fallback = false) {
-    return readBoolean(storage, key, fallback);
+    return readBoolean2(storage, key, fallback);
   }
   function setBooleanSetting(storage, key, enabled) {
     return writeBoolean(storage, key, enabled);
@@ -3396,12 +3599,12 @@ iframe.blobio-captcha-anchor-hidden,
     let color = fallback.color;
     let alpha = fallback.alpha;
     try {
-      color = normalizeColor3(storage?.getItem?.(keys.color), fallback.color);
-      alpha = normalizeAlpha3(storage?.getItem?.(keys.alpha), fallback.alpha);
+      color = normalizeColor4(storage?.getItem?.(keys.color), fallback.color);
+      alpha = normalizeAlpha4(storage?.getItem?.(keys.alpha), fallback.alpha);
     } catch {
     }
     return {
-      enabled: readBoolean(storage, keys.enabled, fallback.enabled),
+      enabled: readBoolean2(storage, keys.enabled, fallback.enabled),
       color,
       alpha
     };
@@ -3410,8 +3613,8 @@ iframe.blobio-captcha-anchor-hidden,
     const current = getColorSetting(storage, keys, defaults);
     const next = {
       enabled: changes.enabled === void 0 ? current.enabled : Boolean(changes.enabled),
-      color: normalizeColor3(changes.color ?? current.color, current.color),
-      alpha: normalizeAlpha3(changes.alpha ?? current.alpha, current.alpha)
+      color: normalizeColor4(changes.color ?? current.color, current.color),
+      alpha: normalizeAlpha4(changes.alpha ?? current.alpha, current.alpha)
     };
     try {
       storage?.setItem?.(keys.enabled, next.enabled ? "1" : "0");
@@ -3424,11 +3627,11 @@ iframe.blobio-captcha-anchor-hidden,
   function getLeaderboardFontSetting(storage) {
     let value = UI_FONT_SIZE_LIMITS.defaultValue;
     try {
-      value = normalizeFontSize(storage?.getItem?.(LEADERBOARD_FONT_KEYS.value));
+      value = normalizeFontSize2(storage?.getItem?.(LEADERBOARD_FONT_KEYS.value));
     } catch {
     }
     return {
-      enabled: readBoolean(storage, LEADERBOARD_FONT_KEYS.enabled, false),
+      enabled: readBoolean2(storage, LEADERBOARD_FONT_KEYS.enabled, false),
       value
     };
   }
@@ -3436,7 +3639,7 @@ iframe.blobio-captcha-anchor-hidden,
     const current = getLeaderboardFontSetting(storage);
     const next = {
       enabled: changes.enabled === void 0 ? current.enabled : Boolean(changes.enabled),
-      value: changes.value === void 0 ? current.value : normalizeFontSize(changes.value)
+      value: changes.value === void 0 ? current.value : normalizeFontSize2(changes.value)
     };
     try {
       storage?.setItem?.(LEADERBOARD_FONT_KEYS.enabled, next.enabled ? "1" : "0");
@@ -3494,8 +3697,8 @@ iframe.blobio-captcha-anchor-hidden,
   }
   function readInGameUiSettings(storage) {
     return {
-      hideCaptchaLogo: readBoolean(storage, CAPTCHA_LOGO_HIDDEN_KEY, true),
-      smoothChat: readBoolean(storage, SMOOTH_CHAT_KEY, true),
+      hideCaptchaLogo: readBoolean2(storage, CAPTCHA_LOGO_HIDDEN_KEY, true),
+      smoothChat: readBoolean2(storage, SMOOTH_CHAT_KEY, true),
       chatBackground: getColorSetting(storage, CHAT_BACKGROUND_KEYS, DEFAULT_COLORS.chatBackground),
       chatOutline: getColorSetting(storage, CHAT_OUTLINE_KEYS, DEFAULT_COLORS.chatOutline),
       leaderboardBackground: getColorSetting(
@@ -3574,6 +3777,7 @@ iframe.blobio-captcha-anchor-hidden,
       this.unsubscribeHotkeys = this.hotkeyStore?.subscribe?.(() => this.syncHotkeyUi()) || null;
       this.applyChatFontSize();
       this.applyAnimationSpeed();
+      this.applyHudInfo();
       this.watchPage();
       return true;
     }
@@ -3593,6 +3797,7 @@ iframe.blobio-captcha-anchor-hidden,
       if (this.root?.parentNode) {
         this.ensureHotkeyLauncher();
         this.ensureAnimationSpeedLauncher();
+        this.ensureHudInfoLauncher();
         this.syncChatWrapper();
         this.positionUi();
         return;
@@ -3611,13 +3816,15 @@ iframe.blobio-captcha-anchor-hidden,
       const mutedButton = this.createCategoryButton("Muted-Players", "muted");
       const hotkeyButton = this.createCategoryButton("HotKey", "hotkey");
       const animationButton = this.createCategoryButton("Anim-Speed", "animation");
+      const hudButton = this.createCategoryButton("HUD-Info", "hud-info");
       const captchaButton = this.createCategoryButton("Captcha-Logo", "captcha");
       const leaderboardButton = this.createCategoryButton("Leaderboard-Settings", "leaderboard");
-      panel.append(chatButton, mutedButton, hotkeyButton, animationButton, captchaButton, leaderboardButton);
+      panel.append(chatButton, mutedButton, hotkeyButton, animationButton, hudButton, captchaButton, leaderboardButton);
       const chatCategory = this.createChatCategory();
       const mutedCategory = this.createMutedPlayersCategory();
       const hotkeyCategory = this.createHotkeyCategory();
       const animationCategory = this.createAnimationSpeedCategory();
+      const hudCategory = this.createHudInfoCategory();
       const captchaCategory = this.createCaptchaCategory();
       const leaderboardCategory = this.createLeaderboardCategory();
       root.append(
@@ -3627,6 +3834,7 @@ iframe.blobio-captcha-anchor-hidden,
         mutedCategory,
         hotkeyCategory,
         animationCategory,
+        hudCategory,
         captchaCategory,
         leaderboardCategory
       );
@@ -3643,11 +3851,13 @@ iframe.blobio-captcha-anchor-hidden,
       this.bindCategoryButton(mutedButton);
       this.bindCategoryButton(hotkeyButton);
       this.bindCategoryButton(animationButton);
+      this.bindCategoryButton(hudButton);
       this.bindCategoryButton(captchaButton);
       this.bindCategoryButton(leaderboardButton);
       this.bindChatCategory(chatCategory);
       this.bindCaptchaCategory(captchaCategory);
       this.bindAnimationSpeedCategory(animationCategory);
+      this.bindHudInfoCategory(hudCategory);
       this.bindLeaderboardCategory(leaderboardCategory);
       const muteToggle = mutedCategory.querySelector(".blobio-muted-players-toggle");
       const mutedList = mutedCategory.querySelector(".blobio-muted-players-list");
@@ -3863,6 +4073,20 @@ iframe.blobio-captcha-anchor-hidden,
       this.bindCategoryButton(button);
       return button;
     }
+    ensureHudInfoLauncher() {
+      const panel = this.root?.querySelector?.(".blobio-chat-settings-panel");
+      if (!panel) {
+        return null;
+      }
+      let button = Array.from(panel.querySelectorAll?.(".blobio-chat-settings-category-button") || []).find((item) => item.dataset.category === "hud-info");
+      if (!button) {
+        button = this.createCategoryButton("HUD-Info", "hud-info");
+        const animation = panel.querySelector('.blobio-chat-settings-category-button[data-category="animation"]');
+        panel.insertBefore(button, animation?.nextSibling || null);
+      }
+      this.bindCategoryButton(button);
+      return button;
+    }
     createChatCategory() {
       const category = this.document.createElement("div");
       category.classList.add("blobio-chat-settings-category", "blobio-chat-appearance-category");
@@ -4062,6 +4286,98 @@ iframe.blobio-captcha-anchor-hidden,
       category.appendChild(group);
       return category;
     }
+    createHudInfoCategory() {
+      const category = this.document.createElement("div");
+      category.classList.add("blobio-chat-settings-category", "blobio-hud-info-category");
+      category.dataset.category = "hud-info";
+      category.append(
+        this.createBooleanSetting("hud-info-enabled", "HUD-text on screen"),
+        this.createBooleanSetting("hud-info-fps", "FPS"),
+        this.createBooleanSetting("hud-info-score", "Score"),
+        this.createBooleanSetting("hud-info-cells", "Cells"),
+        this.createBooleanSetting("hud-info-ping", "Ping"),
+        this.createHudModeSetting("hud-position", "Position"),
+        this.createHudModeSetting("hud-layout", "Layout"),
+        this.createHudModeSetting("hud-style", "Style"),
+        this.createHudModeSetting("hud-fps-mode", "FPS mode"),
+        this.createHudModeSetting("hud-score-mode", "Score mode"),
+        this.createHudModeSetting("hud-ping-mode", "Ping mode"),
+        this.createHudSizeSetting(),
+        this.createHudColorSetting()
+      );
+      return category;
+    }
+    createHudModeSetting(name, labelText) {
+      const group = this.document.createElement("div");
+      group.classList.add("blobio-ui-setting-group", "blobio-hud-mode-setting");
+      group.dataset.setting = name;
+      const label = this.document.createElement("div");
+      label.classList.add("blobio-chat-font-label");
+      label.textContent = labelText;
+      const button = this.document.createElement("button");
+      button.type = "button";
+      button.classList.add("blobio-hud-mode-button");
+      button.setAttribute("aria-label", labelText);
+      group.append(label, button);
+      return group;
+    }
+    createHudSizeSetting() {
+      const group = this.document.createElement("div");
+      group.classList.add("blobio-ui-setting-group", "blobio-hud-size-setting");
+      group.dataset.setting = "hud-font-size";
+      const label = this.document.createElement("div");
+      label.classList.add("blobio-chat-font-label");
+      label.textContent = "HUD Font-Size";
+      const controls = this.document.createElement("div");
+      controls.classList.add("blobio-chat-font-controls");
+      const range = this.document.createElement("input");
+      range.type = "range";
+      range.classList.add("blobio-chat-font-range", "blobio-themed-range");
+      range.min = String(HUD_INFO_FONT_LIMITS.min);
+      range.max = String(HUD_INFO_FONT_LIMITS.max);
+      range.step = "1";
+      const number = this.document.createElement("input");
+      number.type = "number";
+      number.classList.add("blobio-chat-font-number");
+      number.min = String(HUD_INFO_FONT_LIMITS.min);
+      number.max = String(HUD_INFO_FONT_LIMITS.max);
+      number.step = "1";
+      number.setAttribute("aria-label", "HUD font size");
+      controls.append(range, number);
+      group.append(label, controls);
+      return group;
+    }
+    createHudColorSetting() {
+      const group = this.document.createElement("div");
+      group.classList.add("blobio-ui-setting-group", "blobio-hud-color-setting");
+      group.dataset.setting = "hud-color";
+      const label = this.document.createElement("div");
+      label.classList.add("blobio-chat-font-label");
+      label.textContent = "HUD Text-Color";
+      const controls = this.document.createElement("div");
+      controls.classList.add("blobio-ui-color-controls");
+      const wheel = this.document.createElement("label");
+      wheel.classList.add("blobio-ui-color-wheel");
+      const swatch = this.document.createElement("span");
+      swatch.classList.add("blobio-ui-color-swatch");
+      const color = this.document.createElement("input");
+      color.type = "color";
+      color.classList.add("blobio-ui-color-input");
+      color.setAttribute("aria-label", "HUD text color");
+      wheel.append(swatch, color);
+      const alpha = this.document.createElement("input");
+      alpha.type = "range";
+      alpha.min = "0";
+      alpha.max = "1";
+      alpha.step = "0.01";
+      alpha.classList.add("blobio-ui-alpha-range", "blobio-themed-range");
+      alpha.setAttribute("aria-label", "HUD text alpha");
+      const alphaValue = this.document.createElement("span");
+      alphaValue.classList.add("blobio-ui-alpha-value");
+      controls.append(wheel, alpha, alphaValue);
+      group.append(label, controls);
+      return group;
+    }
     bindChatCategory(category) {
       const font = category.querySelector('[data-setting="chat"]');
       const fontToggle = font.querySelector(".blobio-setting-toggle");
@@ -4165,6 +4481,68 @@ iframe.blobio-captcha-anchor-hidden,
         this.applyAnimationSpeed();
       });
     }
+    bindHudInfoCategory(category) {
+      const booleanBindings = [
+        ["hud-info-enabled", "enabled"],
+        ["hud-info-fps", "showFps"],
+        ["hud-info-score", "showScore"],
+        ["hud-info-cells", "showCells"],
+        ["hud-info-ping", "showPing"]
+      ];
+      for (const [settingName, key] of booleanBindings) {
+        const toggle = category.querySelector(`[data-setting="${settingName}"] .blobio-setting-toggle`);
+        toggle?.addEventListener("click", () => {
+          const current = readHudInfoSettings(this.storage);
+          saveHudInfoSettings(this.storage, { ...current, [key]: !current[key] });
+          this.syncVisualSettingsUi();
+          this.applyHudInfo();
+        });
+      }
+      this.bindHudModeButton(category, "hud-position", "positionMode", HUD_INFO_POSITION_MODES);
+      this.bindHudModeButton(category, "hud-layout", "layoutMode", HUD_INFO_LAYOUT_MODES);
+      this.bindHudModeButton(category, "hud-style", "styleMode", HUD_INFO_STYLE_MODES);
+      this.bindHudModeButton(category, "hud-fps-mode", "fpsMode", HUD_INFO_DATA_MODES);
+      this.bindHudModeButton(category, "hud-score-mode", "scoreMode", HUD_INFO_DATA_MODES);
+      this.bindHudModeButton(category, "hud-ping-mode", "pingMode", HUD_INFO_DATA_MODES);
+      const sizeGroup = category.querySelector('[data-setting="hud-font-size"]');
+      const range = sizeGroup.querySelector(".blobio-chat-font-range");
+      const number = sizeGroup.querySelector(".blobio-chat-font-number");
+      const updateSize = (value) => {
+        const current = readHudInfoSettings(this.storage);
+        const next = saveHudInfoSettings(this.storage, { ...current, fontSize: value });
+        range.value = String(next.fontSize);
+        number.value = String(next.fontSize);
+        this.applyHudInfo();
+      };
+      range.addEventListener("input", () => updateSize(range.value));
+      number.addEventListener("input", () => updateSize(number.value));
+      number.addEventListener("change", () => updateSize(number.value));
+      const colorGroup = category.querySelector('[data-setting="hud-color"]');
+      const color = colorGroup.querySelector(".blobio-ui-color-input");
+      const alpha = colorGroup.querySelector(".blobio-ui-alpha-range");
+      color.addEventListener("input", () => {
+        const current = readHudInfoSettings(this.storage);
+        saveHudInfoSettings(this.storage, { ...current, color: color.value });
+        this.syncVisualSettingsUi();
+        this.applyHudInfo();
+      });
+      alpha.addEventListener("input", () => {
+        const current = readHudInfoSettings(this.storage);
+        saveHudInfoSettings(this.storage, { ...current, alpha: alpha.value });
+        this.syncVisualSettingsUi();
+        this.applyHudInfo();
+      });
+    }
+    bindHudModeButton(category, settingName, key, options) {
+      const button = category.querySelector(`[data-setting="${settingName}"] .blobio-hud-mode-button`);
+      button?.addEventListener("click", () => {
+        const current = readHudInfoSettings(this.storage);
+        const value = nextHudInfoMode(current[key], options);
+        saveHudInfoSettings(this.storage, { ...current, [key]: value });
+        this.syncVisualSettingsUi();
+        this.applyHudInfo();
+      });
+    }
     bindColorSetting(category, name, keys, defaults) {
       const group = category.querySelector(`[data-setting="${name}"]`);
       const toggle = group.querySelector(".blobio-setting-toggle");
@@ -4190,6 +4568,7 @@ iframe.blobio-captcha-anchor-hidden,
     applyRuntimeUi() {
       this.applyChatFontSize();
       this.applyAnimationSpeed();
+      this.applyHudInfo();
       this.uiCustomization?.applyAll?.();
     }
     applyAnimationSpeed() {
@@ -4201,6 +4580,10 @@ iframe.blobio-captcha-anchor-hidden,
         mode: setting.mode
       });
     }
+    applyHudInfo() {
+      const win = this.document.defaultView || globalThis;
+      win.__blobioHudInfoRefresh?.(readHudInfoSettings(this.storage));
+    }
     setOpen(open) {
       if (!this.root) {
         return;
@@ -4208,6 +4591,7 @@ iframe.blobio-captcha-anchor-hidden,
       if (open) {
         this.ensureHotkeyLauncher();
         this.ensureAnimationSpeedLauncher();
+        this.ensureHudInfoLauncher();
       }
       const toggle = this.root.querySelector(".blobio-chat-settings-toggle");
       if (open) {
@@ -4264,6 +4648,7 @@ iframe.blobio-captcha-anchor-hidden,
       this.syncColorSetting("leaderboard-background", settings.leaderboardBackground);
       this.syncColorSetting("leaderboard-outline", settings.leaderboardOutline);
       this.syncAnimationSpeedSetting(getAnimationSpeedSetting(this.storage));
+      this.syncHudInfoSetting(readHudInfoSettings(this.storage));
       this.syncBooleanSetting("smooth-chat", settings.smoothChat);
       this.syncBooleanSetting("captcha-logo", settings.hideCaptchaLogo);
       const chatActive = isChatFontSizeEnabled(this.storage) || settings.chatBackground.enabled || settings.chatOutline.enabled || settings.smoothChat;
@@ -4272,6 +4657,7 @@ iframe.blobio-captcha-anchor-hidden,
       this.root.querySelector('.blobio-chat-settings-category-button[data-category="captcha"]')?.classList.toggle("has-active-setting", settings.hideCaptchaLogo);
       this.root.querySelector('.blobio-chat-settings-category-button[data-category="leaderboard"]')?.classList.toggle("has-active-setting", leaderboardActive);
       this.root.querySelector('.blobio-chat-settings-category-button[data-category="animation"]')?.classList.toggle("has-active-setting", getAnimationSpeedSetting(this.storage).enabled);
+      this.root.querySelector('.blobio-chat-settings-category-button[data-category="hud-info"]')?.classList.toggle("has-active-setting", readHudInfoSettings(this.storage).enabled);
     }
     syncAnimationSpeedSetting(setting) {
       const group = this.root?.querySelector('[data-setting="animation-speed"]');
@@ -4291,6 +4677,57 @@ iframe.blobio-captcha-anchor-hidden,
       slider.value = String(setting.slider);
       value.textContent = `${setting.speed.toFixed(1)}x`;
       group.classList.toggle("is-disabled", !setting.enabled);
+    }
+    syncHudInfoSetting(setting) {
+      this.syncBooleanSetting("hud-info-enabled", setting.enabled);
+      this.syncBooleanSetting("hud-info-fps", setting.showFps);
+      this.syncBooleanSetting("hud-info-score", setting.showScore);
+      this.syncBooleanSetting("hud-info-cells", setting.showCells);
+      this.syncBooleanSetting("hud-info-ping", setting.showPing);
+      this.syncHudModeSetting("hud-position", setting.positionMode, HUD_INFO_POSITION_MODES);
+      this.syncHudModeSetting("hud-layout", setting.layoutMode, HUD_INFO_LAYOUT_MODES);
+      this.syncHudModeSetting("hud-style", setting.styleMode, HUD_INFO_STYLE_MODES);
+      this.syncHudModeSetting("hud-fps-mode", setting.fpsMode, HUD_INFO_DATA_MODES);
+      this.syncHudModeSetting("hud-score-mode", setting.scoreMode, HUD_INFO_DATA_MODES);
+      this.syncHudModeSetting("hud-ping-mode", setting.pingMode, HUD_INFO_DATA_MODES);
+      const sizeGroup = this.root?.querySelector('[data-setting="hud-font-size"]');
+      const range = sizeGroup?.querySelector(".blobio-chat-font-range");
+      const number = sizeGroup?.querySelector(".blobio-chat-font-number");
+      if (range) {
+        range.value = String(setting.fontSize);
+      }
+      if (number) {
+        number.value = String(setting.fontSize);
+      }
+      const colorGroup = this.root?.querySelector('[data-setting="hud-color"]');
+      const color = colorGroup?.querySelector(".blobio-ui-color-input");
+      const swatch = colorGroup?.querySelector(".blobio-ui-color-swatch");
+      const alpha = colorGroup?.querySelector(".blobio-ui-alpha-range");
+      const alphaValue = colorGroup?.querySelector(".blobio-ui-alpha-value");
+      if (color) {
+        color.value = setting.color;
+      }
+      if (swatch) {
+        swatch.style.backgroundColor = setting.color;
+      }
+      if (alpha) {
+        alpha.value = String(setting.alpha);
+      }
+      if (alphaValue) {
+        alphaValue.textContent = `${Math.round(setting.alpha * 100)}%`;
+      }
+      const category = this.root?.querySelector('.blobio-chat-settings-category[data-category="hud-info"]');
+      category?.classList.toggle("is-disabled", !setting.enabled);
+    }
+    syncHudModeSetting(name, value, options) {
+      const button = this.root?.querySelector(`[data-setting="${name}"] .blobio-hud-mode-button`);
+      if (!button) {
+        return;
+      }
+      button.textContent = hudInfoModeLabel(value, options);
+      button.dataset.mode = value;
+      button.classList.toggle("is-advanced", value === "advanced");
+      button.classList.toggle("is-dev", value === "dev");
     }
     syncFontSetting(name, setting) {
       const group = this.root?.querySelector(`[data-setting="${name}"]`);
@@ -6905,6 +7342,98 @@ html.${className} app-settings .blobio-admin-only-setting-row.is-hidden {
   display: none !important;
 }
 
+html.${className} app-settings .blobio-jelly-setting-group {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 8px;
+  min-width: 0;
+}
+
+html.${className} app-settings .blobio-jelly-setting-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 34px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+html.${className} app-settings .blobio-jelly-dropdown-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid rgba(130, 255, 166, 0.72);
+  border-radius: 5px;
+  outline: none;
+  background: rgba(0, 0, 0, 0.74);
+  color: #ecfff1;
+  text-align: center;
+  text-shadow: 0 0 5px rgba(255, 255, 255, 0.76), 0 0 12px rgba(77, 255, 126, 0.74);
+  box-shadow: inset 0 0 9px rgba(79, 255, 130, 0.12), 0 0 12px rgba(79, 255, 130, 0.26);
+  cursor: pointer;
+}
+
+html.${className} app-settings .blobio-jelly-dropdown-button:hover,
+html.${className} app-settings .blobio-jelly-dropdown-button:focus-visible {
+  border-color: rgba(151, 255, 181, 0.96);
+  box-shadow: inset 0 0 11px rgba(79, 255, 130, 0.18), 0 0 15px rgba(79, 255, 130, 0.42);
+}
+
+html.${className} app-settings .blobio-jelly-dropdown-symbol {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0 1px;
+  color: inherit;
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1;
+  text-align: center;
+  text-shadow: inherit;
+  pointer-events: none;
+}
+
+html.${className} app-settings .blobio-jelly-button-menu {
+  display: grid;
+  gap: 9px;
+  width: 100%;
+  min-width: 0;
+  padding: 11px;
+  border: 1px solid rgba(142, 255, 174, 0.38);
+  border-radius: 9px;
+  background: linear-gradient(145deg, rgba(3, 31, 19, 0.94), rgba(1, 10, 7, 0.94));
+  box-shadow: inset 0 0 18px rgba(79, 255, 130, 0.12), 0 0 14px rgba(79, 255, 130, 0.16);
+  box-sizing: border-box;
+}
+
+html.${className} app-settings .blobio-jelly-button-menu[hidden] {
+  display: none !important;
+}
+
+html.${className} app-settings .blobio-jelly-option-row {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  color: #dfffe6;
+  font-size: 12px;
+  font-weight: 800;
+  text-shadow: 0 0 7px rgba(77, 255, 126, 0.5);
+  cursor: pointer;
+}
+
+html.${className} app-settings .blobio-jelly-option-row input {
+  width: 16px !important;
+  height: 16px !important;
+  margin: 0 !important;
+  accent-color: rgb(74, 229, 111);
+}
+
 html.${className} app-settings .blobio-virus-setting-group {
   display: grid;
   grid-column: 1 / -1;
@@ -8309,17 +8838,17 @@ html.${className} .blobio-watermark-extension::after {
       angle: 135
     }
   });
-  function readBoolean2(value, fallback = false) {
+  function readBoolean3(value, fallback = false) {
     if (value === null || value === void 0 || value === "") {
       return fallback;
     }
     return value === true || value === 1 || value === "1" || String(value).toLowerCase() === "true";
   }
-  function normalizeColor4(value, fallback) {
+  function normalizeColor5(value, fallback) {
     const color = String(value || "").trim().toLowerCase();
     return /^#[0-9a-f]{6}$/.test(color) ? color : fallback;
   }
-  function normalizeAlpha4(value, fallback) {
+  function normalizeAlpha5(value, fallback) {
     const alpha = Number(value);
     return Number.isFinite(alpha) ? Math.max(0, Math.min(100, Math.round(alpha))) : fallback;
   }
@@ -8327,7 +8856,7 @@ html.${className} .blobio-watermark-extension::after {
     const angle = Math.round(Number(value));
     return Number.isFinite(angle) ? Math.max(0, Math.min(360, angle)) : fallback;
   }
-  function normalizeMode(value) {
+  function normalizeMode2(value) {
     return value === "gradient" ? "gradient" : "solid";
   }
   function normalizeGameBackgroundSettings(settings = {}) {
@@ -8339,19 +8868,19 @@ html.${className} .blobio-watermark-extension::after {
     const to = gradient.to && typeof gradient.to === "object" ? gradient.to : {};
     return {
       enabled: Boolean(source.enabled),
-      mode: normalizeMode(source.mode),
+      mode: normalizeMode2(source.mode),
       solid: {
-        color: normalizeColor4(solid.color, defaults.solid.color),
-        alpha: normalizeAlpha4(solid.alpha, defaults.solid.alpha)
+        color: normalizeColor5(solid.color, defaults.solid.color),
+        alpha: normalizeAlpha5(solid.alpha, defaults.solid.alpha)
       },
       gradient: {
         from: {
-          color: normalizeColor4(from.color, defaults.gradient.from.color),
-          alpha: normalizeAlpha4(from.alpha, defaults.gradient.from.alpha)
+          color: normalizeColor5(from.color, defaults.gradient.from.color),
+          alpha: normalizeAlpha5(from.alpha, defaults.gradient.from.alpha)
         },
         to: {
-          color: normalizeColor4(to.color, defaults.gradient.to.color),
-          alpha: normalizeAlpha4(to.alpha, defaults.gradient.to.alpha)
+          color: normalizeColor5(to.color, defaults.gradient.to.color),
+          alpha: normalizeAlpha5(to.alpha, defaults.gradient.to.alpha)
         },
         angle: normalizeAngle3(gradient.angle, defaults.gradient.angle)
       }
@@ -8360,7 +8889,7 @@ html.${className} .blobio-watermark-extension::after {
   function readGameBackgroundSettings(storage) {
     try {
       return normalizeGameBackgroundSettings({
-        enabled: readBoolean2(storage?.getItem?.(GAME_BACKGROUND_KEYS.enabled), DEFAULT_GAME_BACKGROUND_SETTINGS.enabled),
+        enabled: readBoolean3(storage?.getItem?.(GAME_BACKGROUND_KEYS.enabled), DEFAULT_GAME_BACKGROUND_SETTINGS.enabled),
         mode: storage?.getItem?.(GAME_BACKGROUND_KEYS.mode) || DEFAULT_GAME_BACKGROUND_SETTINGS.mode,
         solid: {
           color: storage?.getItem?.(GAME_BACKGROUND_KEYS.solidColor),
@@ -8399,11 +8928,11 @@ html.${className} .blobio-watermark-extension::after {
     return clean;
   }
   function backgroundColorToRgba(color, alpha) {
-    const normalized = normalizeColor4(color, "#000000").slice(1);
+    const normalized = normalizeColor5(color, "#000000").slice(1);
     const red = Number.parseInt(normalized.slice(0, 2), 16);
     const green = Number.parseInt(normalized.slice(2, 4), 16);
     const blue = Number.parseInt(normalized.slice(4, 6), 16);
-    return `rgba(${red}, ${green}, ${blue}, ${normalizeAlpha4(alpha, 100) / 100})`;
+    return `rgba(${red}, ${green}, ${blue}, ${normalizeAlpha5(alpha, 100) / 100})`;
   }
   function gameBackgroundCss(settings) {
     const clean = normalizeGameBackgroundSettings(settings);
@@ -9261,6 +9790,221 @@ html.${className} .blobio-watermark-extension::after {
     }
   };
 
+  // src/jelly/JellyShaderSettings.js
+  var JELLY_SHADER_KEYS = {
+    enabled: "blobio.settings.jellyShader.enabled",
+    skinCells: "blobio.settings.jellyShader.skinCells",
+    noSkinCells: "blobio.settings.jellyShader.noSkinCells"
+  };
+  var DEFAULT_JELLY_SHADER_SETTINGS = Object.freeze({
+    enabled: false,
+    skinCells: true,
+    noSkinCells: false
+  });
+  function readBoolean4(storage, key, fallback) {
+    try {
+      const value = storage?.getItem?.(key);
+      if (value === null || value === void 0 || value === "") {
+        return fallback;
+      }
+      return value === "1" || String(value).toLowerCase() === "true";
+    } catch {
+      return fallback;
+    }
+  }
+  function normalizeJellyShaderSettings(settings = {}) {
+    const source = settings && typeof settings === "object" ? settings : {};
+    return {
+      enabled: source.enabled === void 0 ? DEFAULT_JELLY_SHADER_SETTINGS.enabled : Boolean(source.enabled),
+      skinCells: source.skinCells === void 0 ? DEFAULT_JELLY_SHADER_SETTINGS.skinCells : Boolean(source.skinCells),
+      noSkinCells: source.noSkinCells === void 0 ? DEFAULT_JELLY_SHADER_SETTINGS.noSkinCells : Boolean(source.noSkinCells)
+    };
+  }
+  function readJellyShaderSettings(storage) {
+    return normalizeJellyShaderSettings({
+      enabled: readBoolean4(storage, JELLY_SHADER_KEYS.enabled, DEFAULT_JELLY_SHADER_SETTINGS.enabled),
+      skinCells: readBoolean4(storage, JELLY_SHADER_KEYS.skinCells, DEFAULT_JELLY_SHADER_SETTINGS.skinCells),
+      noSkinCells: readBoolean4(storage, JELLY_SHADER_KEYS.noSkinCells, DEFAULT_JELLY_SHADER_SETTINGS.noSkinCells)
+    });
+  }
+  function saveJellyShaderSettings(storage, settings) {
+    const next = normalizeJellyShaderSettings(settings);
+    try {
+      storage?.setItem?.(JELLY_SHADER_KEYS.enabled, next.enabled ? "1" : "0");
+      storage?.setItem?.(JELLY_SHADER_KEYS.skinCells, next.skinCells ? "1" : "0");
+      storage?.setItem?.(JELLY_SHADER_KEYS.noSkinCells, next.noSkinCells ? "1" : "0");
+    } catch {
+    }
+    return next;
+  }
+
+  // src/jelly/JellyShaderSettingsUi.js
+  var DESCRIPTION = "When enabled, this disables Blobgame.io's vanilla Jelly Physics option and adds a different lightweight jelly physics shader.";
+  var JellyShaderSettingsUi = class {
+    constructor({
+      document,
+      storage,
+      showTooltip = null,
+      moveTooltip = null,
+      hideTooltip = null,
+      onOpen = null
+    } = {}) {
+      this.document = document;
+      this.storage = storage;
+      this.showTooltip = showTooltip;
+      this.moveTooltip = moveTooltip;
+      this.hideTooltip = hideTooltip;
+      this.onOpen = onOpen;
+      this.settings = readJellyShaderSettings(storage);
+      this.listeners = [];
+      this.elements = null;
+    }
+    create() {
+      this.settings = readJellyShaderSettings(this.storage);
+      const group = this.document.createElement("div");
+      group.classList.add("blobio-jelly-setting-group");
+      group.setAttribute("_ngcontent-c3", "");
+      const row = this.createHeaderRow();
+      const menu = this.createDropdownMenu();
+      group.append(row, menu);
+      this.elements = {
+        group,
+        row,
+        menu,
+        enabled: row.querySelector("#config-switch-jelly-shader"),
+        arrowButton: row.querySelector(".blobio-jelly-dropdown-button"),
+        disclosure: row.querySelector(".blobio-jelly-dropdown-symbol"),
+        skinCells: menu.querySelector('[data-jelly-option="skinCells"]'),
+        noSkinCells: menu.querySelector('[data-jelly-option="noSkinCells"]')
+      };
+      this.sync();
+      return group;
+    }
+    destroy() {
+      for (const [node, type, listener, options] of this.listeners) {
+        node.removeEventListener?.(type, listener, options);
+      }
+      this.listeners = [];
+      this.elements?.group?.remove?.();
+      this.elements = null;
+    }
+    createHeaderRow() {
+      const row = this.document.createElement("div");
+      row.classList.add("grid-item", "blobio-extension-setting-row", "blobio-jelly-setting-row");
+      row.dataset.blobioTooltip = DESCRIPTION;
+      row.setAttribute("_ngcontent-c3", "");
+      const switchLabel = this.document.createElement("label");
+      switchLabel.classList.add("switch");
+      switchLabel.setAttribute("_ngcontent-c3", "");
+      const checkbox = this.document.createElement("input");
+      checkbox.id = "config-switch-jelly-shader";
+      checkbox.type = "checkbox";
+      checkbox.classList.add("ng-untouched", "ng-pristine", "ng-valid");
+      checkbox.setAttribute("_ngcontent-c3", "");
+      const slider = this.document.createElement("span");
+      slider.classList.add("slider");
+      slider.setAttribute("_ngcontent-c3", "");
+      switchLabel.append(checkbox, slider);
+      const textLabel = this.document.createElement("label");
+      textLabel.setAttribute("for", checkbox.id);
+      textLabel.setAttribute("_ngcontent-c3", "");
+      textLabel.textContent = "Jelly-Physics Shader";
+      const arrowButton = this.document.createElement("button");
+      arrowButton.type = "button";
+      arrowButton.classList.add("blobio-jelly-dropdown-button");
+      arrowButton.setAttribute("aria-label", "Open Jelly-Physics Shader settings");
+      arrowButton.setAttribute("aria-expanded", "false");
+      arrowButton.setAttribute("_ngcontent-c3", "");
+      const disclosure = this.document.createElement("span");
+      disclosure.classList.add("blobio-jelly-dropdown-symbol");
+      disclosure.setAttribute("aria-hidden", "true");
+      disclosure.textContent = "+";
+      arrowButton.appendChild(disclosure);
+      row.append(switchLabel, textLabel, arrowButton);
+      this.installTooltip(row, DESCRIPTION);
+      this.listen(checkbox, "change", () => {
+        this.settings = this.save({ enabled: Boolean(checkbox.checked) });
+        this.sync();
+      });
+      this.listen(arrowButton, "click", (event) => {
+        event.preventDefault?.();
+        event.stopPropagation?.();
+        const open = this.elements?.menu?.hidden !== false;
+        if (open) {
+          this.onOpen?.(this);
+        }
+        this.setOpen(open);
+      });
+      return row;
+    }
+    createDropdownMenu() {
+      const menu = this.document.createElement("div");
+      menu.classList.add("blobio-jelly-button-menu");
+      menu.hidden = true;
+      menu.setAttribute("_ngcontent-c3", "");
+      menu.append(
+        this.createOption("skinCells", "Skin-Cells"),
+        this.createOption("noSkinCells", "No-Skin-Cells")
+      );
+      return menu;
+    }
+    createOption(key, labelText) {
+      const row = this.document.createElement("label");
+      row.classList.add("blobio-jelly-option-row");
+      const input = this.document.createElement("input");
+      input.type = "checkbox";
+      input.dataset.jellyOption = key;
+      const label = this.document.createElement("span");
+      label.textContent = labelText;
+      row.append(input, label);
+      this.listen(input, "change", () => {
+        this.settings = this.save({ [key]: Boolean(input.checked) });
+        this.sync();
+      });
+      return row;
+    }
+    installTooltip(node, text) {
+      if (!node || !text) {
+        return;
+      }
+      node.dataset.blobioTooltip = text;
+      node.removeAttribute?.("title");
+      if (typeof this.showTooltip !== "function") {
+        return;
+      }
+      this.listen(node, "mouseenter", (event) => this.showTooltip(node, event));
+      this.listen(node, "mousemove", (event) => this.moveTooltip?.(event));
+      this.listen(node, "mouseleave", () => this.hideTooltip?.());
+    }
+    save(changes) {
+      return saveJellyShaderSettings(this.storage, {
+        ...this.settings,
+        ...changes
+      });
+    }
+    setOpen(open) {
+      if (!this.elements) {
+        return;
+      }
+      this.elements.menu.hidden = !open;
+      this.elements.arrowButton.setAttribute("aria-expanded", String(open));
+      this.elements.disclosure.textContent = open ? "-" : "+";
+      this.elements.group.classList.toggle("is-open", open);
+    }
+    sync() {
+      if (!this.elements) {
+        return;
+      }
+      this.elements.enabled.checked = this.settings.enabled;
+      this.elements.skinCells.checked = this.settings.skinCells;
+      this.elements.noSkinCells.checked = this.settings.noSkinCells;
+    }
+    listen(node, type, listener, options) {
+      node.addEventListener?.(type, listener, options);
+      this.listeners.push([node, type, listener, options]);
+    }
+  };
+
   // src/virus/VirusMotherCellSettings.js
   var VIRUS_MOTHER_CELL_KEYS = {
     enabled: "blobio.settings.virusMotherCell.enabled",
@@ -9289,11 +10033,11 @@ html.${className} .blobio-watermark-extension::after {
       return normalizeVirusMotherCellSettings(snapshot);
     }
     return normalizeVirusMotherCellSettings({
-      enabled: readBoolean3(storage, VIRUS_MOTHER_CELL_KEYS.enabled, DEFAULT_VIRUS_MOTHER_CELL_SETTINGS.enabled),
+      enabled: readBoolean5(storage, VIRUS_MOTHER_CELL_KEYS.enabled, DEFAULT_VIRUS_MOTHER_CELL_SETTINGS.enabled),
       maskId: storage?.getItem?.(VIRUS_MOTHER_CELL_KEYS.maskId),
       color: storage?.getItem?.(VIRUS_MOTHER_CELL_KEYS.color),
       alpha: storage?.getItem?.(VIRUS_MOTHER_CELL_KEYS.alpha),
-      rotate: readBoolean3(storage, VIRUS_MOTHER_CELL_KEYS.rotate, DEFAULT_VIRUS_MOTHER_CELL_SETTINGS.rotate)
+      rotate: readBoolean5(storage, VIRUS_MOTHER_CELL_KEYS.rotate, DEFAULT_VIRUS_MOTHER_CELL_SETTINGS.rotate)
     });
   }
   function saveVirusMotherCellSettings(storage, settings, document = globalThis.document) {
@@ -9390,7 +10134,7 @@ html.${className} .blobio-watermark-extension::after {
     } catch {
     }
   }
-  function readBoolean3(storage, key, fallback) {
+  function readBoolean5(storage, key, fallback) {
     const value = storage?.getItem?.(key);
     if (value === null || value === void 0 || value === "") {
       return fallback;
@@ -9879,6 +10623,7 @@ html.${className} .blobio-watermark-extension::after {
       this.virusMotherCellSettingsUi = null;
       this.gameBackgroundSettingsUi = null;
       this.virusPelletColorSettingsUi = null;
+      this.jellyShaderSettingsUi = null;
     }
     start() {
       if (this.started) {
@@ -9954,6 +10699,8 @@ html.${className} .blobio-watermark-extension::after {
       this.gameBackgroundSettingsUi = null;
       this.virusPelletColorSettingsUi?.destroy?.();
       this.virusPelletColorSettingsUi = null;
+      this.jellyShaderSettingsUi?.destroy?.();
+      this.jellyShaderSettingsUi = null;
       this.cleanupExtensionSettings();
       this.cleanupCustomSkinUi();
       for (const node of this.hiddenOriginalNodes) {
@@ -10565,6 +11312,16 @@ html.${className} .blobio-watermark-extension::after {
         onOpen: (ui) => this.closeExtensionSettingMenus(ui)
       });
       categoryPanels.get("theme").appendChild(this.virusPelletColorSettingsUi.create());
+      this.jellyShaderSettingsUi?.destroy?.();
+      this.jellyShaderSettingsUi = new JellyShaderSettingsUi({
+        document: this.document,
+        storage: this.storage,
+        showTooltip: (row, event) => this.showExtensionTooltip(row, event),
+        moveTooltip: (event) => this.moveExtensionTooltip(event),
+        hideTooltip: () => this.hideExtensionTooltip(),
+        onOpen: (ui) => this.closeExtensionSettingMenus(ui)
+      });
+      categoryPanels.get("animation").appendChild(this.jellyShaderSettingsUi.create());
       categoryPanels.get("text").append(
         this.createExtensionSwitchRow({
           id: "config-switch-watermark",
@@ -10605,7 +11362,12 @@ html.${className} .blobio-watermark-extension::after {
       return panel;
     }
     closeExtensionSettingMenus(except = null) {
-      for (const ui of [this.virusMotherCellSettingsUi, this.gameBackgroundSettingsUi, this.virusPelletColorSettingsUi]) {
+      for (const ui of [
+        this.virusMotherCellSettingsUi,
+        this.gameBackgroundSettingsUi,
+        this.virusPelletColorSettingsUi,
+        this.jellyShaderSettingsUi
+      ]) {
         if (ui && ui !== except) {
           ui.setOpen?.(false);
         }
@@ -10742,6 +11504,7 @@ html.${className} .blobio-watermark-extension::after {
       if (hideAdminMd) {
         hideAdminMd.checked = isHideAdminMdEnabled(this.storage);
       }
+      this.jellyShaderSettingsUi?.sync?.();
       this.syncAdminSettingVisibility(panel);
     }
     installFriendHighlightTracking() {
@@ -12596,6 +13359,1048 @@ html.${className} .blobio-watermark-extension::after {
     }
   };
 
+  // src/hud/pageHudInfoBootstrap.js
+  var HUD_INFO_CUSTOM_HOST = "custom.client.blobgame.io";
+  var HUD_INFO_SAMPLE_INTERVAL_MS = 250;
+  var HUD_INFO_PING_PROBE_INTERVAL_MS = 3e3;
+  var HUD_INFO_PING_PROBE_TIMEOUT_MS = 2500;
+  var HUD_INFO_PING_STALE_MS = 9e3;
+  var HUD_INFO_MAX_SAMPLES = 240;
+  var HUD_INFO_STYLE_MODES2 = /* @__PURE__ */ new Set(["solid", "simple"]);
+  var HUD_INFO_DATA_MODES2 = /* @__PURE__ */ new Set(["default", "advanced", "dev"]);
+  var HUD_INFO_POSITION_MODES_SET = /* @__PURE__ */ new Set(["top-left", "top-center", "top-right", "bottom-left", "bottom-center", "bottom-right"]);
+  var HUD_INFO_LAYOUT_MODES_SET = /* @__PURE__ */ new Set(["line", "below"]);
+  var HUD_INFO_STYLE_CLASSES = [...HUD_INFO_STYLE_MODES2].map((mode) => `is-${mode}`);
+  var HUD_INFO_POSITION_CLASSES = [...HUD_INFO_POSITION_MODES_SET].map((mode) => `position-${mode}`);
+  var HUD_INFO_ANCHOR_CLASSES = ["anchor-left", "anchor-center", "anchor-right"];
+  var HUD_INFO_LAYOUT_CLASSES = [...HUD_INFO_LAYOUT_MODES_SET].map((mode) => `is-layout-${mode}`);
+  var HUD_INFO_MASS_COLORS = {
+    red: "rgb(255, 74, 74)",
+    yellow: "rgb(255, 220, 74)",
+    green: "rgb(83, 255, 119)"
+  };
+  var DEFAULT_HUD_INFO_RUNTIME_SETTINGS = Object.freeze({
+    enabled: true,
+    showScore: true,
+    showFps: true,
+    showPing: true,
+    showCells: true,
+    styleMode: "simple",
+    scoreMode: "default",
+    fpsMode: "default",
+    pingMode: "default",
+    positionMode: "top-left",
+    layoutMode: "below",
+    fontSize: 17,
+    color: "#ffffff",
+    alpha: 1
+  });
+  var HUD_INFO_ROWS = [
+    { key: "score", label: "Score", show: "showScore", mode: "scoreMode", format: hudInfoFormatScoreValue, color: (data) => hudInfoColorForMass(data.score) },
+    { key: "fps", label: "FPS", show: "showFps", mode: "fpsMode", format: hudInfoFormatFpsValue, color: (data) => hudInfoColorForFps(data.fps) },
+    { key: "ping", label: "Ping", show: "showPing", mode: "pingMode", format: hudInfoFormatPingValue, color: (data) => hudInfoColorForPing(data.ping) },
+    { key: "cells", label: "Cells", show: "showCells", format: hudInfoFormatCellsValue, color: () => HUD_INFO_MASS_COLORS.green }
+  ];
+  function pageHudInfoBootstrap(initialSettings, pageWindow = globalThis) {
+    const win = pageWindow;
+    const doc = win.document;
+    const socketSendTimes = typeof win.WeakMap === "function" ? new win.WeakMap() : null;
+    if (!doc || win.location?.hostname !== HUD_INFO_CUSTOM_HOST) {
+      return false;
+    }
+    if (win.__blobioHudInfoInstalled) {
+      win.__blobioHudInfoRefresh?.(initialSettings);
+      return true;
+    }
+    win.__blobioHudInfoInstalled = true;
+    const state = {
+      startedAt: Date.now(),
+      patchApplied: false,
+      dataUpdates: 0,
+      lastSampleAt: 0,
+      settings: normalizeHudInfoSettings2(initialSettings),
+      latest: {
+        score: 0,
+        fps: 0,
+        averageScore: 0,
+        averageFps: 0,
+        frameTime: 0,
+        ping: 0,
+        averagePing: 0,
+        peakPing: 0,
+        pingUpdatedAt: 0,
+        cells: 0,
+        replayEnded: false
+      },
+      fpsSamples: [],
+      pingSamples: [],
+      renderFrame: null,
+      positionFrame: null,
+      root: null,
+      rows: null,
+      styleNode: null,
+      pingProbeTimer: null,
+      pingStaleTimer: null,
+      pingProbeInFlight: false,
+      nativeWebSocket: null,
+      gameSocketUrl: "",
+      gameSocketProtocols: void 0,
+      renderSettingsKey: "",
+      renderDataKey: "",
+      originalAppendChild: null,
+      originalInsertBefore: null
+    };
+    exposeApi();
+    installWebSocketPingProbe();
+    startPingProbeTimer();
+    installScriptObserver();
+    installGwtPatch();
+    startPatchTimer();
+    startUi();
+    win.addEventListener?.("resize", schedulePosition, { passive: true });
+    return true;
+    function refresh(nextSettings) {
+      state.settings = normalizeHudInfoSettings2(nextSettings);
+      state.renderSettingsKey = "";
+      state.renderDataKey = "";
+      renderHud();
+      schedulePosition();
+    }
+    function exposeApi() {
+      win.__BlobioHudInfoUpdate = updateFromGame;
+      win.__BlobioHudInfoCells = updateCellsFromGame;
+      win.__BlobioHudInfoSocketOpening = noteGameSocketOpening;
+      win.__BlobioHudInfoSocketCreated = noteGameSocketCreated;
+      win.__BlobioHudInfoSocketSend = noteGameSocketSend;
+      win.__BlobioHudInfoSocketMessage = noteGameSocketMessage;
+      win.__blobioHudInfoRefresh = refresh;
+    }
+    function startUi() {
+      const install = () => {
+        ensureStyle();
+        ensureHud();
+        renderHud();
+        positionHud();
+      };
+      if (doc.body) {
+        install();
+      } else {
+        doc.addEventListener?.("DOMContentLoaded", install, { once: true });
+        win.setTimeout?.(install, 0);
+      }
+    }
+    function ensureHud() {
+      if (state.root?.parentNode) {
+        return;
+      }
+      const root = doc.createElement("div");
+      root.classList.add("blobio-hud-info-root");
+      const output = doc.createElement("div");
+      output.classList.add("blobio-hud-info-output");
+      const rows = {};
+      for (const row of HUD_INFO_ROWS) {
+        const parts = createHudRow(row.key);
+        rows[row.key] = parts.row;
+        rows[`${row.key}Label`] = parts.label;
+        rows[`${row.key}Value`] = parts.value;
+        rows[`${row.key}Separator`] = parts.separator;
+        output.appendChild(parts.row);
+      }
+      root.appendChild(output);
+      (doc.body || doc.documentElement).appendChild(root);
+      state.root = root;
+      state.rows = rows;
+    }
+    function createHudRow(name) {
+      const row = doc.createElement("div");
+      row.classList.add("blobio-hud-info-row");
+      row.dataset.row = name;
+      const label = doc.createElement("span");
+      label.classList.add("blobio-hud-info-label");
+      const value = doc.createElement("span");
+      value.classList.add("blobio-hud-info-value");
+      const separator = doc.createElement("span");
+      separator.classList.add("blobio-hud-info-separator");
+      separator.textContent = "|";
+      row.append(label, value, separator);
+      return { row, label, value, separator };
+    }
+    function scheduleRender() {
+      if (state.renderFrame !== null) {
+        return;
+      }
+      const raf = win.requestAnimationFrame || ((callback) => win.setTimeout(callback, 16));
+      state.renderFrame = raf(() => {
+        state.renderFrame = null;
+        renderHud();
+      });
+    }
+    function renderHud() {
+      if (!state.rows || !state.root) {
+        return;
+      }
+      expirePingIfStale(Date.now(), false);
+      const settings = state.settings;
+      const data = state.latest;
+      const fontFamily = getChatFontFamily();
+      const nextSettingsKey = hudInfoRenderSettingsKey(settings, fontFamily);
+      const nextDataKey = hudInfoRenderDataKey(data, settings);
+      const hasData = state.dataUpdates > 0;
+      state.root.hidden = !settings.enabled;
+      if (!settings.enabled) {
+        return;
+      }
+      if (state.renderSettingsKey !== nextSettingsKey) {
+        state.renderSettingsKey = nextSettingsKey;
+        renderHudSettings(settings, fontFamily);
+      }
+      if (state.renderDataKey !== nextDataKey) {
+        state.renderDataKey = nextDataKey;
+        renderHudValues(data, settings);
+      }
+      hudInfoToggleClass(state.root, "has-data", hasData);
+    }
+    function renderHudSettings(settings, fontFamily) {
+      const separatorItems = [];
+      const isEmpty = HUD_INFO_ROWS.every((row) => !settings[row.show]);
+      state.root.classList.remove(
+        ...HUD_INFO_STYLE_CLASSES,
+        ...HUD_INFO_POSITION_CLASSES,
+        ...HUD_INFO_ANCHOR_CLASSES,
+        ...HUD_INFO_LAYOUT_CLASSES
+      );
+      state.root.classList.add(
+        `is-${settings.styleMode}`,
+        `position-${settings.positionMode}`,
+        `anchor-${hudInfoPositionAnchor(settings.positionMode)}`,
+        `is-layout-${settings.layoutMode}`
+      );
+      hudInfoToggleClass(state.root, "has-readable-shadow", hudInfoShouldUseTextShadow(settings));
+      hudInfoToggleClass(state.root, "is-empty", isEmpty);
+      state.root.style.setProperty("--blobio-hud-color-a", hudInfoRgbaFromSettings(settings));
+      state.root.style.setProperty("--blobio-hud-font-size", `${settings.fontSize}px`);
+      state.root.style.setProperty("--blobio-hud-font", fontFamily);
+      for (const row of HUD_INFO_ROWS) {
+        const visible = settings[row.show];
+        hudInfoSetRowVisible(state.rows[row.key], visible);
+        hudInfoSetText(state.rows[`${row.key}Label`], hudInfoLabelTextFor(row.label, settings));
+        separatorItems.push({ separator: state.rows[`${row.key}Separator`], visible });
+      }
+      hudInfoUpdateSeparators(separatorItems, settings);
+      schedulePosition();
+    }
+    function renderHudValues(data, settings) {
+      const useValueColors = settings.styleMode === "simple";
+      for (const row of HUD_INFO_ROWS) {
+        const valueNode = state.rows[`${row.key}Value`];
+        hudInfoSetText(valueNode, row.format(data, settings[row.mode]));
+        hudInfoSetStyleColor(valueNode, useValueColors ? row.color(data) : "");
+      }
+    }
+    function getChatFontFamily() {
+      try {
+        const chat = doc.querySelector?.("#chat");
+        const style = chat ? win.getComputedStyle?.(chat) : null;
+        if (style?.fontFamily) {
+          return style.fontFamily;
+        }
+      } catch {
+      }
+      return "Ubuntu, Arial, sans-serif";
+    }
+    function schedulePosition() {
+      if (state.positionFrame !== null) {
+        return;
+      }
+      const raf = win.requestAnimationFrame || ((callback) => win.setTimeout(callback, 16));
+      state.positionFrame = raf(() => {
+        state.positionFrame = null;
+        positionHud();
+      });
+    }
+    function positionHud() {
+      if (!state.root?.parentNode) {
+        return;
+      }
+      const mode = state.settings.positionMode;
+      const anchor = hudInfoPositionAnchor(mode);
+      const isBottom = hudInfoIsBottomPosition(mode);
+      state.root.style.top = isBottom ? "auto" : "12px";
+      state.root.style.bottom = isBottom ? "12px" : "auto";
+      state.root.style.left = anchor === "right" ? "auto" : anchor === "center" ? "50%" : "12px";
+      state.root.style.right = anchor === "right" ? "12px" : "auto";
+      state.root.style.transform = anchor === "center" ? "translateX(-50%)" : "none";
+    }
+    function updateFromGame(score, fps, replayEnded) {
+      const now = Date.now();
+      const nextScore = Math.max(0, Math.round(Number(score) || 0));
+      const nextFps = Math.max(0, Math.round(Number(fps) || 0));
+      state.dataUpdates += 1;
+      state.latest.score = nextScore;
+      state.latest.fps = nextFps;
+      state.latest.replayEnded = Boolean(replayEnded);
+      state.latest.frameTime = nextFps > 0 ? 1e3 / nextFps : 0;
+      state.latest.averageScore = hudInfoAverageMass(nextScore, state.latest.cells);
+      if (now - state.lastSampleAt >= HUD_INFO_SAMPLE_INTERVAL_MS) {
+        state.lastSampleAt = now;
+        hudInfoPushSample(state.fpsSamples, nextFps);
+        state.latest.averageFps = hudInfoAverage(state.fpsSamples);
+      }
+      scheduleRender();
+    }
+    function updateCellsFromGame(cells) {
+      const count = Math.max(0, Math.round(Number(cells) || 0));
+      if (state.latest.cells === count) {
+        return;
+      }
+      state.latest.cells = count;
+      state.latest.averageScore = hudInfoAverageMass(state.latest.score, count);
+      scheduleRender();
+    }
+    function updatePingFromSocket(ping) {
+      const number = Number(ping);
+      if (!Number.isFinite(number) || number <= 0 || number > 5e3) {
+        return;
+      }
+      const value = Math.max(1, Math.round(number));
+      state.latest.ping = value;
+      state.latest.pingUpdatedAt = Date.now();
+      hudInfoPushSample(state.pingSamples, value);
+      state.latest.averagePing = hudInfoAverage(state.pingSamples);
+      state.latest.peakPing = hudInfoMaxValue(state.pingSamples);
+      schedulePingExpiry();
+      scheduleRender();
+    }
+    function expirePingIfStale(now = Date.now(), shouldRender = true) {
+      if (!state.latest.ping || !state.latest.pingUpdatedAt) {
+        return false;
+      }
+      if (now - state.latest.pingUpdatedAt < HUD_INFO_PING_STALE_MS) {
+        return false;
+      }
+      state.latest.ping = 0;
+      state.latest.averagePing = 0;
+      state.latest.peakPing = 0;
+      state.latest.pingUpdatedAt = 0;
+      state.pingSamples = [];
+      if (shouldRender) {
+        scheduleRender();
+      }
+      return true;
+    }
+    function schedulePingExpiry() {
+      if (state.pingStaleTimer !== null) {
+        win.clearTimeout?.(state.pingStaleTimer);
+        state.pingStaleTimer = null;
+      }
+      state.pingStaleTimer = win.setTimeout?.(() => {
+        state.pingStaleTimer = null;
+        expirePingIfStale(Date.now(), true);
+      }, HUD_INFO_PING_STALE_MS + 50) ?? null;
+    }
+    function expectedSocketTarget() {
+      const search = String(win.location?.search || "");
+      try {
+        const SearchParams = win.URLSearchParams || URLSearchParams;
+        const params = new SearchParams(search);
+        return params.get("ip") || "";
+      } catch {
+        const match = search.match(/[?&]ip=([^&]+)/);
+        return match ? decodeURIComponent(match[1].replace(/\+/g, " ")) : "";
+      }
+    }
+    function isGameSocketUrl(url) {
+      const text = String(url || "");
+      const target = expectedSocketTarget();
+      return target ? text.includes(target) : /^wss?:\/\//i.test(text);
+    }
+    function guessedSocketUrl() {
+      const target = expectedSocketTarget();
+      if (!target) {
+        return "";
+      }
+      return `${win.location?.protocol === "https:" ? "wss" : "ws"}://${target}`;
+    }
+    function probeSocketUrl() {
+      return guessedSocketUrl() || state.gameSocketUrl || "";
+    }
+    function startPingProbeTimer() {
+      if (state.pingProbeTimer !== null || typeof state.nativeWebSocket !== "function") {
+        return;
+      }
+      const runProbe = () => probeServerPing();
+      state.pingProbeTimer = win.setInterval?.(runProbe, HUD_INFO_PING_PROBE_INTERVAL_MS) ?? null;
+      runProbe();
+    }
+    function probeServerPing() {
+      const url = probeSocketUrl();
+      if (state.pingProbeInFlight || !url || typeof state.nativeWebSocket !== "function") {
+        return;
+      }
+      state.pingProbeInFlight = true;
+      const startedAt = hudInfoNowMs();
+      let socket = null;
+      let finished = false;
+      let timeout = null;
+      const finish = (latency) => {
+        if (finished) {
+          return;
+        }
+        finished = true;
+        win.clearTimeout?.(timeout);
+        state.pingProbeInFlight = false;
+        if (Number.isFinite(latency)) {
+          updatePingFromSocket(latency);
+        } else {
+          expirePingIfStale(Date.now(), true);
+        }
+        try {
+          socket?.close?.(1e3, "blobio-hud-ping");
+        } catch {
+        }
+      };
+      try {
+        socket = new state.nativeWebSocket(url);
+      } catch {
+        state.pingProbeInFlight = false;
+        return;
+      }
+      timeout = win.setTimeout?.(() => finish(null), HUD_INFO_PING_PROBE_TIMEOUT_MS);
+      socket.addEventListener?.("open", () => finish(hudInfoNowMs() - startedAt), { once: true });
+      socket.addEventListener?.("error", () => finish(null), { once: true });
+      socket.addEventListener?.("close", () => finish(null), { once: true });
+    }
+    function rememberGameSocket(url, protocols) {
+      if (!isGameSocketUrl(url)) {
+        return false;
+      }
+      state.gameSocketUrl = String(url);
+      state.gameSocketProtocols = protocols;
+      startPingProbeTimer();
+      return true;
+    }
+    function installWebSocketPingProbe() {
+      const NativeWebSocket = win.WebSocket;
+      if (typeof NativeWebSocket !== "function" || NativeWebSocket.__blobioHudInfoWrapped) {
+        return;
+      }
+      state.nativeWebSocket = NativeWebSocket;
+      function BlobioHudInfoWebSocket(url, protocols) {
+        const socket = protocols === void 0 ? new NativeWebSocket(url) : new NativeWebSocket(url, protocols);
+        monitorSocket(socket, url, protocols);
+        return socket;
+      }
+      try {
+        Object.setPrototypeOf(BlobioHudInfoWebSocket, NativeWebSocket);
+      } catch {
+      }
+      BlobioHudInfoWebSocket.prototype = NativeWebSocket.prototype;
+      for (const key of ["CONNECTING", "OPEN", "CLOSING", "CLOSED"]) {
+        try {
+          Object.defineProperty(BlobioHudInfoWebSocket, key, {
+            configurable: true,
+            enumerable: true,
+            value: NativeWebSocket[key]
+          });
+        } catch {
+        }
+      }
+      BlobioHudInfoWebSocket.__blobioHudInfoWrapped = true;
+      win.WebSocket = BlobioHudInfoWebSocket;
+    }
+    function monitorSocket(socket, url, protocols) {
+      if (!socket || socket.__blobioHudInfoMonitored || !isGameSocketUrl(url)) {
+        return;
+      }
+      rememberGameSocket(url, protocols);
+      socket.__blobioHudInfoMonitored = true;
+    }
+    function noteGameSocketOpening(url, protocols) {
+      rememberGameSocket(url, protocols);
+    }
+    function noteGameSocketCreated(socket, url, protocols) {
+      monitorSocket(socket, url, protocols);
+    }
+    function noteGameSocketSend(socket) {
+      const sentAt = hudInfoNowMs();
+      if (socketSendTimes && socket) {
+        socketSendTimes.set(socket, sentAt);
+        return;
+      }
+      try {
+        socket.__blobioHudInfoLastSendAt = sentAt;
+      } catch {
+      }
+    }
+    function noteGameSocketMessage(socket) {
+      let sentAt = 0;
+      if (socketSendTimes && socket) {
+        sentAt = socketSendTimes.get(socket) || 0;
+        socketSendTimes.delete(socket);
+      } else {
+        sentAt = Number(socket?.__blobioHudInfoLastSendAt) || 0;
+        try {
+          socket.__blobioHudInfoLastSendAt = 0;
+        } catch {
+        }
+      }
+      if (sentAt) {
+        updatePingFromSocket(hudInfoNowMs() - sentAt);
+      }
+    }
+    function patchGameCode(code) {
+      if (typeof code !== "string") {
+        return { code, changed: false };
+      }
+      let patched = code;
+      let changed = false;
+      const hudNeedle = "function Tqe(a){var b;bt(a.a);b=((Yse(),Qse)?'Replay: ':'Score: ')+((sxe(),qxe).g/100|0);if(Nye(qxe.f,(Ize(),zze))){Wqe(a);b=_Ee(b,' | '+y1d(a.d)+' fps')}qxe.I.d&&(b='Replay ended');Gm(a.c,a.a,b,10,$b.a.height-10);jt(a.a)}";
+      const hudReplacement = "function Tqe(a){var b;bt(a.a);b=((sxe(),qxe).g/100|0);Wqe(a);$wnd.__BlobioHudInfoUpdate&&$wnd.__BlobioHudInfoUpdate(b,y1d(a.d),qxe.I.d?1:0);jt(a.a)}";
+      if (patched.includes(hudNeedle) && !patched.includes("__BlobioHudInfoUpdate")) {
+        patched = patched.replace(hudNeedle, hudReplacement);
+        changed = true;
+      }
+      const cellsNeedle = "function zxe(a){var b,c,d,e,f,g,h;g=0;b=0;h=TIe(a.A.a);for(d=(f=(new JJe(a.A.a)).a.iX().Rd(),new PJe(f));d.a.Td();){c=(e=d.a.Ud(),e.WX());g+=c.w*c.w;b+=c.w}a.g=g;h>1&&(a.a=b/h|0)}";
+      const cellsReplacement = "function zxe(a){var b,c,d,e,f,g,h;g=0;b=0;h=TIe(a.A.a);for(d=(f=(new JJe(a.A.a)).a.iX().Rd(),new PJe(f));d.a.Td();){c=(e=d.a.Ud(),e.WX());g+=c.w*c.w;b+=c.w}a.g=g;h>1&&(a.a=b/h|0);$wnd.__BlobioHudInfoCells&&$wnd.__BlobioHudInfoCells(h)}";
+      if (patched.includes(cellsNeedle) && !patched.includes("__BlobioHudInfoCells")) {
+        patched = patched.replace(cellsNeedle, cellsReplacement);
+        changed = true;
+      }
+      const socketNeedle = "function kxe(e,b,c){var d=e;d.ws&&d.ws.close(X0e);d.ws=new WebSocket(b,c);d.ws.onopen=function(){d.uW()};d.ws.binaryType=xsf;d.ws.onclose=function(a){d.qW(a.code,a.reason)};d.ws.onerror=function(a){d.rW(a.type,a.toString())};d.ws.onmessage=function(a){typeof a.data==USe?d.tW(a.data):d.sW(a.data)}}";
+      const socketReplacement = "function kxe(e,b,c){var d=e;$wnd.__BlobioHudInfoSocketOpening&&$wnd.__BlobioHudInfoSocketOpening(b,c);d.ws&&d.ws.close(X0e);d.ws=new WebSocket(b,c);$wnd.__BlobioHudInfoSocketCreated&&$wnd.__BlobioHudInfoSocketCreated(d.ws,b,c);d.ws.onopen=function(){d.uW()};d.ws.binaryType=xsf;d.ws.onclose=function(a){d.qW(a.code,a.reason)};d.ws.onerror=function(a){d.rW(a.type,a.toString())};d.ws.onmessage=function(a){$wnd.__BlobioHudInfoSocketMessage&&$wnd.__BlobioHudInfoSocketMessage(d.ws);typeof a.data==USe?d.tW(a.data):d.sW(a.data)}}";
+      if (patched.includes(socketNeedle) && !patched.includes("__BlobioHudInfoSocketCreated")) {
+        patched = patched.replace(socketNeedle, socketReplacement);
+        changed = true;
+      }
+      const socketSendNeedle = "_.pW=function BVd(b){var c,d,e;d=fme(b.length);c=new Int8Array(d);c.set(b,0);try{this.ws&&this.ws.send(d)}catch(a){a=Yke(a);if(q1d(a,36)){e=a;throw Zke(new fVd(e))}else throw Zke(a)}};";
+      const socketSendReplacement = "_.pW=function BVd(b){var c,d,e;d=fme(b.length);c=new Int8Array(d);c.set(b,0);try{this.ws&&($wnd.__BlobioHudInfoSocketSend&&$wnd.__BlobioHudInfoSocketSend(this.ws),this.ws.send(d))}catch(a){a=Yke(a);if(q1d(a,36)){e=a;throw Zke(new fVd(e))}else throw Zke(a)}};";
+      if (patched.includes(socketSendNeedle) && !patched.includes("__BlobioHudInfoSocketSend")) {
+        patched = patched.replace(socketSendNeedle, socketSendReplacement);
+        changed = true;
+      }
+      return { code: patched, changed };
+    }
+    function patchDownloadedChunk(chunk) {
+      const result = patchGameCode(chunk);
+      if (result.changed) {
+        state.patchApplied = true;
+      }
+      return result.code;
+    }
+    function installGwtPatch() {
+      const html = win.html;
+      if (!html || html.__blobioHudInfoWrapped || typeof html.onScriptDownloaded !== "function") {
+        return false;
+      }
+      const original = html.onScriptDownloaded;
+      html.onScriptDownloaded = function blobioHudInfoOnScriptDownloaded(chunks) {
+        const patched = Array.isArray(chunks) ? chunks.map(patchDownloadedChunk) : patchDownloadedChunk(chunks);
+        return original.call(this, patched);
+      };
+      html.__blobioHudInfoWrapped = true;
+      return true;
+    }
+    function installScriptObserver() {
+      const NodeCtor = win.Node;
+      if (!NodeCtor?.prototype || NodeCtor.prototype.__blobioHudInfoNodePatch) {
+        return;
+      }
+      state.originalAppendChild = NodeCtor.prototype.appendChild;
+      state.originalInsertBefore = NodeCtor.prototype.insertBefore;
+      NodeCtor.prototype.appendChild = function blobioHudInfoAppendChild(node) {
+        if (node?.tagName === "SCRIPT") {
+          installGwtPatch();
+        }
+        return state.originalAppendChild.call(this, node);
+      };
+      NodeCtor.prototype.insertBefore = function blobioHudInfoInsertBefore(node, child) {
+        if (node?.tagName === "SCRIPT") {
+          installGwtPatch();
+        }
+        return state.originalInsertBefore.call(this, node, child);
+      };
+      NodeCtor.prototype.__blobioHudInfoNodePatch = true;
+    }
+    function startPatchTimer() {
+      const timer = win.setInterval?.(() => {
+        if (installGwtPatch() || Date.now() - state.startedAt > 3e4) {
+          win.clearInterval?.(timer);
+        }
+      }, 50);
+    }
+    function ensureStyle() {
+      if (state.styleNode?.parentNode) {
+        return;
+      }
+      const style = doc.createElement("style");
+      style.id = "blobio-hud-info-style";
+      style.textContent = `
+.blobio-hud-info-root {
+  --blobio-hud-color-a: rgba(255, 255, 255, 1);
+  --blobio-hud-font-size: 17px;
+  --blobio-hud-font: Ubuntu, Arial, sans-serif;
+  position: fixed;
+  z-index: 79;
+  pointer-events: none;
+  font-family: var(--blobio-hud-font);
+  font-size: var(--blobio-hud-font-size);
+  line-height: 1.12;
+}
+.blobio-hud-info-output {
+  min-width: 128px;
+  display: flex;
+  gap: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-align: right;
+  white-space: nowrap;
+}
+.blobio-hud-info-root.is-layout-line .blobio-hud-info-output {
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: baseline;
+  justify-content: flex-start;
+}
+.blobio-hud-info-root.is-layout-below .blobio-hud-info-output {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+.blobio-hud-info-root.anchor-left .blobio-hud-info-output {
+  align-items: flex-start;
+  text-align: left;
+}
+.blobio-hud-info-root.anchor-center .blobio-hud-info-output {
+  align-items: center;
+  text-align: center;
+}
+.blobio-hud-info-root.anchor-right .blobio-hud-info-output {
+  align-items: flex-end;
+  text-align: right;
+}
+.blobio-hud-info-row {
+  display: flex;
+  flex: 0 0 auto;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: 5px;
+}
+.blobio-hud-info-root.anchor-left.is-layout-below .blobio-hud-info-row {
+  justify-content: flex-start;
+}
+.blobio-hud-info-root.anchor-center.is-layout-below .blobio-hud-info-row {
+  justify-content: center;
+}
+.blobio-hud-info-root.anchor-right.is-layout-below .blobio-hud-info-row {
+  flex-direction: row-reverse;
+  justify-content: flex-start;
+}
+.blobio-hud-info-row.is-hidden,
+.blobio-hud-info-root.is-empty .blobio-hud-info-output {
+  display: none;
+}
+.blobio-hud-info-root.is-solid .blobio-hud-info-row {
+  color: var(--blobio-hud-color-a);
+}
+.blobio-hud-info-root.has-readable-shadow.is-solid .blobio-hud-info-row,
+.blobio-hud-info-root.has-readable-shadow.is-simple .blobio-hud-info-label,
+.blobio-hud-info-root.has-readable-shadow.is-simple .blobio-hud-info-value {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95), 1px 0 1px rgba(0, 0, 0, 0.9), -1px 0 1px rgba(0, 0, 0, 0.9);
+}
+.blobio-hud-info-root.is-simple .blobio-hud-info-label {
+  color: var(--blobio-hud-color-a);
+}
+.blobio-hud-info-separator {
+  display: none;
+  color: #fff;
+  text-shadow: none;
+}
+.blobio-hud-info-separator.is-visible {
+  display: inline;
+}`;
+      (doc.head || doc.documentElement).appendChild(style);
+      state.styleNode = style;
+    }
+  }
+  function normalizeHudInfoSettings2(settings = {}) {
+    const source = settings && typeof settings === "object" ? settings : {};
+    return {
+      enabled: source.enabled === void 0 ? DEFAULT_HUD_INFO_RUNTIME_SETTINGS.enabled : Boolean(source.enabled),
+      showScore: source.showScore === void 0 ? DEFAULT_HUD_INFO_RUNTIME_SETTINGS.showScore : Boolean(source.showScore),
+      showFps: source.showFps === void 0 ? DEFAULT_HUD_INFO_RUNTIME_SETTINGS.showFps : Boolean(source.showFps),
+      showPing: source.showPing === void 0 ? DEFAULT_HUD_INFO_RUNTIME_SETTINGS.showPing : Boolean(source.showPing),
+      showCells: source.showCells === void 0 ? DEFAULT_HUD_INFO_RUNTIME_SETTINGS.showCells : Boolean(source.showCells),
+      styleMode: HUD_INFO_STYLE_MODES2.has(source.styleMode) ? source.styleMode : DEFAULT_HUD_INFO_RUNTIME_SETTINGS.styleMode,
+      scoreMode: HUD_INFO_DATA_MODES2.has(source.scoreMode) ? source.scoreMode : DEFAULT_HUD_INFO_RUNTIME_SETTINGS.scoreMode,
+      fpsMode: HUD_INFO_DATA_MODES2.has(source.fpsMode) ? source.fpsMode : DEFAULT_HUD_INFO_RUNTIME_SETTINGS.fpsMode,
+      pingMode: HUD_INFO_DATA_MODES2.has(source.pingMode) ? source.pingMode : DEFAULT_HUD_INFO_RUNTIME_SETTINGS.pingMode,
+      positionMode: HUD_INFO_POSITION_MODES_SET.has(source.positionMode) ? source.positionMode : DEFAULT_HUD_INFO_RUNTIME_SETTINGS.positionMode,
+      layoutMode: HUD_INFO_LAYOUT_MODES_SET.has(source.layoutMode) ? source.layoutMode : DEFAULT_HUD_INFO_RUNTIME_SETTINGS.layoutMode,
+      fontSize: hudInfoClampNumber(source.fontSize, 10, 32, DEFAULT_HUD_INFO_RUNTIME_SETTINGS.fontSize),
+      color: hudInfoNormalizeColor(source.color, DEFAULT_HUD_INFO_RUNTIME_SETTINGS.color),
+      alpha: hudInfoClampNumber(source.alpha, 0, 1, DEFAULT_HUD_INFO_RUNTIME_SETTINGS.alpha)
+    };
+  }
+  function hudInfoNormalizeColor(value, fallback) {
+    const color = String(value || "").trim().toLowerCase();
+    return /^#[0-9a-f]{6}$/.test(color) ? color : fallback;
+  }
+  function hudInfoClampNumber(value, min, max, fallback) {
+    if (value === null || value === void 0 || value === "") {
+      return fallback;
+    }
+    const number = Number(value);
+    if (!Number.isFinite(number)) {
+      return fallback;
+    }
+    return Math.max(min, Math.min(max, number));
+  }
+  function hudInfoRgbaFromSettings(settings) {
+    const clean = hudInfoNormalizeColor(settings.color, DEFAULT_HUD_INFO_RUNTIME_SETTINGS.color).slice(1);
+    const red = Number.parseInt(clean.slice(0, 2), 16) || 0;
+    const green = Number.parseInt(clean.slice(2, 4), 16) || 0;
+    const blue = Number.parseInt(clean.slice(4, 6), 16) || 0;
+    return `rgba(${red}, ${green}, ${blue}, ${Math.round(settings.alpha * 1e3) / 1e3})`;
+  }
+  function hudInfoNumberText(value) {
+    const number = Math.round(Number(value) || 0);
+    return number.toLocaleString("en-US");
+  }
+  function hudInfoColorForMass(score) {
+    const value = Number(score) || 0;
+    if (value >= 4e4) return HUD_INFO_MASS_COLORS.green;
+    if (value >= 2e4) return HUD_INFO_MASS_COLORS.yellow;
+    return HUD_INFO_MASS_COLORS.red;
+  }
+  function hudInfoColorForFps(fps) {
+    const value = Number(fps) || 0;
+    if (value >= 50) return HUD_INFO_MASS_COLORS.green;
+    if (value >= 30) return HUD_INFO_MASS_COLORS.yellow;
+    return HUD_INFO_MASS_COLORS.red;
+  }
+  function hudInfoColorForPing(ping) {
+    const value = Number(ping) || 0;
+    if (value >= 70) return HUD_INFO_MASS_COLORS.red;
+    if (value >= 20) return HUD_INFO_MASS_COLORS.yellow;
+    return HUD_INFO_MASS_COLORS.green;
+  }
+  function hudInfoFormatScoreValue(data, mode) {
+    const score = hudInfoNumberText(data.score);
+    return mode === "advanced" || mode === "dev" ? `${score} [${hudInfoNumberText(data.averageScore)}]` : score;
+  }
+  function hudInfoFormatFpsValue(data, mode) {
+    const fps = hudInfoNumberText(data.fps);
+    if (mode === "advanced") {
+      return `${fps} [${hudInfoNumberText(data.averageFps)}]`;
+    }
+    if (mode === "dev") {
+      return `${fps} [${(Number(data.frameTime) || 0).toFixed(1)} ms]`;
+    }
+    return fps;
+  }
+  function hudInfoFormatPingValue(data, mode) {
+    const hasPing = Number(data.ping) > 0;
+    const ping = hasPing ? hudInfoNumberText(data.ping) : "--";
+    const averagePing = hasPing ? hudInfoNumberText(data.averagePing) : "--";
+    const peakPing = hasPing ? hudInfoNumberText(data.peakPing) : "--";
+    if (mode === "advanced") {
+      return `${ping} [${averagePing}]`;
+    }
+    if (mode === "dev") {
+      return `${ping} [${averagePing}] + [${peakPing}]`;
+    }
+    return ping;
+  }
+  function hudInfoFormatCellsValue(data) {
+    return hudInfoNumberText(data.cells);
+  }
+  function hudInfoAverageMass(score, cells) {
+    const count = Math.max(0, Math.round(Number(cells) || 0));
+    return count ? Math.max(0, Math.round((Number(score) || 0) / count)) : Math.max(0, Math.round(Number(score) || 0));
+  }
+  function hudInfoAverage(values) {
+    return values.length ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length) : 0;
+  }
+  function hudInfoMaxValue(values) {
+    return values.length ? Math.max(...values) : 0;
+  }
+  function hudInfoPushSample(samples, value) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) {
+      return;
+    }
+    samples.push(number);
+    if (samples.length > HUD_INFO_MAX_SAMPLES) {
+      samples.splice(0, samples.length - HUD_INFO_MAX_SAMPLES);
+    }
+  }
+  function hudInfoHasAnyEnabled(settings) {
+    return Boolean(settings.showScore || settings.showFps || settings.showPing || settings.showCells);
+  }
+  function hudInfoShouldUseTextShadow(settings) {
+    return hudInfoHasAnyEnabled(settings) && (Number(settings.alpha) || 0) > 0;
+  }
+  function hudInfoPositionAnchor(positionMode) {
+    if (String(positionMode).endsWith("right")) return "right";
+    if (String(positionMode).endsWith("center")) return "center";
+    return "left";
+  }
+  function hudInfoIsBottomPosition(positionMode) {
+    return String(positionMode).startsWith("bottom");
+  }
+  function hudInfoLabelTextFor(label, settings) {
+    if (settings.layoutMode === "below" && hudInfoPositionAnchor(settings.positionMode) === "right") {
+      return label;
+    }
+    return `${label}:`;
+  }
+  function hudInfoRenderSettingsKey(settings, fontFamily = "") {
+    return [
+      settings.enabled ? 1 : 0,
+      ...HUD_INFO_ROWS.map((row) => settings[row.show] ? 1 : 0),
+      settings.styleMode,
+      settings.positionMode,
+      settings.layoutMode,
+      settings.fontSize,
+      settings.color,
+      settings.alpha,
+      fontFamily
+    ].join("|");
+  }
+  function hudInfoRenderDataKey(data, settings) {
+    return [
+      settings.styleMode,
+      settings.scoreMode,
+      settings.fpsMode,
+      settings.pingMode,
+      data.score,
+      data.averageScore,
+      data.fps,
+      data.averageFps,
+      Math.round((Number(data.frameTime) || 0) * 10),
+      data.ping,
+      data.averagePing,
+      data.peakPing,
+      data.cells
+    ].join("|");
+  }
+  function hudInfoSetText(node, text) {
+    if (node && node.textContent !== text) {
+      node.textContent = text;
+    }
+  }
+  function hudInfoSetStyleColor(node, color) {
+    if (node && node.style.color !== color) {
+      node.style.color = color;
+    }
+  }
+  function hudInfoToggleClass(node, className, enabled) {
+    if (node?.classList?.toggle) {
+      node.classList.toggle(className, Boolean(enabled));
+    } else if (enabled) {
+      node?.classList?.add?.(className);
+    } else {
+      node?.classList?.remove?.(className);
+    }
+  }
+  function hudInfoSetRowVisible(row, visible) {
+    hudInfoToggleClass(row, "is-hidden", !visible);
+    row?.setAttribute?.("aria-hidden", String(!visible));
+  }
+  function hudInfoUpdateSeparators(items, settings) {
+    let lastVisible = null;
+    for (const item of items) {
+      if (item.visible) {
+        lastVisible = item;
+      }
+    }
+    for (const item of items) {
+      hudInfoToggleClass(item.separator, "is-visible", settings.layoutMode === "line" && item.visible && item !== lastVisible);
+    }
+  }
+  function hudInfoNowMs() {
+    const perf = globalThis.performance;
+    return perf?.now ? perf.now() : Date.now();
+  }
+
+  // src/jelly/pageJellyShaderBootstrap.js
+  var JELLY_SHADER_MARKER = "BlobioJellyPhysics";
+  var JELLY_SHADER_VANILLA_KEY = "config-switch-jelly-physics";
+  var DEFAULT_JELLY_SHADER_RUNTIME_SETTINGS = Object.freeze({
+    enabled: false,
+    skinCells: true,
+    noSkinCells: false
+  });
+  function pageJellyShaderBootstrap(initialSettings, pageWindow = globalThis) {
+    const win = pageWindow;
+    let settings = normalizeJellyShaderRuntimeSettings(initialSettings);
+    if (win.location?.hostname !== "custom.client.blobgame.io") {
+      return false;
+    }
+    if (win.__blobioJellyShaderInstalled) {
+      win.__blobioJellyShaderRefresh?.(settings);
+      return true;
+    }
+    win.__blobioJellyShaderInstalled = true;
+    const status = {
+      version: initialSettings?.version || "",
+      enabled: settings.enabled,
+      shaderSourcesSeen: 0,
+      shaderSourcesPatched: 0,
+      skinShaderPatches: 0,
+      noSkinShaderPatches: 0,
+      hookInstalled: false,
+      reloadNeeded: false
+    };
+    win.__blobioJellyShaderStatus = status;
+    win.__blobioJellyShaderRefresh = refresh;
+    disableVanillaJellyIfNeeded();
+    installShaderHook();
+    retryShaderHook();
+    return true;
+    function refresh(nextSettings) {
+      const previous = settings;
+      settings = normalizeJellyShaderRuntimeSettings(nextSettings);
+      status.enabled = settings.enabled;
+      disableVanillaJellyIfNeeded();
+      if (status.shaderSourcesSeen > 0 && (previous.enabled !== settings.enabled || previous.skinCells !== settings.skinCells || previous.noSkinCells !== settings.noSkinCells)) {
+        status.reloadNeeded = true;
+      }
+    }
+    function disableVanillaJellyIfNeeded() {
+      if (!settings.enabled) {
+        return;
+      }
+      try {
+        win.localStorage?.setItem?.(JELLY_SHADER_VANILLA_KEY, "false");
+      } catch {
+      }
+      const checkbox = win.document?.getElementById?.(JELLY_SHADER_VANILLA_KEY);
+      if (checkbox) {
+        checkbox.checked = false;
+        checkbox.setAttribute?.("aria-checked", "false");
+      }
+    }
+    function installShaderHook() {
+      const contexts = [win.WebGLRenderingContext, win.WebGL2RenderingContext];
+      for (const Ctor of contexts) {
+        if (!Ctor?.prototype || Ctor.prototype.__blobioJellyShaderHooked) {
+          continue;
+        }
+        const nativeShaderSource = Ctor.prototype.shaderSource;
+        if (typeof nativeShaderSource !== "function") {
+          continue;
+        }
+        Ctor.prototype.shaderSource = function blobioJellyShaderSource(shader, source) {
+          status.shaderSourcesSeen += 1;
+          const patched = patchShaderSource(source);
+          if (patched.changed) {
+            status.shaderSourcesPatched += 1;
+            if (patched.skinPatched) {
+              status.skinShaderPatches += 1;
+            }
+            if (patched.noSkinPatched) {
+              status.noSkinShaderPatches += 1;
+            }
+            return nativeShaderSource.call(this, shader, patched.source);
+          }
+          return nativeShaderSource.call(this, shader, source);
+        };
+        Ctor.prototype.__blobioJellyShaderHooked = true;
+        status.hookInstalled = true;
+      }
+    }
+    function retryShaderHook() {
+      let attempts = 0;
+      const timer = win.setInterval?.(() => {
+        attempts += 1;
+        installShaderHook();
+        if (status.hookInstalled || attempts >= 40) {
+          win.clearInterval?.(timer);
+        }
+      }, 100);
+    }
+    function patchShaderSource(source) {
+      if (typeof source !== "string" || !settings.enabled || !settings.skinCells && !settings.noSkinCells) {
+        return { source, changed: false };
+      }
+      if (source.includes(JELLY_SHADER_MARKER) || !isCellShader(source)) {
+        return { source, changed: false };
+      }
+      const centerPattern = /(const\s+vec2\s+CENTER_COORD\s*=\s*vec2\s*\(\s*0\.5\s*,\s*0\.5\s*\)\s*;)/;
+      const scalePattern = /float\s+scale\s*=\s*v_scale\s*;\s*RADIUS\s*-=\s*scale\s*;/;
+      if (!centerPattern.test(source)) {
+        return { source, changed: false };
+      }
+      let patched = source.replace(centerPattern, `$1
+
+${buildJellyGlsl(settings.noSkinCells)}`);
+      let skinPatched = false;
+      let noSkinPatched = false;
+      if (settings.skinCells && scalePattern.test(patched)) {
+        patched = patched.replace(scalePattern, "float scale = blobioJellyScale(v_scale, v_texCoords);\n    RADIUS -= scale;");
+        skinPatched = true;
+      }
+      if (settings.noSkinCells && patched.includes("drawEmptyCell")) {
+        const next = patchNoSkinCellShader(patched);
+        noSkinPatched = next !== patched;
+        patched = next;
+      }
+      return {
+        source: patched,
+        changed: patched !== source,
+        skinPatched,
+        noSkinPatched
+      };
+    }
+    function patchNoSkinCellShader(source) {
+      const startPattern = /void\s+drawEmptyCell\s*\(\s*\)\s*\{\s*float\s+len\s*=\s*length\s*\(\s*CENTER_COORD\s*-\s*v_texCoords\s*\)\s*;/;
+      if (!startPattern.test(source)) {
+        return source;
+      }
+      return source.replace(
+        startPattern,
+        "void drawEmptyCell() {\n\n    float emptyRadius = blobioJellyEmptyRadius(v_scale, v_texCoords);\n    float len = length(CENTER_COORD - v_texCoords);"
+      ).replace(/if\s*\(\s*len\s*<\s*0\.5\s*\)\s*\{/, "if (len < emptyRadius) {").replace(/if\s*\(\s*len\s*<\s*0\.5\s*\*\s*0\.954\s*\)\s*\{/, "if (len < emptyRadius * 0.954) {");
+    }
+    function isCellShader(source) {
+      return source.includes("varying float v_scale") && source.includes("uniform float u_time") && source.includes("CENTER_COORD") && /RADIUS\s*-=\s*scale\s*;/.test(source);
+    }
+    function buildJellyGlsl(includeNoSkinCells) {
+      const lines = [
+        `// ${JELLY_SHADER_MARKER}. Uses existing u_time and v_scale uniforms only.`,
+        "float blobioJellyScale(float baseScale, vec2 uv) {",
+        "    vec2 rel = uv - CENTER_COORD;",
+        "    float dist = length(rel);",
+        "    float edge = smoothstep(0.18, 0.50, dist);",
+        "    float splitEnergy = clamp(baseScale * 5.0, 0.0, 1.0);",
+        "    float wave = sin((rel.x - rel.y) * 18.0 + u_time * 5.4) * 0.010;",
+        "    float ripple = sin((rel.x + rel.y) * 24.0 - u_time * 3.1 + baseScale * 28.0) * 0.005;",
+        "    float wobble = (wave + ripple) * edge * (0.35 + splitEnergy * 0.65);",
+        "    return max(0.0, baseScale * 0.86 + wobble);",
+        "}"
+      ];
+      if (includeNoSkinCells) {
+        lines.push(
+          "",
+          "float blobioJellyEmptyRadius(float baseScale, vec2 uv) {",
+          "    return max(0.38, 0.50 - blobioJellyScale(baseScale, uv));",
+          "}"
+        );
+      }
+      return lines.join("\n");
+    }
+  }
+  function normalizeJellyShaderRuntimeSettings(settings = {}) {
+    const source = settings && typeof settings === "object" ? settings : {};
+    return {
+      enabled: source.enabled === void 0 ? DEFAULT_JELLY_SHADER_RUNTIME_SETTINGS.enabled : Boolean(source.enabled),
+      skinCells: source.skinCells === void 0 ? DEFAULT_JELLY_SHADER_RUNTIME_SETTINGS.skinCells : Boolean(source.skinCells),
+      noSkinCells: source.noSkinCells === void 0 ? DEFAULT_JELLY_SHADER_RUNTIME_SETTINGS.noSkinCells : Boolean(source.noSkinCells),
+      version: source.version || ""
+    };
+  }
+
   // src/roles/UidReader.js
   var UID_ATTRIBUTES = [
     "uid",
@@ -14247,6 +16052,8 @@ html.${className} .blobio-watermark-extension::after {
       }
       const logger = this.window.console || console;
       if (hostMode === "runtime") {
+        this.installJellyShaderFallback(document, logger);
+        this.installHudInfoFallback(document, logger);
         this.installVirusMotherCellFallback(document, logger);
         this.installVirusPelletColorsFallback(document, logger);
       }
@@ -14396,6 +16203,39 @@ html.${className} .blobio-watermark-extension::after {
         status.reason = "bundle-bootstrap-error";
         status.error = error?.message || String(error);
         logger.warn?.("[Blobio] Virus | Mother-cell fallback failed.", error);
+        return false;
+      }
+    }
+    installJellyShaderFallback(document, logger) {
+      const windowRef = this.window;
+      if (windowRef.__blobioJellyShaderInstalled) {
+        return true;
+      }
+      const storage = createBlobioStorage(document);
+      const settings = readJellyShaderSettings(storage);
+      if (!settings.enabled) {
+        return false;
+      }
+      try {
+        return Boolean(pageJellyShaderBootstrap({
+          ...settings,
+          version: EXTENSION_VERSION
+        }, windowRef));
+      } catch (error) {
+        logger.warn?.("[Blobio] Jelly-Physics Shader fallback failed.", error);
+        return false;
+      }
+    }
+    installHudInfoFallback(document, logger) {
+      const windowRef = this.window;
+      if (windowRef.__blobioHudInfoInstalled) {
+        return true;
+      }
+      const storage = createBlobioStorage(document);
+      try {
+        return Boolean(pageHudInfoBootstrap(readHudInfoSettings(storage), windowRef));
+      } catch (error) {
+        logger.warn?.("[Blobio] HUD-Info fallback failed.", error);
         return false;
       }
     }

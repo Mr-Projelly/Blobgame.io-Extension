@@ -25,6 +25,10 @@ import { MenuFeature } from './features/MenuFeature.js';
 import { FriendHighlightStore } from './friends/FriendHighlightStore.js';
 import { FriendRelationService } from './friends/FriendRelationService.js';
 import { HotkeyStore } from './hotkeys/HotkeyStore.js';
+import { readHudInfoSettings } from './settings/HudInfoSettings.js';
+import { pageHudInfoBootstrap } from './hud/pageHudInfoBootstrap.js';
+import { readJellyShaderSettings } from './jelly/JellyShaderSettings.js';
+import { pageJellyShaderBootstrap } from './jelly/pageJellyShaderBootstrap.js';
 import { PlayerMuteFeature } from './features/PlayerMuteFeature.js';
 import { VipBadgeFeature } from './features/VipBadgeFeature.js';
 import { getBlobioHostMode } from './hostRules.js';
@@ -73,6 +77,8 @@ class BlobioExtension {
 
     const logger = this.window.console || console;
     if (hostMode === 'runtime') {
+      this.installJellyShaderFallback(document, logger);
+      this.installHudInfoFallback(document, logger);
       this.installVirusMotherCellFallback(document, logger);
       this.installVirusPelletColorsFallback(document, logger);
     }
@@ -235,6 +241,44 @@ class BlobioExtension {
       status.reason = 'bundle-bootstrap-error';
       status.error = error?.message || String(error);
       logger.warn?.('[Blobio] Virus | Mother-cell fallback failed.', error);
+      return false;
+    }
+  }
+
+  installJellyShaderFallback(document, logger) {
+    const windowRef = this.window;
+    if (windowRef.__blobioJellyShaderInstalled) {
+      return true;
+    }
+
+    const storage = createBlobioStorage(document);
+    const settings = readJellyShaderSettings(storage);
+    if (!settings.enabled) {
+      return false;
+    }
+
+    try {
+      return Boolean(pageJellyShaderBootstrap({
+        ...settings,
+        version: EXTENSION_VERSION,
+      }, windowRef));
+    } catch (error) {
+      logger.warn?.('[Blobio] Jelly-Physics Shader fallback failed.', error);
+      return false;
+    }
+  }
+
+  installHudInfoFallback(document, logger) {
+    const windowRef = this.window;
+    if (windowRef.__blobioHudInfoInstalled) {
+      return true;
+    }
+
+    const storage = createBlobioStorage(document);
+    try {
+      return Boolean(pageHudInfoBootstrap(readHudInfoSettings(storage), windowRef));
+    } catch (error) {
+      logger.warn?.('[Blobio] HUD-Info fallback failed.', error);
       return false;
     }
   }
