@@ -109,8 +109,6 @@ export function pageHudInfoBootstrap(initialSettings, pageWindow = globalThis) {
 
   function refresh(nextSettings) {
     state.settings = normalizeHudInfoSettings(nextSettings);
-    state.renderSettingsKey = '';
-    state.renderDataKey = '';
     renderHud();
     schedulePosition();
   }
