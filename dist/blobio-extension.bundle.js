@@ -2455,7 +2455,7 @@
         state.context.clearRect(0, 0, width, height);
       }
     }
-    function renderCell(cellId, rawName, centerX, centerY, cellSize, radius, isOwn) {
+    function renderCell(cellId, rawName, centerX, centerY, cellSize, radius, isOwn, projectionMatrix) {
       state.counters.renderCalls += 1;
       const active = findActiveEmote(rawName, isOwn);
       if (!active || !ensureOverlay()) {
@@ -2472,13 +2472,14 @@
       const x = Number(centerX);
       const y = Number(centerY);
       const r = Math.max(0, Number(radius) || Number(cellSize) / 2 || 0);
-      if (!Number.isFinite(x) || !Number.isFinite(y) || !isPointNearViewport(x, y, r)) {
+      const drawInfo = getCellDrawInfo(x, y, r, Number(cellSize), projectionMatrix);
+      if (!drawInfo || !isPointNearViewport(drawInfo.x, drawInfo.y, drawInfo.size / 2)) {
         state.lastRender = {
           cellId,
           isOwn: Boolean(isOwn),
           active: true,
           drawn: false,
-          reason: "outside-viewport",
+          reason: drawInfo ? "outside-viewport" : "invalid-position",
           at: Date.now()
         };
         return false;
@@ -2495,9 +2496,9 @@
         };
         return false;
       }
-      const size = Math.max(24, Math.min(128, r * 1.16 || Number(cellSize) * 0.58 || 42));
-      const drawX = x - size / 2;
-      const drawY = y - size / 2;
+      const size = drawInfo.size;
+      const drawX = drawInfo.x - size / 2;
+      const drawY = drawInfo.y - size / 2;
       state.context.globalAlpha = fadeFor(active.expiresAt);
       state.context.drawImage(image, drawX, drawY, size, size);
       state.context.globalAlpha = 1;
@@ -2507,12 +2508,77 @@
         isOwn: Boolean(isOwn),
         emoteId: active.emoteId,
         drawn: true,
-        x,
-        y,
+        x: drawInfo.x,
+        y: drawInfo.y,
+        worldX: x,
+        worldY: y,
         size,
+        projected: drawInfo.projected,
         at: Date.now()
       };
       return true;
+    }
+    function getCellDrawInfo(x, y, radius, cellSize, projectionMatrix) {
+      if (!Number.isFinite(x) || !Number.isFinite(y)) {
+        return null;
+      }
+      const projected = projectWorldPoint(x, y, projectionMatrix);
+      if (projected) {
+        const measureRadius = Math.max(0, radius || cellSize / 2 || 0);
+        const right = measureRadius > 0 ? projectWorldPoint(x + measureRadius, y, projectionMatrix) : null;
+        const top = measureRadius > 0 ? projectWorldPoint(x, y + measureRadius, projectionMatrix) : null;
+        const projectedRadius = Math.max(
+          right ? Math.abs(right.x - projected.x) : 0,
+          top ? Math.abs(top.y - projected.y) : 0
+        );
+        return {
+          x: projected.x,
+          y: projected.y,
+          size: Math.max(24, Math.min(128, projectedRadius * 1.16 || 42)),
+          projected: true
+        };
+      }
+      return {
+        x,
+        y,
+        size: Math.max(24, Math.min(128, radius * 1.16 || cellSize * 0.58 || 42)),
+        projected: false
+      };
+    }
+    function projectWorldPoint(x, y, projectionMatrix) {
+      const matrix = getMatrixValues(projectionMatrix);
+      const viewport = getOverlayViewport();
+      if (!matrix || viewport.width <= 0 || viewport.height <= 0) {
+        return null;
+      }
+      const clipX = matrix[0] * x + matrix[4] * y + matrix[12];
+      const clipY = matrix[1] * x + matrix[5] * y + matrix[13];
+      const clipW = matrix[3] * x + matrix[7] * y + matrix[15];
+      const w = Number.isFinite(clipW) && Math.abs(clipW) > 1e-5 ? clipW : 1;
+      const ndcX = clipX / w;
+      const ndcY = clipY / w;
+      if (!Number.isFinite(ndcX) || !Number.isFinite(ndcY)) {
+        return null;
+      }
+      return {
+        x: (ndcX + 1) * 0.5 * viewport.width,
+        y: (1 - ndcY) * 0.5 * viewport.height
+      };
+    }
+    function getMatrixValues(value) {
+      const matrix = value?.a || value;
+      return matrix && typeof matrix.length === "number" && matrix.length >= 16 ? matrix : null;
+    }
+    function getOverlayViewport() {
+      const rect = state.targetCanvas?.getBoundingClientRect?.();
+      return {
+        width: Number(rect?.width) || parseCssPixels(state.overlay?.style?.width) || Number(win.innerWidth) || 0,
+        height: Number(rect?.height) || parseCssPixels(state.overlay?.style?.height) || Number(win.innerHeight) || 0
+      };
+    }
+    function parseCssPixels(value) {
+      const number = Number.parseFloat(String(value || ""));
+      return Number.isFinite(number) ? number : 0;
     }
     function findActiveEmote(rawName, isOwn) {
       const now = Date.now();
@@ -2543,8 +2609,9 @@
     }
     function isPointNearViewport(x, y, radius) {
       const margin = Math.max(80, Math.min(240, radius + 80));
-      const width = Number(state.overlay?.width) || Number(win.innerWidth) || 0;
-      const height = Number(state.overlay?.height) || Number(win.innerHeight) || 0;
+      const viewport = getOverlayViewport();
+      const width = viewport.width || Number(win.innerWidth) || 0;
+      const height = viewport.height || Number(win.innerHeight) || 0;
       return x + margin >= 0 && y + margin >= 0 && x - margin <= width && y - margin <= height;
     }
     function ensureOverlay() {
@@ -2714,7 +2781,7 @@
       }
       patched = patched.replace(
         renderNeedle,
-        "if($wnd.__BlobioSkinEmoteRenderCell){$wnd.__BlobioSkinEmoteRenderCell(g.n,g.B,g.R,g.S,g.N,g.M,g.p,g.u||g.r)}" + renderNeedle
+        "if($wnd.__BlobioSkinEmoteRenderCell){$wnd.__BlobioSkinEmoteRenderCell(g.n,g.B,g.R,g.S,g.N,g.M,g.p,a.c&&a.c.g&&a.c.g.a)}" + renderNeedle
       );
       if (patched === source) {
         return { source, changed: false, reason: "replace-failed" };
