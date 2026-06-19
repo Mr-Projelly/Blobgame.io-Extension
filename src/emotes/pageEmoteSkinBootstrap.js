@@ -353,8 +353,18 @@ export function pageEmoteSkinBootstrap(initialConfig = {}, pageWindow = globalTh
   }
 
   function installGameScriptPatch() {
-    wrapScriptDownloaded();
+    const wrapped = wrapScriptDownloaded();
     patchExistingCacheScripts();
+    if (!wrapped) {
+      const callbackPatchTimer = win.setInterval?.(() => {
+        if (wrapScriptDownloaded()) {
+          win.clearInterval?.(callbackPatchTimer);
+        }
+      }, 10);
+      if (callbackPatchTimer !== undefined && callbackPatchTimer !== null) {
+        win.setTimeout?.(() => win.clearInterval?.(callbackPatchTimer), 30000);
+      }
+    }
 
     const NodeCtor = win.Node;
     if (!NodeCtor?.prototype || NodeCtor.prototype.__blobioEmoteSkinNodePatch) {
