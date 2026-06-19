@@ -119,6 +119,8 @@ export function pageHudInfoBootstrap(initialSettings, pageWindow = globalThis) {
       socketSendPatched: 0,
       wrappedCallback: false,
       lastResult: null,
+      boosterCandidateChunks: 0,
+      lastBoosterResult: null,
     },
     renderSettingsKey: '',
     renderDataKey: '',
@@ -698,13 +700,35 @@ export function pageHudInfoBootstrap(initialSettings, pageWindow = globalThis) {
       cellsPatched: false,
       socketPatched: false,
       socketSendPatched: false,
+      boosterNeedlePresent: false,
+      boosterDrawPresent: false,
+      boosterPatchKind: '',
     };
     const boosterNeedle = "function Tqe(a,b){var c,d;bt(a.a);for(c=0;c<b.length;c++){d=b[c];if(!d){break}Gm(a.c,a.a,d.LW(),$b.a.width*f0e,$b.a.height-10-c*20)}jt(a.a)}";
-    const boosterReplacement = "function Tqe(a,b){var c,d,e,f;f=[];bt(a.a);for(c=0;c<b.length;c++){d=b[c];if(!d){break}e=d.LW();f[f.length]=e}$wnd.__BlobioHudInfoBoosters&&$wnd.__BlobioHudInfoBoosters(f);jt(a.a)}";
-    if (patched.includes(boosterNeedle) && !patched.includes('__BlobioHudInfoBoosters')) {
-      patched = patched.replace(boosterNeedle, boosterReplacement);
-      changed = true;
-      result.boosterPatched = true;
+    const boosterDraw = "Gm(a.c,a.a,d.LW(),$b.a.width*f0e,$b.a.height-10-c*20)";
+    const boosterPattern = /function ([A-Za-z_$][\w$]*)\(a,b\)\{var c,d;bt\(a\.a\);for\(c=0;c<b\.length;c\+\+\)\{d=b\[c\];if\(!d\)\{break\}Gm\(a\.c,a\.a,d\.LW\(\),\$b\.a\.width\*f0e,\$b\.a\.height-10-c\*20\)\}jt\(a\.a\)\}/;
+    const boosterReplacementFor = (name) => `function ${name}(a,b){var c,d,e,f;f=[];bt(a.a);for(c=0;c<b.length;c++){d=b[c];if(!d){break}e=d.LW();f[f.length]=e}$wnd.__BlobioHudInfoBoosters&&$wnd.__BlobioHudInfoBoosters(f);jt(a.a)}`;
+
+    result.boosterNeedlePresent = patched.includes(boosterNeedle);
+    result.boosterDrawPresent = patched.includes(boosterDraw);
+    if (result.boosterNeedlePresent || result.boosterDrawPresent) {
+      state.patch.boosterCandidateChunks += 1;
+    }
+    if (!patched.includes('__BlobioHudInfoBoosters')) {
+      if (result.boosterNeedlePresent) {
+        patched = patched.replace(boosterNeedle, boosterReplacementFor('Tqe'));
+        changed = true;
+        result.boosterPatched = true;
+        result.boosterPatchKind = 'exact';
+      } else {
+        const boosterMatch = patched.match(boosterPattern);
+        if (boosterMatch) {
+          patched = patched.replace(boosterPattern, boosterReplacementFor(boosterMatch[1]));
+          changed = true;
+          result.boosterPatched = true;
+          result.boosterPatchKind = 'pattern';
+        }
+      }
     }
 
     const hudNeedle = "function Tqe(a){var b;bt(a.a);b=((Yse(),Qse)?'Replay: ':'Score: ')+((sxe(),qxe).g/100|0);if(Nye(qxe.f,(Ize(),zze))){Wqe(a);b=_Ee(b,' | '+y1d(a.d)+' fps')}qxe.I.d&&(b='Replay ended');Gm(a.c,a.a,b,10,$b.a.height-10);jt(a.a)}";
@@ -740,6 +764,9 @@ export function pageHudInfoBootstrap(initialSettings, pageWindow = globalThis) {
     }
 
     state.patch.lastResult = { ...result, changed };
+    if (result.boosterNeedlePresent || result.boosterDrawPresent || result.boosterPatched) {
+      state.patch.lastBoosterResult = state.patch.lastResult;
+    }
     return { code: patched, changed };
   }
 
