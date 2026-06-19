@@ -94,6 +94,9 @@ export class EmoteSkinFeature {
     button.classList.add('blobio-emote-skin-button');
     button.textContent = this.randomEmoji;
     button.setAttribute('aria-label', 'Open emotes');
+    button.addEventListener('mousedown', (event) => {
+      event.preventDefault?.();
+    });
     button.addEventListener('click', (event) => {
       event.preventDefault?.();
       this.setPanelOpen(!this.panel?.classList?.contains('is-open'));
@@ -246,12 +249,16 @@ export class EmoteSkinFeature {
     const win = this.document.defaultView || globalThis;
     const rect = this.input.getBoundingClientRect();
     const buttonSize = 26;
-    const buttonLeft = Math.max(4, rect.right - buttonSize - 4);
+    const buttonGap = 6;
+    const viewportWidth = Number(win.innerWidth) || 1280;
+    const rightSideLeft = rect.right + buttonGap;
+    const buttonLeft = rightSideLeft + buttonSize <= viewportWidth - 4
+      ? rightSideLeft
+      : Math.max(4, rect.left - buttonSize - buttonGap);
     const buttonTop = rect.top + Math.max(0, (rect.height - buttonSize) / 2);
     this.button.style.left = `${Math.round(buttonLeft)}px`;
     this.button.style.top = `${Math.round(buttonTop)}px`;
 
-    const viewportWidth = Number(win.innerWidth) || 1280;
     const viewportHeight = Number(win.innerHeight) || 720;
     const panelWidth = Math.min(330, Math.max(220, viewportWidth - 24));
     const panelHeight = Math.min(

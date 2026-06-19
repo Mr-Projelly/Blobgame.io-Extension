@@ -13,6 +13,10 @@ export function pageEmoteSkinBootstrap(initialConfig = {}, pageWindow = globalTh
 
   if (win.__blobioEmoteSkinInstalled) {
     win.__blobioEmoteSkinRefresh?.(initialConfig);
+    if (typeof win.__BlobioSkinEmoteDebug === 'function') {
+      win.BlobioEmoteSkinDebug = win.__BlobioSkinEmoteDebug;
+      win.BlobioEmoteSkinRuntimeDebug = win.__BlobioSkinEmoteDebug;
+    }
     return true;
   }
   win.__blobioEmoteSkinInstalled = true;
@@ -79,6 +83,7 @@ export function pageEmoteSkinBootstrap(initialConfig = {}, pageWindow = globalTh
     win.__BlobioSkinEmoteBeginFrame = beginFrame;
     win.__BlobioSkinEmoteRenderCell = renderCell;
     win.__BlobioSkinEmoteDebug = debugReport;
+    win.BlobioEmoteSkinDebug = debugReport;
     win.BlobioEmoteSkinRuntimeDebug = debugReport;
   }
 

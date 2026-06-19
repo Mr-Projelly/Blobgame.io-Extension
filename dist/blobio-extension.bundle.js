@@ -1728,6 +1728,9 @@
       button.classList.add("blobio-emote-skin-button");
       button.textContent = this.randomEmoji;
       button.setAttribute("aria-label", "Open emotes");
+      button.addEventListener("mousedown", (event) => {
+        event.preventDefault?.();
+      });
       button.addEventListener("click", (event) => {
         event.preventDefault?.();
         this.setPanelOpen(!this.panel?.classList?.contains("is-open"));
@@ -1856,11 +1859,13 @@
       const win = this.document.defaultView || globalThis;
       const rect = this.input.getBoundingClientRect();
       const buttonSize = 26;
-      const buttonLeft = Math.max(4, rect.right - buttonSize - 4);
+      const buttonGap = 6;
+      const viewportWidth = Number(win.innerWidth) || 1280;
+      const rightSideLeft = rect.right + buttonGap;
+      const buttonLeft = rightSideLeft + buttonSize <= viewportWidth - 4 ? rightSideLeft : Math.max(4, rect.left - buttonSize - buttonGap);
       const buttonTop = rect.top + Math.max(0, (rect.height - buttonSize) / 2);
       this.button.style.left = `${Math.round(buttonLeft)}px`;
       this.button.style.top = `${Math.round(buttonTop)}px`;
-      const viewportWidth = Number(win.innerWidth) || 1280;
       const viewportHeight = Number(win.innerHeight) || 720;
       const panelWidth = Math.min(330, Math.max(220, viewportWidth - 24));
       const panelHeight = Math.min(
@@ -2312,6 +2317,10 @@
     }
     if (win.__blobioEmoteSkinInstalled) {
       win.__blobioEmoteSkinRefresh?.(initialConfig);
+      if (typeof win.__BlobioSkinEmoteDebug === "function") {
+        win.BlobioEmoteSkinDebug = win.__BlobioSkinEmoteDebug;
+        win.BlobioEmoteSkinRuntimeDebug = win.__BlobioSkinEmoteDebug;
+      }
       return true;
     }
     win.__blobioEmoteSkinInstalled = true;
@@ -2371,6 +2380,7 @@
       win.__BlobioSkinEmoteBeginFrame = beginFrame;
       win.__BlobioSkinEmoteRenderCell = renderCell;
       win.__BlobioSkinEmoteDebug = debugReport;
+      win.BlobioEmoteSkinDebug = debugReport;
       win.BlobioEmoteSkinRuntimeDebug = debugReport;
     }
     function triggerEmote(event = {}) {
@@ -5375,8 +5385,25 @@ iframe.blobio-captcha-anchor-hidden,
       if (!root || this.keyboardShield) {
         return;
       }
-      const stop = (event) => event.stopPropagation?.();
+      const shouldRelease = (event) => !root.classList.contains("is-open") && !this.hotkeyCapture && !this.isProtectedTextInput(event.target);
+      const release = (event) => {
+        if (event.key === "Enter" || event.key === " " || event.code === "Space") {
+          event.preventDefault?.();
+        }
+        this.releaseFocusToGame();
+      };
+      const stop = (event) => {
+        if (shouldRelease(event)) {
+          release(event);
+          return;
+        }
+        event.stopPropagation?.();
+      };
       const keydown = (event) => {
+        if (shouldRelease(event)) {
+          release(event);
+          return;
+        }
         if (this.isProtectedTextInput(event.target) && (event.key === "Backspace" || event.key === "Delete")) {
           this.deleteTextAtSelection(event.target, event.key);
           event.preventDefault?.();

@@ -355,8 +355,29 @@ export class ChatSettingsFeature {
       return;
     }
 
-    const stop = (event) => event.stopPropagation?.();
+    const shouldRelease = (event) => (
+      !root.classList.contains('is-open')
+      && !this.hotkeyCapture
+      && !this.isProtectedTextInput(event.target)
+    );
+    const release = (event) => {
+      if (event.key === 'Enter' || event.key === ' ' || event.code === 'Space') {
+        event.preventDefault?.();
+      }
+      this.releaseFocusToGame();
+    };
+    const stop = (event) => {
+      if (shouldRelease(event)) {
+        release(event);
+        return;
+      }
+      event.stopPropagation?.();
+    };
     const keydown = (event) => {
+      if (shouldRelease(event)) {
+        release(event);
+        return;
+      }
       if (this.isProtectedTextInput(event.target) && (event.key === 'Backspace' || event.key === 'Delete')) {
         this.deleteTextAtSelection(event.target, event.key);
         event.preventDefault?.();

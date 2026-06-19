@@ -5219,6 +5219,10 @@
 
     if (win.__blobioEmoteSkinInstalled) {
       win.__blobioEmoteSkinRefresh?.(initialConfig);
+      if (typeof win.__BlobioSkinEmoteDebug === 'function') {
+        win.BlobioEmoteSkinDebug = win.__BlobioSkinEmoteDebug;
+        win.BlobioEmoteSkinRuntimeDebug = win.__BlobioSkinEmoteDebug;
+      }
       return true;
     }
     win.__blobioEmoteSkinInstalled = true;
@@ -5285,6 +5289,7 @@
       win.__BlobioSkinEmoteBeginFrame = beginFrame;
       win.__BlobioSkinEmoteRenderCell = renderCell;
       win.__BlobioSkinEmoteDebug = debugReport;
+      win.BlobioEmoteSkinDebug = debugReport;
       win.BlobioEmoteSkinRuntimeDebug = debugReport;
     }
 
