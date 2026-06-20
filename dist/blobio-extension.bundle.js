@@ -82,9 +82,7 @@
     yOffset: 10,
     nameGap: 1.2,
     updateDelayMs: 3e3,
-    colorMode: "solid",
     solid: Object.freeze({ color: "#ffffff" }),
-    gradient: Object.freeze({ from: "#ffffff", to: "#70ff96" }),
     alpha: 100
   });
   function readCellMassSettings(storage, document = globalThis.document) {
@@ -141,7 +139,6 @@
     const mode = normalizeMode(source.mode);
     const preset = CELL_MASS_MODE_PRESETS[mode];
     const solid = source.solid && typeof source.solid === "object" ? source.solid : {};
-    const gradient = source.gradient && typeof source.gradient === "object" ? source.gradient : {};
     return {
       enabled: source.enabled === void 0 ? DEFAULT_CELL_MASS_SETTINGS.enabled : Boolean(source.enabled),
       compact: source.compact === void 0 ? DEFAULT_CELL_MASS_SETTINGS.compact : Boolean(source.compact),
@@ -152,13 +149,8 @@
       yOffset: clampNumber(source.yOffset, -120, 120, preset.yOffset),
       nameGap: clampNumber(source.nameGap, 0.1, 3, preset.nameGap),
       updateDelayMs: Math.round(clampNumber(source.updateDelayMs, 0, 1e4, DEFAULT_CELL_MASS_SETTINGS.updateDelayMs)),
-      colorMode: source.colorMode === "gradient" ? "gradient" : "solid",
       solid: {
         color: normalizeColor(solid.color, DEFAULT_CELL_MASS_SETTINGS.solid.color)
-      },
-      gradient: {
-        from: normalizeColor(gradient.from, DEFAULT_CELL_MASS_SETTINGS.gradient.from),
-        to: normalizeColor(gradient.to, DEFAULT_CELL_MASS_SETTINGS.gradient.to)
       },
       alpha: normalizeAlpha(source.alpha, DEFAULT_CELL_MASS_SETTINGS.alpha)
     };
@@ -272,10 +264,6 @@
         solid: {
           ...settings.solid,
           ...nextSettings?.solid || {}
-        },
-        gradient: {
-          ...settings.gradient,
-          ...nextSettings?.gradient || {}
         }
       });
       state.settings = settings;
@@ -406,12 +394,7 @@
       return 0.18;
     }
     function getLabelColor(mass, totalMass) {
-      if (settings.colorMode !== "gradient") {
-        return colorToObject(settings.solid.color, settings.alpha);
-      }
-      const total = Math.max(Number(totalMass) || 0, mass || 0);
-      const ratio = total > 0 ? Math.sqrt(Math.max(0, Math.min(1, mass / total))) : 0;
-      return colorToObject(blendColor(settings.gradient.from, settings.gradient.to, ratio), settings.alpha);
+      return colorToObject(settings.solid.color, settings.alpha);
     }
     function colorToObject(color, alpha = 100) {
       const rgb = hexToRgb(color, "#ffffff");
@@ -421,18 +404,6 @@
         b: rgb.blue / 255,
         a: normalizeAlpha7(alpha, 100) / 100
       };
-    }
-    function blendColor(from, to, ratio) {
-      const left = hexToRgb(from, "#ffffff");
-      const right = hexToRgb(to, "#70ff96");
-      const mix = Math.max(0, Math.min(1, ratio));
-      const red = Math.round(left.red + (right.red - left.red) * mix);
-      const green = Math.round(left.green + (right.green - left.green) * mix);
-      const blue = Math.round(left.blue + (right.blue - left.blue) * mix);
-      return `#${toHex(red)}${toHex(green)}${toHex(blue)}`;
-    }
-    function toHex(value) {
-      return Math.max(0, Math.min(255, value)).toString(16).padStart(2, "0");
     }
     function hexToRgb(value, fallback) {
       const clean = normalizeColor7(value, fallback).slice(1);
@@ -543,7 +514,8 @@
         "h=$wnd.BlobioCellMassDraw(g.n,g.w*g.w/100,g.w,g.M,g.N,g.B,d,d?f:0,0,qxe.g/100);",
         "if(h&&h.text){",
         "f=d?a.o.b:0;",
-        "Mm(a.i,h.color||a.B);",
+        "h.od=a.B.d;h.oc=a.B.c;h.ob=a.B.b;h.oa=a.B.a;",
+        "a.B.d=h.color.d;a.B.c=h.color.c;a.B.b=h.color.b;a.B.a=h.color.a;Mm(a.i,a.B);",
         "Nn(a.i.b,h.scale);",
         "xp(a.o,a.i,h.text);",
         "if(a.o.d>g.N*h.maxWidth){h.scale*=g.N*h.maxWidth/a.o.d;Nn(a.i.b,h.scale);xp(a.o,a.i,h.text)}",
@@ -556,6 +528,7 @@
         "c=$wnd.Math.min(g.S+g.M-a.o.b,c);",
         "Gm(a.i,a.c,h.text,b,c);",
         "Nn(a.i.b,1);",
+        "a.B.d=h.od;a.B.c=h.oc;a.B.b=h.ob;a.B.a=h.oa;",
         "Mm(a.i,a.B)",
         "}}}}"
       ].join("");
@@ -599,7 +572,7 @@
         version: SCRIPT_VERSION,
         url: win.location?.href || "",
         uptimeMs: Date.now() - state.startedAt,
-        settings: { ...settings, solid: { ...settings.solid }, gradient: { ...settings.gradient } },
+        settings: { ...settings, solid: { ...settings.solid } },
         counters: { ...state.counters, cachedCells: labelCache.size },
         patch: {
           seenCacheScripts: state.seenCacheScripts,
@@ -629,13 +602,10 @@
         yOffset: 10,
         nameGap: 1.2,
         updateDelayMs: 3e3,
-        colorMode: "solid",
         solid: { color: "#ffffff" },
-        gradient: { from: "#ffffff", to: "#70ff96" },
         alpha: 100
       };
       const solid = source.solid && typeof source.solid === "object" ? source.solid : {};
-      const gradient = source.gradient && typeof source.gradient === "object" ? source.gradient : {};
       return {
         enabled: source.enabled === void 0 ? defaults.enabled : Boolean(source.enabled),
         compact: source.compact === void 0 ? defaults.compact : Boolean(source.compact),
@@ -646,13 +616,8 @@
         yOffset: clampNumber2(source.yOffset, -120, 120, defaults.yOffset),
         nameGap: clampNumber2(source.nameGap, 0.1, 3, defaults.nameGap),
         updateDelayMs: Math.round(clampNumber2(source.updateDelayMs, 0, 1e4, defaults.updateDelayMs)),
-        colorMode: source.colorMode === "gradient" ? "gradient" : "solid",
         solid: {
           color: normalizeColor7(solid.color, defaults.solid.color)
-        },
-        gradient: {
-          from: normalizeColor7(gradient.from, defaults.gradient.from),
-          to: normalizeColor7(gradient.to, defaults.gradient.to)
         },
         alpha: normalizeAlpha7(source.alpha, defaults.alpha)
       };
@@ -9858,13 +9823,30 @@ html.${className} app-settings .blobio-cell-mass-button-menu[hidden] {
 }
 
 html.${className} app-settings .blobio-cell-mass-section-title {
-  margin-top: 3px;
-  padding: 3px 0;
+  display: grid;
+  grid-template-columns: minmax(16px, 1fr) auto minmax(16px, 1fr);
+  align-items: center;
+  gap: 8px;
+  margin-top: 5px;
+  padding: 4px 0;
   color: #c8ffd4;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 900;
   line-height: 1.2;
+  text-align: center;
   text-shadow: 0 0 7px rgba(77, 255, 126, 0.5);
+}
+
+html.${className} app-settings .blobio-cell-mass-section-title::before,
+html.${className} app-settings .blobio-cell-mass-section-title::after {
+  content: "";
+  height: 1px;
+  background: linear-gradient(90deg, rgba(112, 255, 153, 0), rgba(112, 255, 153, 0.68));
+  box-shadow: 0 0 7px rgba(79, 255, 130, 0.26);
+}
+
+html.${className} app-settings .blobio-cell-mass-section-title::after {
+  background: linear-gradient(90deg, rgba(112, 255, 153, 0.68), rgba(112, 255, 153, 0));
 }
 
 html.${className} app-settings .blobio-cell-mass-checkbox-row {
@@ -9900,13 +9882,16 @@ html.${className} app-settings .blobio-cell-mass-alpha-row {
 }
 
 html.${className} app-settings .blobio-cell-mass-mode-row {
-  grid-template-columns: minmax(0, 1fr) 118px;
+  grid-template-columns: minmax(0, 1fr) 156px;
 }
 
-html.${className} app-settings .blobio-cell-mass-preset-mode-button,
-html.${className} app-settings .blobio-cell-mass-color-mode-button {
+html.${className} app-settings .blobio-cell-mass-preset-mode-button {
   position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: center;
   height: 30px;
+  padding: 0;
   overflow: hidden;
   border: 1px solid rgba(147, 255, 177, 0.58);
   border-radius: 999px;
@@ -9917,35 +9902,50 @@ html.${className} app-settings .blobio-cell-mass-color-mode-button {
   box-shadow: inset 0 0 9px rgba(79, 255, 130, 0.12), 0 0 9px rgba(79, 255, 130, 0.2);
 }
 
-html.${className} app-settings .blobio-cell-mass-preset-mode-text,
-html.${className} app-settings .blobio-cell-mass-color-mode-text {
+html.${className} app-settings .blobio-cell-mass-preset-mode-button::before {
   position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transform: translateX(-100%);
-  transition: transform 180ms ease, opacity 180ms ease;
-  pointer-events: none;
-}
-
-html.${className} app-settings .blobio-cell-mass-preset-mode-button[data-mode="normal"] .is-normal,
-html.${className} app-settings .blobio-cell-mass-preset-mode-button[data-mode="vip"] .is-vip,
-html.${className} app-settings .blobio-cell-mass-preset-mode-button[data-mode="custom"] .is-custom,
-html.${className} app-settings .blobio-cell-mass-color-mode-text.is-solid {
-  opacity: 1;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc((100% - 6px) / 3);
+  content: "";
+  border-radius: 999px;
+  background: linear-gradient(145deg, rgba(184, 255, 202, 0.96), rgba(47, 198, 94, 0.92));
+  box-shadow: 0 0 9px rgba(79, 255, 130, 0.5), inset 0 0 7px rgba(255, 255, 255, 0.28);
   transform: translateX(0);
+  transition: transform 180ms ease;
 }
 
-html.${className} app-settings .blobio-cell-mass-color-mode-button.is-gradient .blobio-cell-mass-color-mode-text.is-solid {
-  opacity: 0;
+html.${className} app-settings .blobio-cell-mass-preset-mode-button.is-vip::before {
   transform: translateX(100%);
 }
 
-html.${className} app-settings .blobio-cell-mass-color-mode-button.is-gradient .blobio-cell-mass-color-mode-text.is-gradient {
-  opacity: 1;
-  transform: translateX(0);
+html.${className} app-settings .blobio-cell-mass-preset-mode-button.is-custom::before {
+  transform: translateX(200%);
+}
+
+html.${className} app-settings .blobio-cell-mass-preset-mode-text {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  height: 100%;
+  padding: 0 6px;
+  color: rgba(236, 255, 241, 0.74);
+  font-size: 11px;
+  line-height: 1;
+  text-align: center;
+  transition: color 180ms ease, text-shadow 180ms ease;
+  pointer-events: none;
+}
+
+html.${className} app-settings .blobio-cell-mass-preset-mode-button.is-normal .blobio-cell-mass-preset-mode-text.is-normal,
+html.${className} app-settings .blobio-cell-mass-preset-mode-button.is-vip .blobio-cell-mass-preset-mode-text.is-vip,
+html.${className} app-settings .blobio-cell-mass-preset-mode-button.is-custom .blobio-cell-mass-preset-mode-text.is-custom {
+  color: #06210f;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.38);
 }
 
 html.${className} app-settings .blobio-cell-mass-slider-input,
@@ -10007,23 +10007,6 @@ html.${className} app-settings .blobio-cell-mass-alpha-value {
   color: #c8ffd4;
   font-variant-numeric: tabular-nums;
   text-align: right;
-}
-
-html.${className} app-settings .blobio-cell-mass-color-sections,
-html.${className} app-settings .blobio-cell-mass-solid-section,
-html.${className} app-settings .blobio-cell-mass-gradient-section {
-  display: grid;
-  gap: 9px;
-  min-width: 0;
-}
-
-html.${className} app-settings .blobio-cell-mass-solid-section[hidden],
-html.${className} app-settings .blobio-cell-mass-gradient-section[hidden] {
-  display: none !important;
-}
-
-html.${className} app-settings .blobio-cell-mass-gradient-section {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 html.${className} app-settings .blobio-cell-mass-color-row {
@@ -11962,9 +11945,6 @@ html.${className} .blobio-watermark-extension::after {
         arrowButton: row.querySelector(".blobio-cell-mass-dropdown-button"),
         disclosure: row.querySelector(".blobio-cell-mass-dropdown-symbol"),
         modeButton: menu.querySelector(".blobio-cell-mass-preset-mode-button"),
-        colorModeButton: menu.querySelector(".blobio-cell-mass-color-mode-button"),
-        solidSection: menu.querySelector(".blobio-cell-mass-solid-section"),
-        gradientSection: menu.querySelector(".blobio-cell-mass-gradient-section"),
         checkboxes: Array.from(menu.querySelectorAll(".blobio-cell-mass-checkbox-input") || []),
         sliders: Array.from(menu.querySelectorAll(".blobio-cell-mass-slider-input") || []),
         sliderValues: Array.from(menu.querySelectorAll(".blobio-cell-mass-slider-value") || []),
@@ -12044,10 +12024,9 @@ html.${className} .blobio-watermark-extension::after {
         this.createSectionTitle("Offset/Scale"),
         this.createModeRow(),
         ...SLIDERS.map((slider) => this.createSliderRow(slider)),
-        this.createSectionTitle("Update/RGBA/gradient"),
+        this.createSectionTitle("Update/RGBA"),
         this.createUpdateDelayRow(),
-        this.createColorModeRow(),
-        this.createColorSections(),
+        this.createColorControl("Color", "solid.color"),
         this.createAlphaRow()
       );
       return menu;
@@ -12133,47 +12112,6 @@ html.${className} .blobio-watermark-extension::after {
         step: 100
       });
     }
-    createColorModeRow() {
-      const row = this.document.createElement("div");
-      row.classList.add("blobio-cell-mass-mode-row");
-      const label = this.document.createElement("span");
-      label.textContent = "Color mode";
-      const button = this.document.createElement("button");
-      button.type = "button";
-      button.classList.add("blobio-cell-mass-color-mode-button");
-      button.setAttribute("aria-label", "Show mass color mode");
-      for (const [text, mode] of [["SOLID", "solid"], ["GRADIENT", "gradient"]]) {
-        const span = this.document.createElement("span");
-        span.classList.add("blobio-cell-mass-color-mode-text", `is-${mode}`);
-        span.textContent = text;
-        button.appendChild(span);
-      }
-      row.append(label, button);
-      this.listen(button, "click", (event) => {
-        event.preventDefault?.();
-        event.stopPropagation?.();
-        this.settings = this.save({
-          colorMode: this.settings.colorMode === "gradient" ? "solid" : "gradient"
-        });
-        this.sync();
-      });
-      return row;
-    }
-    createColorSections() {
-      const wrapper = this.document.createElement("div");
-      wrapper.classList.add("blobio-cell-mass-color-sections");
-      const solid = this.document.createElement("div");
-      solid.classList.add("blobio-cell-mass-solid-section");
-      solid.appendChild(this.createColorControl("Solid", "solid.color"));
-      const gradient = this.document.createElement("div");
-      gradient.classList.add("blobio-cell-mass-gradient-section");
-      gradient.append(
-        this.createColorControl("From", "gradient.from"),
-        this.createColorControl("To", "gradient.to")
-      );
-      wrapper.append(solid, gradient);
-      return wrapper;
-    }
     createColorControl(labelText, path) {
       const row = this.document.createElement("label");
       row.classList.add("blobio-cell-mass-color-row");
@@ -12218,19 +12156,10 @@ html.${className} .blobio-watermark-extension::after {
       return row;
     }
     colorChange(path, color) {
-      if (path === "solid.color") {
-        return {
-          solid: {
-            ...this.settings.solid,
-            color
-          }
-        };
-      }
-      const key = path === "gradient.to" ? "to" : "from";
       return {
-        gradient: {
-          ...this.settings.gradient,
-          [key]: color
+        solid: {
+          ...this.settings.solid,
+          color
         }
       };
     }
@@ -12254,10 +12183,6 @@ html.${className} .blobio-watermark-extension::after {
         solid: {
           ...this.settings.solid,
           ...changes.solid || {}
-        },
-        gradient: {
-          ...this.settings.gradient,
-          ...changes.gradient || {}
         }
       }, this.document);
     }
@@ -12274,12 +12199,8 @@ html.${className} .blobio-watermark-extension::after {
       if (!this.elements) {
         return;
       }
-      const isGradient = this.settings.colorMode === "gradient";
       this.elements.enabled.checked = this.settings.enabled;
-      this.elements.modeButton.dataset.mode = this.settings.mode;
-      this.elements.colorModeButton.classList.toggle("is-gradient", isGradient);
-      this.elements.solidSection.hidden = isGradient;
-      this.elements.gradientSection.hidden = !isGradient;
+      this.syncPresetModeButton();
       this.elements.alphaInput.value = String(this.settings.alpha);
       this.elements.alphaValue.textContent = `${this.settings.alpha}%`;
       for (const input of this.elements.checkboxes) {
@@ -12301,13 +12222,13 @@ html.${className} .blobio-watermark-extension::after {
       }
     }
     colorValue(path) {
-      if (path === "solid.color") {
-        return this.settings.solid.color;
-      }
-      if (path === "gradient.to") {
-        return this.settings.gradient.to;
-      }
-      return this.settings.gradient.from;
+      return this.settings.solid.color;
+    }
+    syncPresetModeButton() {
+      const modeButton = this.elements.modeButton;
+      modeButton.classList.toggle("is-normal", this.settings.mode === "normal");
+      modeButton.classList.toggle("is-vip", this.settings.mode === "vip");
+      modeButton.classList.toggle("is-custom", this.settings.mode === "custom");
     }
     listen(node, type, listener, options) {
       node.addEventListener?.(type, listener, options);

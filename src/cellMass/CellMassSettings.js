@@ -19,9 +19,7 @@ export const DEFAULT_CELL_MASS_SETTINGS = Object.freeze({
   yOffset: 10,
   nameGap: 1.2,
   updateDelayMs: 3000,
-  colorMode: 'solid',
   solid: Object.freeze({ color: '#ffffff' }),
-  gradient: Object.freeze({ from: '#ffffff', to: '#70ff96' }),
   alpha: 100,
 });
 
@@ -88,7 +86,6 @@ export function normalizeCellMassSettings(settings = {}) {
   const mode = normalizeMode(source.mode);
   const preset = CELL_MASS_MODE_PRESETS[mode];
   const solid = source.solid && typeof source.solid === 'object' ? source.solid : {};
-  const gradient = source.gradient && typeof source.gradient === 'object' ? source.gradient : {};
 
   return {
     enabled: source.enabled === undefined ? DEFAULT_CELL_MASS_SETTINGS.enabled : Boolean(source.enabled),
@@ -104,13 +101,8 @@ export function normalizeCellMassSettings(settings = {}) {
     yOffset: clampNumber(source.yOffset, -120, 120, preset.yOffset),
     nameGap: clampNumber(source.nameGap, 0.1, 3, preset.nameGap),
     updateDelayMs: Math.round(clampNumber(source.updateDelayMs, 0, 10000, DEFAULT_CELL_MASS_SETTINGS.updateDelayMs)),
-    colorMode: source.colorMode === 'gradient' ? 'gradient' : 'solid',
     solid: {
       color: normalizeColor(solid.color, DEFAULT_CELL_MASS_SETTINGS.solid.color),
-    },
-    gradient: {
-      from: normalizeColor(gradient.from, DEFAULT_CELL_MASS_SETTINGS.gradient.from),
-      to: normalizeColor(gradient.to, DEFAULT_CELL_MASS_SETTINGS.gradient.to),
     },
     alpha: normalizeAlpha(source.alpha, DEFAULT_CELL_MASS_SETTINGS.alpha),
   };

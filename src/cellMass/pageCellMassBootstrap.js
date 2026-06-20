@@ -76,10 +76,6 @@ export function pageCellMassBootstrap(initialSettings = {}, pageWindow = globalT
         ...settings.solid,
         ...(nextSettings?.solid || {}),
       },
-      gradient: {
-        ...settings.gradient,
-        ...(nextSettings?.gradient || {}),
-      },
     });
     state.settings = settings;
 
@@ -240,13 +236,7 @@ export function pageCellMassBootstrap(initialSettings = {}, pageWindow = globalT
   }
 
   function getLabelColor(mass, totalMass) {
-    if (settings.colorMode !== 'gradient') {
-      return colorToObject(settings.solid.color, settings.alpha);
-    }
-
-    const total = Math.max(Number(totalMass) || 0, mass || 0);
-    const ratio = total > 0 ? Math.sqrt(Math.max(0, Math.min(1, mass / total))) : 0;
-    return colorToObject(blendColor(settings.gradient.from, settings.gradient.to, ratio), settings.alpha);
+    return colorToObject(settings.solid.color, settings.alpha);
   }
 
   function colorToObject(color, alpha = 100) {
@@ -257,20 +247,6 @@ export function pageCellMassBootstrap(initialSettings = {}, pageWindow = globalT
       b: rgb.blue / 255,
       a: normalizeAlpha(alpha, 100) / 100,
     };
-  }
-
-  function blendColor(from, to, ratio) {
-    const left = hexToRgb(from, '#ffffff');
-    const right = hexToRgb(to, '#70ff96');
-    const mix = Math.max(0, Math.min(1, ratio));
-    const red = Math.round(left.red + (right.red - left.red) * mix);
-    const green = Math.round(left.green + (right.green - left.green) * mix);
-    const blue = Math.round(left.blue + (right.blue - left.blue) * mix);
-    return `#${toHex(red)}${toHex(green)}${toHex(blue)}`;
-  }
-
-  function toHex(value) {
-    return Math.max(0, Math.min(255, value)).toString(16).padStart(2, '0');
   }
 
   function hexToRgb(value, fallback) {
@@ -412,7 +388,8 @@ export function pageCellMassBootstrap(initialSettings = {}, pageWindow = globalT
       'h=$wnd.BlobioCellMassDraw(g.n,g.w*g.w/100,g.w,g.M,g.N,g.B,d,d?f:0,0,qxe.g/100);',
       'if(h&&h.text){',
       'f=d?a.o.b:0;',
-      'Mm(a.i,h.color||a.B);',
+      'h.od=a.B.d;h.oc=a.B.c;h.ob=a.B.b;h.oa=a.B.a;',
+      'a.B.d=h.color.d;a.B.c=h.color.c;a.B.b=h.color.b;a.B.a=h.color.a;Mm(a.i,a.B);',
       'Nn(a.i.b,h.scale);',
       'xp(a.o,a.i,h.text);',
       'if(a.o.d>g.N*h.maxWidth){h.scale*=g.N*h.maxWidth/a.o.d;Nn(a.i.b,h.scale);xp(a.o,a.i,h.text)}',
@@ -425,6 +402,7 @@ export function pageCellMassBootstrap(initialSettings = {}, pageWindow = globalT
       'c=$wnd.Math.min(g.S+g.M-a.o.b,c);',
       'Gm(a.i,a.c,h.text,b,c);',
       'Nn(a.i.b,1);',
+      'a.B.d=h.od;a.B.c=h.oc;a.B.b=h.ob;a.B.a=h.oa;',
       'Mm(a.i,a.B)',
       '}}}}',
     ].join('');
@@ -475,7 +453,7 @@ export function pageCellMassBootstrap(initialSettings = {}, pageWindow = globalT
       version: SCRIPT_VERSION,
       url: win.location?.href || '',
       uptimeMs: Date.now() - state.startedAt,
-      settings: { ...settings, solid: { ...settings.solid }, gradient: { ...settings.gradient } },
+      settings: { ...settings, solid: { ...settings.solid } },
       counters: { ...state.counters, cachedCells: labelCache.size },
       patch: {
         seenCacheScripts: state.seenCacheScripts,
@@ -506,13 +484,10 @@ export function pageCellMassBootstrap(initialSettings = {}, pageWindow = globalT
       yOffset: 10,
       nameGap: 1.2,
       updateDelayMs: 3000,
-      colorMode: 'solid',
       solid: { color: '#ffffff' },
-      gradient: { from: '#ffffff', to: '#70ff96' },
       alpha: 100,
     };
     const solid = source.solid && typeof source.solid === 'object' ? source.solid : {};
-    const gradient = source.gradient && typeof source.gradient === 'object' ? source.gradient : {};
 
     return {
       enabled: source.enabled === undefined ? defaults.enabled : Boolean(source.enabled),
@@ -524,13 +499,8 @@ export function pageCellMassBootstrap(initialSettings = {}, pageWindow = globalT
       yOffset: clampNumber(source.yOffset, -120, 120, defaults.yOffset),
       nameGap: clampNumber(source.nameGap, 0.1, 3, defaults.nameGap),
       updateDelayMs: Math.round(clampNumber(source.updateDelayMs, 0, 10000, defaults.updateDelayMs)),
-      colorMode: source.colorMode === 'gradient' ? 'gradient' : 'solid',
       solid: {
         color: normalizeColor(solid.color, defaults.solid.color),
-      },
-      gradient: {
-        from: normalizeColor(gradient.from, defaults.gradient.from),
-        to: normalizeColor(gradient.to, defaults.gradient.to),
       },
       alpha: normalizeAlpha(source.alpha, defaults.alpha),
     };

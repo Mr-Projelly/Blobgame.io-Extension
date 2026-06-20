@@ -986,13 +986,30 @@ html.${className} app-settings .blobio-cell-mass-button-menu[hidden] {
 }
 
 html.${className} app-settings .blobio-cell-mass-section-title {
-  margin-top: 3px;
-  padding: 3px 0;
+  display: grid;
+  grid-template-columns: minmax(16px, 1fr) auto minmax(16px, 1fr);
+  align-items: center;
+  gap: 8px;
+  margin-top: 5px;
+  padding: 4px 0;
   color: #c8ffd4;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 900;
   line-height: 1.2;
+  text-align: center;
   text-shadow: 0 0 7px rgba(77, 255, 126, 0.5);
+}
+
+html.${className} app-settings .blobio-cell-mass-section-title::before,
+html.${className} app-settings .blobio-cell-mass-section-title::after {
+  content: "";
+  height: 1px;
+  background: linear-gradient(90deg, rgba(112, 255, 153, 0), rgba(112, 255, 153, 0.68));
+  box-shadow: 0 0 7px rgba(79, 255, 130, 0.26);
+}
+
+html.${className} app-settings .blobio-cell-mass-section-title::after {
+  background: linear-gradient(90deg, rgba(112, 255, 153, 0.68), rgba(112, 255, 153, 0));
 }
 
 html.${className} app-settings .blobio-cell-mass-checkbox-row {
@@ -1028,13 +1045,16 @@ html.${className} app-settings .blobio-cell-mass-alpha-row {
 }
 
 html.${className} app-settings .blobio-cell-mass-mode-row {
-  grid-template-columns: minmax(0, 1fr) 118px;
+  grid-template-columns: minmax(0, 1fr) 156px;
 }
 
-html.${className} app-settings .blobio-cell-mass-preset-mode-button,
-html.${className} app-settings .blobio-cell-mass-color-mode-button {
+html.${className} app-settings .blobio-cell-mass-preset-mode-button {
   position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: center;
   height: 30px;
+  padding: 0;
   overflow: hidden;
   border: 1px solid rgba(147, 255, 177, 0.58);
   border-radius: 999px;
@@ -1045,35 +1065,50 @@ html.${className} app-settings .blobio-cell-mass-color-mode-button {
   box-shadow: inset 0 0 9px rgba(79, 255, 130, 0.12), 0 0 9px rgba(79, 255, 130, 0.2);
 }
 
-html.${className} app-settings .blobio-cell-mass-preset-mode-text,
-html.${className} app-settings .blobio-cell-mass-color-mode-text {
+html.${className} app-settings .blobio-cell-mass-preset-mode-button::before {
   position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transform: translateX(-100%);
-  transition: transform 180ms ease, opacity 180ms ease;
-  pointer-events: none;
-}
-
-html.${className} app-settings .blobio-cell-mass-preset-mode-button[data-mode="normal"] .is-normal,
-html.${className} app-settings .blobio-cell-mass-preset-mode-button[data-mode="vip"] .is-vip,
-html.${className} app-settings .blobio-cell-mass-preset-mode-button[data-mode="custom"] .is-custom,
-html.${className} app-settings .blobio-cell-mass-color-mode-text.is-solid {
-  opacity: 1;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc((100% - 6px) / 3);
+  content: "";
+  border-radius: 999px;
+  background: linear-gradient(145deg, rgba(184, 255, 202, 0.96), rgba(47, 198, 94, 0.92));
+  box-shadow: 0 0 9px rgba(79, 255, 130, 0.5), inset 0 0 7px rgba(255, 255, 255, 0.28);
   transform: translateX(0);
+  transition: transform 180ms ease;
 }
 
-html.${className} app-settings .blobio-cell-mass-color-mode-button.is-gradient .blobio-cell-mass-color-mode-text.is-solid {
-  opacity: 0;
+html.${className} app-settings .blobio-cell-mass-preset-mode-button.is-vip::before {
   transform: translateX(100%);
 }
 
-html.${className} app-settings .blobio-cell-mass-color-mode-button.is-gradient .blobio-cell-mass-color-mode-text.is-gradient {
-  opacity: 1;
-  transform: translateX(0);
+html.${className} app-settings .blobio-cell-mass-preset-mode-button.is-custom::before {
+  transform: translateX(200%);
+}
+
+html.${className} app-settings .blobio-cell-mass-preset-mode-text {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  height: 100%;
+  padding: 0 6px;
+  color: rgba(236, 255, 241, 0.74);
+  font-size: 11px;
+  line-height: 1;
+  text-align: center;
+  transition: color 180ms ease, text-shadow 180ms ease;
+  pointer-events: none;
+}
+
+html.${className} app-settings .blobio-cell-mass-preset-mode-button.is-normal .blobio-cell-mass-preset-mode-text.is-normal,
+html.${className} app-settings .blobio-cell-mass-preset-mode-button.is-vip .blobio-cell-mass-preset-mode-text.is-vip,
+html.${className} app-settings .blobio-cell-mass-preset-mode-button.is-custom .blobio-cell-mass-preset-mode-text.is-custom {
+  color: #06210f;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.38);
 }
 
 html.${className} app-settings .blobio-cell-mass-slider-input,
@@ -1135,23 +1170,6 @@ html.${className} app-settings .blobio-cell-mass-alpha-value {
   color: #c8ffd4;
   font-variant-numeric: tabular-nums;
   text-align: right;
-}
-
-html.${className} app-settings .blobio-cell-mass-color-sections,
-html.${className} app-settings .blobio-cell-mass-solid-section,
-html.${className} app-settings .blobio-cell-mass-gradient-section {
-  display: grid;
-  gap: 9px;
-  min-width: 0;
-}
-
-html.${className} app-settings .blobio-cell-mass-solid-section[hidden],
-html.${className} app-settings .blobio-cell-mass-gradient-section[hidden] {
-  display: none !important;
-}
-
-html.${className} app-settings .blobio-cell-mass-gradient-section {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 html.${className} app-settings .blobio-cell-mass-color-row {

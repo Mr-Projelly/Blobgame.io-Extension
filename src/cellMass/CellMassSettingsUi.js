@@ -63,9 +63,6 @@ export class CellMassSettingsUi {
       arrowButton: row.querySelector('.blobio-cell-mass-dropdown-button'),
       disclosure: row.querySelector('.blobio-cell-mass-dropdown-symbol'),
       modeButton: menu.querySelector('.blobio-cell-mass-preset-mode-button'),
-      colorModeButton: menu.querySelector('.blobio-cell-mass-color-mode-button'),
-      solidSection: menu.querySelector('.blobio-cell-mass-solid-section'),
-      gradientSection: menu.querySelector('.blobio-cell-mass-gradient-section'),
       checkboxes: Array.from(menu.querySelectorAll('.blobio-cell-mass-checkbox-input') || []),
       sliders: Array.from(menu.querySelectorAll('.blobio-cell-mass-slider-input') || []),
       sliderValues: Array.from(menu.querySelectorAll('.blobio-cell-mass-slider-value') || []),
@@ -160,10 +157,9 @@ export class CellMassSettingsUi {
       this.createSectionTitle('Offset/Scale'),
       this.createModeRow(),
       ...SLIDERS.map((slider) => this.createSliderRow(slider)),
-      this.createSectionTitle('Update/RGBA/gradient'),
+      this.createSectionTitle('Update/RGBA'),
       this.createUpdateDelayRow(),
-      this.createColorModeRow(),
-      this.createColorSections(),
+      this.createColorControl('Color', 'solid.color'),
       this.createAlphaRow(),
     );
 
@@ -268,56 +264,6 @@ export class CellMassSettingsUi {
     });
   }
 
-  createColorModeRow() {
-    const row = this.document.createElement('div');
-    row.classList.add('blobio-cell-mass-mode-row');
-
-    const label = this.document.createElement('span');
-    label.textContent = 'Color mode';
-
-    const button = this.document.createElement('button');
-    button.type = 'button';
-    button.classList.add('blobio-cell-mass-color-mode-button');
-    button.setAttribute('aria-label', 'Show mass color mode');
-
-    for (const [text, mode] of [['SOLID', 'solid'], ['GRADIENT', 'gradient']]) {
-      const span = this.document.createElement('span');
-      span.classList.add('blobio-cell-mass-color-mode-text', `is-${mode}`);
-      span.textContent = text;
-      button.appendChild(span);
-    }
-
-    row.append(label, button);
-    this.listen(button, 'click', (event) => {
-      event.preventDefault?.();
-      event.stopPropagation?.();
-      this.settings = this.save({
-        colorMode: this.settings.colorMode === 'gradient' ? 'solid' : 'gradient',
-      });
-      this.sync();
-    });
-    return row;
-  }
-
-  createColorSections() {
-    const wrapper = this.document.createElement('div');
-    wrapper.classList.add('blobio-cell-mass-color-sections');
-
-    const solid = this.document.createElement('div');
-    solid.classList.add('blobio-cell-mass-solid-section');
-    solid.appendChild(this.createColorControl('Solid', 'solid.color'));
-
-    const gradient = this.document.createElement('div');
-    gradient.classList.add('blobio-cell-mass-gradient-section');
-    gradient.append(
-      this.createColorControl('From', 'gradient.from'),
-      this.createColorControl('To', 'gradient.to'),
-    );
-
-    wrapper.append(solid, gradient);
-    return wrapper;
-  }
-
   createColorControl(labelText, path) {
     const row = this.document.createElement('label');
     row.classList.add('blobio-cell-mass-color-row');
@@ -373,20 +319,10 @@ export class CellMassSettingsUi {
   }
 
   colorChange(path, color) {
-    if (path === 'solid.color') {
-      return {
-        solid: {
-          ...this.settings.solid,
-          color,
-        },
-      };
-    }
-
-    const key = path === 'gradient.to' ? 'to' : 'from';
     return {
-      gradient: {
-        ...this.settings.gradient,
-        [key]: color,
+      solid: {
+        ...this.settings.solid,
+        color,
       },
     };
   }
@@ -413,10 +349,6 @@ export class CellMassSettingsUi {
         ...this.settings.solid,
         ...(changes.solid || {}),
       },
-      gradient: {
-        ...this.settings.gradient,
-        ...(changes.gradient || {}),
-      },
     }, this.document);
   }
 
@@ -436,12 +368,8 @@ export class CellMassSettingsUi {
       return;
     }
 
-    const isGradient = this.settings.colorMode === 'gradient';
     this.elements.enabled.checked = this.settings.enabled;
-    this.elements.modeButton.dataset.mode = this.settings.mode;
-    this.elements.colorModeButton.classList.toggle('is-gradient', isGradient);
-    this.elements.solidSection.hidden = isGradient;
-    this.elements.gradientSection.hidden = !isGradient;
+    this.syncPresetModeButton();
     this.elements.alphaInput.value = String(this.settings.alpha);
     this.elements.alphaValue.textContent = `${this.settings.alpha}%`;
 
@@ -471,13 +399,14 @@ export class CellMassSettingsUi {
   }
 
   colorValue(path) {
-    if (path === 'solid.color') {
-      return this.settings.solid.color;
-    }
-    if (path === 'gradient.to') {
-      return this.settings.gradient.to;
-    }
-    return this.settings.gradient.from;
+    return this.settings.solid.color;
+  }
+
+  syncPresetModeButton() {
+    const modeButton = this.elements.modeButton;
+    modeButton.classList.toggle('is-normal', this.settings.mode === 'normal');
+    modeButton.classList.toggle('is-vip', this.settings.mode === 'vip');
+    modeButton.classList.toggle('is-custom', this.settings.mode === 'custom');
   }
 
   listen(node, type, listener, options) {
