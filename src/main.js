@@ -19,6 +19,8 @@ import emotePopUrl from '../assets/emote_pop.png';
 import emoteThxUrl from '../assets/emote_thx.png';
 import emoteWhyUrl from '../assets/emote_why.png';
 import emoteYoUrl from '../assets/emote_yo.png';
+import { readCellMassSettings } from './cellMass/CellMassSettings.js';
+import { pageCellMassBootstrap } from './cellMass/pageCellMassBootstrap.js';
 import { readVirusPelletColorSettings } from './cellColors/VirusPelletColorSettings.js';
 import { pageVirusPelletColorsBootstrap } from './cellColors/pageVirusPelletColorsBootstrap.js';
 import { MutedPlayersStore } from './chat/MutedPlayersStore.js';
@@ -99,6 +101,7 @@ class BlobioExtension {
       this.installEmoteSkinFallback(document, logger);
       this.installJellyShaderFallback(document, logger);
       this.installHudInfoFallback(document, logger);
+      this.installCellMassFallback(document, logger);
       this.installVirusMotherCellFallback(document, logger);
       this.installVirusPelletColorsFallback(document, logger);
     }
@@ -322,6 +325,22 @@ class BlobioExtension {
       return Boolean(pageHudInfoBootstrap(readHudInfoSettings(storage), windowRef));
     } catch (error) {
       logger.warn?.('[Blobio] HUD-Info fallback failed.', error);
+      return false;
+    }
+  }
+
+  installCellMassFallback(document, logger) {
+    const windowRef = this.window;
+    const pageWindow = getTampermonkeyPageWindow(windowRef);
+    if (pageWindow.__blobioCellMassInstalled) {
+      return true;
+    }
+
+    const storage = createBlobioStorage(document);
+    try {
+      return Boolean(pageCellMassBootstrap(readCellMassSettings(storage, document), pageWindow));
+    } catch (error) {
+      logger.warn?.('[Blobio] Show mass fallback failed.', error);
       return false;
     }
   }

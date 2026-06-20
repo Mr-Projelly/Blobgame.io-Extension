@@ -95,6 +95,8 @@
   const VIRUS_MOTHER_CELL_COOKIE_NAME = 'blobioVirusMotherCell';
   const VIRUS_PELLET_COLOR_SNAPSHOT_KEY = 'blobio.settings.virusPelletColors.snapshot';
   const VIRUS_PELLET_COLOR_COOKIE_NAME = 'blobioVirusPelletColors';
+  const CELL_MASS_SNAPSHOT_KEY = 'blobio.settings.cellMass.snapshot';
+  const CELL_MASS_COOKIE_NAME = 'blobioCellMass';
   /* VIRUS_ASSETS_START */
   const VIRUS_MOTHER_CELL_ASSET_URLS = {
     halo: 'data:image/png;base64,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',
@@ -594,6 +596,94 @@
     if (selected.source === 'domain-cookie'
       && (!sharedSnapshot || cookieSnapshot.updatedAt > sharedSnapshot.updatedAt)) {
       setSharedValue(VIRUS_PELLET_COLOR_SNAPSHOT_KEY, JSON.stringify(cookieSnapshot));
+    }
+
+    return {
+      ...selected.value,
+      source: selected.source,
+      diagnostics: {
+        sharedSnapshotPresent: Boolean(sharedSnapshot),
+        sharedSnapshotUpdatedAt: sharedSnapshot?.updatedAt || 0,
+        cookieSnapshotPresent: Boolean(cookieSnapshot),
+        cookieSnapshotUpdatedAt: cookieSnapshot?.updatedAt || 0,
+      },
+    };
+  }
+
+  const DEFAULT_CELL_MASS_RUNTIME_SETTINGS = {
+    enabled: true,
+    compact: true,
+    smartRendering: true,
+    emphasizeBiggest: true,
+    mode: 'normal',
+    textScale: 0.65,
+    yOffset: 10,
+    nameGap: 1.2,
+    updateDelayMs: 3000,
+    colorMode: 'solid',
+    solid: { color: '#ffffff' },
+    gradient: { from: '#ffffff', to: '#70ff96' },
+    alpha: 100,
+  };
+
+  function normalizeCellMassRuntimeSnapshot(value) {
+    if (!value || typeof value !== 'object') {
+      return null;
+    }
+
+    const updatedAt = Number(value.updatedAt);
+    const solid = value.solid && typeof value.solid === 'object' ? value.solid : {};
+    const gradient = value.gradient && typeof value.gradient === 'object' ? value.gradient : {};
+    return {
+      enabled: value.enabled === undefined ? DEFAULT_CELL_MASS_RUNTIME_SETTINGS.enabled : readBooleanValue(value.enabled),
+      compact: value.compact === undefined ? DEFAULT_CELL_MASS_RUNTIME_SETTINGS.compact : readBooleanValue(value.compact),
+      smartRendering: value.smartRendering === undefined ? DEFAULT_CELL_MASS_RUNTIME_SETTINGS.smartRendering : readBooleanValue(value.smartRendering),
+      emphasizeBiggest: value.emphasizeBiggest === undefined ? DEFAULT_CELL_MASS_RUNTIME_SETTINGS.emphasizeBiggest : readBooleanValue(value.emphasizeBiggest),
+      mode: ['normal', 'vip', 'custom'].includes(value.mode) ? value.mode : DEFAULT_CELL_MASS_RUNTIME_SETTINGS.mode,
+      textScale: normalizeHudInfoRuntimeNumber(value.textScale, 0.35, 1.4, DEFAULT_CELL_MASS_RUNTIME_SETTINGS.textScale),
+      yOffset: normalizeHudInfoRuntimeNumber(value.yOffset, -120, 120, DEFAULT_CELL_MASS_RUNTIME_SETTINGS.yOffset),
+      nameGap: normalizeHudInfoRuntimeNumber(value.nameGap, 0.1, 3, DEFAULT_CELL_MASS_RUNTIME_SETTINGS.nameGap),
+      updateDelayMs: Math.round(normalizeHudInfoRuntimeNumber(value.updateDelayMs, 0, 10000, DEFAULT_CELL_MASS_RUNTIME_SETTINGS.updateDelayMs)),
+      colorMode: value.colorMode === 'gradient' ? 'gradient' : 'solid',
+      solid: {
+        color: normalizeHexColor(solid.color, DEFAULT_CELL_MASS_RUNTIME_SETTINGS.solid.color),
+      },
+      gradient: {
+        from: normalizeHexColor(gradient.from, DEFAULT_CELL_MASS_RUNTIME_SETTINGS.gradient.from),
+        to: normalizeHexColor(gradient.to, DEFAULT_CELL_MASS_RUNTIME_SETTINGS.gradient.to),
+      },
+      alpha: normalizePercentAlpha(value.alpha, DEFAULT_CELL_MASS_RUNTIME_SETTINGS.alpha),
+      updatedAt: Number.isFinite(updatedAt) && updatedAt > 0 ? updatedAt : 0,
+    };
+  }
+
+  function parseCellMassRuntimeSnapshot(value) {
+    if (!value) {
+      return null;
+    }
+    try {
+      return normalizeCellMassRuntimeSnapshot(typeof value === 'string' ? JSON.parse(value) : value);
+    } catch {
+      return null;
+    }
+  }
+
+  function readCellMassRuntimeSettings() {
+    const sharedSnapshotRaw = getSharedValue(CELL_MASS_SNAPSHOT_KEY);
+    const sharedSnapshot = parseCellMassRuntimeSnapshot(sharedSnapshotRaw);
+    const cookieSnapshotRaw = getCookieValue(CELL_MASS_COOKIE_NAME);
+    const cookieSnapshot = parseCellMassRuntimeSnapshot(cookieSnapshotRaw);
+    const fallback = normalizeCellMassRuntimeSnapshot(DEFAULT_CELL_MASS_RUNTIME_SETTINGS);
+
+    const candidates = [
+      sharedSnapshot && { source: 'gm-snapshot', value: sharedSnapshot },
+      cookieSnapshot && { source: 'domain-cookie', value: cookieSnapshot },
+    ].filter(Boolean).sort((left, right) => right.value.updatedAt - left.value.updatedAt);
+    const selected = candidates[0] || { source: 'defaults', value: fallback };
+
+    if (selected.source === 'domain-cookie'
+      && (!sharedSnapshot || cookieSnapshot.updatedAt > sharedSnapshot.updatedAt)) {
+      setSharedValue(CELL_MASS_SNAPSHOT_KEY, JSON.stringify(cookieSnapshot));
     }
 
     return {
@@ -6182,6 +6272,579 @@
   }
   /* EMOTE_SKIN_RUNTIME_END */
 
+  /* CELL_MASS_RUNTIME_START */
+  function pageCellMassBootstrap(initialSettings = {}, pageWindow = globalThis) {
+    const win = pageWindow || globalThis;
+    const host = String(win.location?.hostname || '').toLowerCase();
+    if (host && host !== 'custom.client.blobgame.io' && host !== 'blobgame.io') {
+      return false;
+    }
+
+    if (win.__blobioCellMassInstalled) {
+      win.__blobioCellMassRefresh?.(initialSettings);
+      return true;
+    }
+
+    const SCRIPT_VERSION = '0.1.0';
+    const CACHE_SCRIPT_RE = /\/html\/[a-f0-9]{32}\.cache\.js(?:[?#].*)?$/i;
+    const DRAW_HOOK_NAME = 'BlobioCellMassDraw';
+    const PATCH_MARKER = 'BlobioCellMassDraw';
+    const MIN_RENDER_SIZE = 13;
+    const MAX_LABEL_WIDTH = 0.9;
+    const MAX_LABEL_HEIGHT = 0.32;
+    const PRIMARY_MAX_LABEL_HEIGHT = 0.42;
+
+    let settings = normalizeSettings(initialSettings);
+    let lastCacheSweep = 0;
+
+    const labelCache = new Map();
+    const state = {
+      installed: true,
+      version: SCRIPT_VERSION,
+      startedAt: Date.now(),
+      settings,
+      seenCacheScripts: 0,
+      wrappedCallback: false,
+      patchedChunks: 0,
+      lastPatchResult: null,
+      counters: {
+        drawHookCalls: 0,
+        labelsDrawn: 0,
+        labelUpdates: 0,
+        cacheHits: 0,
+        hiddenBySetting: 0,
+        hiddenByThreshold: 0,
+        hiddenBySmartLimit: 0,
+        primaryLabels: 0,
+      },
+      samples: [],
+      errors: [],
+    };
+
+    win.__blobioCellMassInstalled = true;
+    win.__blobioCellMassState = state;
+    win[DRAW_HOOK_NAME] = drawCellMassLabel;
+    win.__blobioCellMassRefresh = refreshSettings;
+    win.__BlobioCellMassDebug = debugReport;
+    win.BlobioCellMassDebug = debugReport;
+
+    if (win.__BLOBIO_CELL_MASS_TEST__) {
+      win.__BlobioCellMassTestApi = {
+        drawCellMassLabel,
+        formatMass,
+        getFitScale,
+        normalizeSettings,
+        patchGameBundle,
+        refreshSettings,
+      };
+    }
+
+    installGameScriptPatch();
+    return true;
+
+    function refreshSettings(nextSettings = {}) {
+      const previous = settings;
+      settings = normalizeSettings({
+        ...settings,
+        ...(nextSettings || {}),
+        solid: {
+          ...settings.solid,
+          ...(nextSettings?.solid || {}),
+        },
+        gradient: {
+          ...settings.gradient,
+          ...(nextSettings?.gradient || {}),
+        },
+      });
+      state.settings = settings;
+
+      if (
+        previous.compact !== settings.compact
+        || previous.updateDelayMs !== settings.updateDelayMs
+      ) {
+        labelCache.clear();
+      }
+
+      return settings;
+    }
+
+    function drawCellMassLabel(cellId, mass, rawSize, renderSize, cellSize, name, nameDrawn, nameScale, explicitFitScale, totalMass) {
+      state.counters.drawHookCalls += 1;
+
+      if (!settings.enabled) {
+        state.counters.hiddenBySetting += 1;
+        return null;
+      }
+
+      const safeMass = Math.max(0, Number(mass) || 0);
+      const safeRawSize = Number(rawSize) || 0;
+      const safeRenderSize = Number(renderSize) || safeRawSize;
+      if (safeMass <= 0 || Math.max(safeRawSize, safeRenderSize) < MIN_RENDER_SIZE) {
+        state.counters.hiddenByThreshold += 1;
+        return null;
+      }
+
+      const autoMinMass = settings.smartRendering ? getAutoMinMass(totalMass) : 0;
+      if (autoMinMass > 0 && safeMass <= autoMinMass) {
+        state.counters.hiddenBySmartLimit += 1;
+        return null;
+      }
+
+      const now = Date.now();
+      sweepLabelCache(now);
+      const textEntry = readMassText(cellId, safeMass, now);
+      if (!textEntry.text) {
+        return null;
+      }
+
+      const fitScale = Number(explicitFitScale) > 0
+        ? Number(explicitFitScale)
+        : getFitScale(textEntry.text, name, nameScale, safeRenderSize);
+      const primary = isPrimaryLabel(safeMass, safeRawSize, safeRenderSize, totalMass);
+      let scale = clampNumber(fitScale * settings.textScale, 0.001, 1.4, settings.textScale);
+
+      if (primary) {
+        scale = Math.max(scale, readableScaleFloor(safeRawSize, safeRenderSize));
+        state.counters.primaryLabels += 1;
+      }
+
+      const result = {
+        text: textEntry.text,
+        scale,
+        offset: settings.yOffset,
+        lineGap: settings.nameGap,
+        maxWidth: MAX_LABEL_WIDTH,
+        maxHeight: primary ? PRIMARY_MAX_LABEL_HEIGHT : MAX_LABEL_HEIGHT,
+        color: getLabelColor(safeMass, totalMass),
+        cached: textEntry.cached,
+        primary,
+      };
+
+      state.counters.labelsDrawn += 1;
+      rememberSample(cellId, safeMass, safeRawSize, safeRenderSize, cellSize, name, Boolean(nameDrawn), result);
+      return result;
+    }
+
+    function readMassText(cellId, mass, now) {
+      const key = String(cellId ?? `mass-${mass}`);
+      const cached = labelCache.get(key);
+      if (cached && settings.updateDelayMs > 0 && now - cached.updatedAt < settings.updateDelayMs) {
+        cached.lastSeen = now;
+        state.counters.cacheHits += 1;
+        return { text: cached.text, cached: true };
+      }
+
+      const text = formatMass(mass);
+      labelCache.set(key, {
+        text,
+        updatedAt: now,
+        lastSeen: now,
+      });
+      state.counters.labelUpdates += 1;
+      return { text, cached: false };
+    }
+
+    function formatMass(value) {
+      const mass = Math.max(0, Number(value) || 0);
+      if (!settings.compact) {
+        return String(Math.round(mass));
+      }
+
+      if (mass >= 1000000) {
+        return `${trimNumber(mass / 1000000)}m`;
+      }
+
+      if (mass >= 1000) {
+        return `${trimNumber(mass / 1000)}k`;
+      }
+
+      return String(Math.round(mass));
+    }
+
+    function trimNumber(value) {
+      const rounded = Math.round(value * 10) / 10;
+      return rounded % 1 === 0 ? String(rounded | 0) : rounded.toFixed(1);
+    }
+
+    function getAutoMinMass(totalMass) {
+      const total = Number(totalMass) || 0;
+      if (total > 15000) {
+        return 500;
+      }
+      if (total >= 8000) {
+        return 200;
+      }
+      if (total > 2000) {
+        return 40;
+      }
+      return 0;
+    }
+
+    function getFitScale(text, name, nameScale, renderSize) {
+      const textLength = Math.max(String(text || '').length, 3);
+      const nameLength = Math.max(String(name || '').length, 3);
+      const widestLength = Math.max(textLength, nameLength);
+      const scale = Number(nameScale);
+
+      if (Number.isFinite(scale) && scale > 0) {
+        return scale * (nameLength / widestLength);
+      }
+
+      return Math.max(0.001, Number(renderSize) / (widestLength * 80));
+    }
+
+    function isPrimaryLabel(mass, rawSize, renderSize, totalMass) {
+      if (!settings.emphasizeBiggest) {
+        return false;
+      }
+
+      const total = Number(totalMass) || 0;
+      const share = total > 0 ? mass / total : 0;
+      return share >= 0.18 || Math.max(Number(rawSize) || 0, Number(renderSize) || 0) >= 80;
+    }
+
+    function readableScaleFloor(rawSize, renderSize) {
+      const size = Math.max(Number(rawSize) || 0, Number(renderSize) || 0);
+      if (size >= 150) {
+        return 0.26;
+      }
+      if (size >= 95) {
+        return 0.2;
+      }
+      return 0.18;
+    }
+
+    function getLabelColor(mass, totalMass) {
+      if (settings.colorMode !== 'gradient') {
+        return colorToObject(settings.solid.color, settings.alpha);
+      }
+
+      const total = Math.max(Number(totalMass) || 0, mass || 0);
+      const ratio = total > 0 ? Math.sqrt(Math.max(0, Math.min(1, mass / total))) : 0;
+      return colorToObject(blendColor(settings.gradient.from, settings.gradient.to, ratio), settings.alpha);
+    }
+
+    function colorToObject(color, alpha = 100) {
+      const rgb = hexToRgb(color, '#ffffff');
+      return {
+        d: rgb.red / 255,
+        c: rgb.green / 255,
+        b: rgb.blue / 255,
+        a: normalizeAlpha(alpha, 100) / 100,
+      };
+    }
+
+    function blendColor(from, to, ratio) {
+      const left = hexToRgb(from, '#ffffff');
+      const right = hexToRgb(to, '#70ff96');
+      const mix = Math.max(0, Math.min(1, ratio));
+      const red = Math.round(left.red + (right.red - left.red) * mix);
+      const green = Math.round(left.green + (right.green - left.green) * mix);
+      const blue = Math.round(left.blue + (right.blue - left.blue) * mix);
+      return `#${toHex(red)}${toHex(green)}${toHex(blue)}`;
+    }
+
+    function toHex(value) {
+      return Math.max(0, Math.min(255, value)).toString(16).padStart(2, '0');
+    }
+
+    function hexToRgb(value, fallback) {
+      const clean = normalizeColor(value, fallback).slice(1);
+      return {
+        red: Number.parseInt(clean.slice(0, 2), 16),
+        green: Number.parseInt(clean.slice(2, 4), 16),
+        blue: Number.parseInt(clean.slice(4, 6), 16),
+      };
+    }
+
+    function sweepLabelCache(now) {
+      if (now - lastCacheSweep < 5000 || labelCache.size < 64) {
+        return;
+      }
+
+      lastCacheSweep = now;
+      for (const [cellId, entry] of labelCache) {
+        if (now - entry.lastSeen > 30000) {
+          labelCache.delete(cellId);
+        }
+      }
+    }
+
+    function installGameScriptPatch() {
+      const NodeCtor = win.Node || globalThis.Node;
+      if (!NodeCtor?.prototype || NodeCtor.prototype.__blobioCellMassScriptPatchInstalled) {
+        return;
+      }
+
+      const originalAppendChild = NodeCtor.prototype.appendChild;
+      const originalInsertBefore = NodeCtor.prototype.insertBefore;
+
+      NodeCtor.prototype.appendChild = function blobioCellMassAppendChild(node) {
+        if (shouldWatchScript(node)) {
+          node.dataset.blobioCellMassScriptPatch = 'seen';
+          state.seenCacheScripts += 1;
+          installGwtCallbackPatch();
+        }
+        return originalAppendChild.call(this, node);
+      };
+
+      NodeCtor.prototype.insertBefore = function blobioCellMassInsertBefore(node, child) {
+        if (shouldWatchScript(node)) {
+          node.dataset.blobioCellMassScriptPatch = 'seen';
+          state.seenCacheScripts += 1;
+          installGwtCallbackPatch();
+        }
+        return originalInsertBefore.call(this, node, child);
+      };
+
+      NodeCtor.prototype.__blobioCellMassScriptPatchInstalled = true;
+      installGwtCallbackPatch();
+
+      const timer = win.setInterval?.(() => {
+        if (installGwtCallbackPatch()) {
+          win.clearInterval?.(timer);
+        }
+      }, 10);
+      win.setTimeout?.(() => win.clearInterval?.(timer), 30000);
+    }
+
+    function shouldWatchScript(node) {
+      return node
+        && node.tagName === 'SCRIPT'
+        && node.src
+        && node.dataset
+        && !node.dataset.blobioCellMassScriptPatch
+        && CACHE_SCRIPT_RE.test(node.src);
+    }
+
+    function installGwtCallbackPatch() {
+      const html = win.html;
+      if (!html || html.__blobioCellMassCallbackWrapped || typeof html.onScriptDownloaded !== 'function') {
+        return false;
+      }
+
+      const original = html.onScriptDownloaded;
+      html.onScriptDownloaded = function blobioCellMassOnScriptDownloaded(chunks) {
+        let patchedChunks = chunks;
+        try {
+          patchedChunks = Array.isArray(chunks)
+            ? chunks.map((chunk) => patchDownloadedChunk(chunk))
+            : patchDownloadedChunk(chunks);
+        } catch (error) {
+          rememberError(`GWT patch failed: ${getErrorMessage(error)}`);
+        }
+
+        return original.call(this, patchedChunks);
+      };
+
+      html.__blobioCellMassCallbackWrapped = true;
+      state.wrappedCallback = true;
+      return true;
+    }
+
+    function patchDownloadedChunk(chunk) {
+      if (typeof chunk !== 'string') {
+        return chunk;
+      }
+
+      const result = patchGameBundle(chunk);
+      if (result.changed || !state.lastPatchResult) {
+        state.lastPatchResult = compactPatchResult(result);
+      }
+
+      if (!result.changed) {
+        return chunk;
+      }
+
+      state.patchedChunks += 1;
+      return result.source;
+    }
+
+    function patchGameBundle(source) {
+      if (typeof source !== 'string') {
+        return { source, changed: false, reason: 'not-a-string' };
+      }
+
+      if (source.includes(`${PATCH_MARKER}(g.n,g.w*g.w/100`)) {
+        return { source, changed: false, reason: 'already-patched' };
+      }
+
+      const nameBlockStart = 'Mm(a.i,g.u?a.b:g.r?a.a:a.B);if(Nye(qxe.f,(Ize(),Gze))&&g.B!=null){';
+      const nameDrawEnd = 'Gm(a.i,a.c,g.B,b,c)}}}}';
+
+      if (!source.includes(nameBlockStart) || !source.includes(nameDrawEnd)) {
+        return { source, changed: false, reason: 'renderer-block-not-found' };
+      }
+
+      let patched = source.replace(
+        nameBlockStart,
+        'Mm(a.i,g.u?a.b:g.r?a.a:a.B);d=false;if(Nye(qxe.f,(Ize(),Gze))&&g.B!=null){',
+      );
+
+      const drawPatch = [
+        'Gm(a.i,a.c,g.B,b,c);d=true}}',
+        'if(g.p&&$wnd.BlobioCellMassDraw){',
+        'h=$wnd.BlobioCellMassDraw(g.n,g.w*g.w/100,g.w,g.M,g.N,g.B,d,d?f:0,0,qxe.g/100);',
+        'if(h&&h.text){',
+        'f=d?a.o.b:0;',
+        'Mm(a.i,h.color||a.B);',
+        'Nn(a.i.b,h.scale);',
+        'xp(a.o,a.i,h.text);',
+        'if(a.o.d>g.N*h.maxWidth){h.scale*=g.N*h.maxWidth/a.o.d;Nn(a.i.b,h.scale);xp(a.o,a.i,h.text)}',
+        'if(a.o.b>g.N*h.maxHeight){h.scale*=g.N*h.maxHeight/a.o.b;Nn(a.i.b,h.scale);xp(a.o,a.i,h.text)}',
+        'b=g.R-a.o.d/2;',
+        'c=g.S-a.o.b/2;',
+        'd&&(c+=f*h.lineGap+a.o.b*0.55);',
+        'c+=h.offset;',
+        'c=$wnd.Math.max(g.S-g.M,c);',
+        'c=$wnd.Math.min(g.S+g.M-a.o.b,c);',
+        'Gm(a.i,a.c,h.text,b,c);',
+        'Nn(a.i.b,1);',
+        'Mm(a.i,a.B)',
+        '}}}}',
+      ].join('');
+
+      patched = patched.replace(nameDrawEnd, drawPatch);
+      if (patched === source) {
+        return { source, changed: false, reason: 'replace-failed' };
+      }
+
+      return { source: patched, changed: true, reason: 'patched' };
+    }
+
+    function compactPatchResult(result) {
+      return {
+        changed: Boolean(result.changed),
+        reason: result.reason || '',
+        sourceLength: typeof result.source === 'string' ? result.source.length : 0,
+      };
+    }
+
+    function rememberSample(cellId, mass, rawSize, renderSize, cellSize, name, nameDrawn, result) {
+      if (state.counters.labelsDrawn % 30 !== 1) {
+        return;
+      }
+
+      state.samples.push({
+        cellId,
+        mass: Math.round(mass * 10) / 10,
+        rawSize,
+        renderSize,
+        cellSize,
+        name: typeof name === 'string' ? name.slice(0, 32) : '',
+        nameDrawn,
+        text: result.text,
+        scale: Math.round(result.scale * 1000) / 1000,
+        primary: result.primary,
+        cached: result.cached,
+      });
+
+      if (state.samples.length > 12) {
+        state.samples.shift();
+      }
+    }
+
+    function debugReport() {
+      const report = {
+        installed: true,
+        version: SCRIPT_VERSION,
+        url: win.location?.href || '',
+        uptimeMs: Date.now() - state.startedAt,
+        settings: { ...settings, solid: { ...settings.solid }, gradient: { ...settings.gradient } },
+        counters: { ...state.counters, cachedCells: labelCache.size },
+        patch: {
+          seenCacheScripts: state.seenCacheScripts,
+          wrappedCallback: state.wrappedCallback,
+          patchedChunks: state.patchedChunks,
+          lastPatchResult: state.lastPatchResult,
+        },
+        samples: state.samples.slice(),
+        errors: state.errors.slice(-8),
+      };
+
+      try {
+        win.console?.log?.('[Blobio Cell Mass] debug', report);
+        win.console?.log?.('[Blobio Cell Mass] JSON:', JSON.stringify(report));
+      } catch {}
+      return report;
+    }
+
+    function normalizeSettings(value = {}) {
+      const source = value && typeof value === 'object' ? value : {};
+      const defaults = {
+        enabled: true,
+        compact: true,
+        smartRendering: true,
+        emphasizeBiggest: true,
+        mode: 'normal',
+        textScale: 0.65,
+        yOffset: 10,
+        nameGap: 1.2,
+        updateDelayMs: 3000,
+        colorMode: 'solid',
+        solid: { color: '#ffffff' },
+        gradient: { from: '#ffffff', to: '#70ff96' },
+        alpha: 100,
+      };
+      const solid = source.solid && typeof source.solid === 'object' ? source.solid : {};
+      const gradient = source.gradient && typeof source.gradient === 'object' ? source.gradient : {};
+
+      return {
+        enabled: source.enabled === undefined ? defaults.enabled : Boolean(source.enabled),
+        compact: source.compact === undefined ? defaults.compact : Boolean(source.compact),
+        smartRendering: source.smartRendering === undefined ? defaults.smartRendering : Boolean(source.smartRendering),
+        emphasizeBiggest: source.emphasizeBiggest === undefined ? defaults.emphasizeBiggest : Boolean(source.emphasizeBiggest),
+        mode: ['normal', 'vip', 'custom'].includes(source.mode) ? source.mode : defaults.mode,
+        textScale: clampNumber(source.textScale, 0.35, 1.4, defaults.textScale),
+        yOffset: clampNumber(source.yOffset, -120, 120, defaults.yOffset),
+        nameGap: clampNumber(source.nameGap, 0.1, 3, defaults.nameGap),
+        updateDelayMs: Math.round(clampNumber(source.updateDelayMs, 0, 10000, defaults.updateDelayMs)),
+        colorMode: source.colorMode === 'gradient' ? 'gradient' : 'solid',
+        solid: {
+          color: normalizeColor(solid.color, defaults.solid.color),
+        },
+        gradient: {
+          from: normalizeColor(gradient.from, defaults.gradient.from),
+          to: normalizeColor(gradient.to, defaults.gradient.to),
+        },
+        alpha: normalizeAlpha(source.alpha, defaults.alpha),
+      };
+    }
+
+    function normalizeColor(value, fallback) {
+      const color = String(value || '').trim().toLowerCase();
+      return /^#[0-9a-f]{6}$/.test(color) ? color : fallback;
+    }
+
+    function normalizeAlpha(value, fallback) {
+      const alpha = Number(value);
+      return Number.isFinite(alpha) ? Math.max(0, Math.min(100, Math.round(alpha))) : fallback;
+    }
+
+    function clampNumber(value, min, max, fallback) {
+      if (value === null || value === undefined || value === '') {
+        return fallback;
+      }
+      const number = Number(value);
+      return Number.isFinite(number) ? Math.max(min, Math.min(max, number)) : fallback;
+    }
+
+    function rememberError(message) {
+      state.errors.push({
+        at: Date.now(),
+        message,
+      });
+      if (state.errors.length > 20) {
+        state.errors.shift();
+      }
+    }
+
+    function getErrorMessage(error) {
+      return error?.message || String(error);
+    }
+  }
+  /* CELL_MASS_RUNTIME_END */
+
   function getVirusResourceUrl(maskId) {
     const normalizedMaskId = Object.hasOwn(VIRUS_MOTHER_CELL_ASSET_URLS, maskId) ? maskId : 'halo';
     return VIRUS_MOTHER_CELL_ASSET_URLS[normalizedMaskId] || '';
@@ -6444,6 +7107,42 @@
     });
   }
 
+  function installCellMassRuntime() {
+    if (location.hostname !== CUSTOM_CLIENT_HOST) {
+      return;
+    }
+
+    const pageWindow = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
+
+    try {
+      pageCellMassBootstrap(readCellMassRuntimeSettings(), pageWindow);
+    } catch (error) {
+      logError('Failed to install Show mass runtime.', error);
+      return;
+    }
+
+    const refresh = () => {
+      try {
+        pageWindow.__blobioCellMassRefresh?.(readCellMassRuntimeSettings());
+      } catch (error) {
+        logError('Failed to refresh Show mass runtime.', error);
+      }
+    };
+
+    if (typeof GM_addValueChangeListener === 'function') {
+      try {
+        GM_addValueChangeListener(CELL_MASS_SNAPSHOT_KEY, refresh);
+      } catch {}
+    }
+
+    window.addEventListener?.('message', (event) => {
+      const message = event.data;
+      if (message?.source === STORAGE_BRIDGE_SOURCE && message.key === CELL_MASS_SNAPSHOT_KEY) {
+        refresh();
+      }
+    });
+  }
+
   function installGameBackgroundRuntime() {
     if (location.hostname !== CUSTOM_CLIENT_HOST) {
       return;
@@ -6569,6 +7268,7 @@
   installVirusPelletColorRuntime();
   installJellyShaderRuntime();
   installHudInfoRuntime();
+  installCellMassRuntime();
   installAnimationSpeedRuntime();
   installGameBackgroundRuntime();
   installFpsUncapRuntime();

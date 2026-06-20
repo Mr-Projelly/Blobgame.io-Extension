@@ -1,5 +1,6 @@
 import { buildMenuCss } from '../css/MenuFeatureStyles.js';
 import { GameBackgroundSettingsUi } from '../background/GameBackgroundSettingsUi.js';
+import { CellMassSettingsUi } from '../cellMass/CellMassSettingsUi.js';
 import { VirusPelletColorSettingsUi } from '../cellColors/VirusPelletColorSettingsUi.js';
 import { createBlobioStorage } from '../storage/BlobioStorage.js';
 import { JellyShaderSettingsUi } from '../jelly/JellyShaderSettingsUi.js';
@@ -170,6 +171,7 @@ export class MenuFeature {
     this.virusMotherCellSettingsUi = null;
     this.gameBackgroundSettingsUi = null;
     this.virusPelletColorSettingsUi = null;
+    this.cellMassSettingsUi = null;
     this.jellyShaderSettingsUi = null;
   }
 
@@ -259,6 +261,8 @@ export class MenuFeature {
     this.gameBackgroundSettingsUi = null;
     this.virusPelletColorSettingsUi?.destroy?.();
     this.virusPelletColorSettingsUi = null;
+    this.cellMassSettingsUi?.destroy?.();
+    this.cellMassSettingsUi = null;
     this.jellyShaderSettingsUi?.destroy?.();
     this.jellyShaderSettingsUi = null;
     this.cleanupExtensionSettings();
@@ -971,6 +975,17 @@ export class MenuFeature {
       }),
     );
 
+    this.cellMassSettingsUi?.destroy?.();
+    this.cellMassSettingsUi = new CellMassSettingsUi({
+      document: this.document,
+      storage: this.storage,
+      showTooltip: (row, event) => this.showExtensionTooltip(row, event),
+      moveTooltip: (event) => this.moveExtensionTooltip(event),
+      hideTooltip: () => this.hideExtensionTooltip(),
+      onOpen: (ui) => this.closeExtensionSettingMenus(ui),
+    });
+    categoryPanels.get('cell').appendChild(this.cellMassSettingsUi.create());
+
     this.virusMotherCellSettingsUi?.destroy?.();
     this.virusMotherCellSettingsUi = new VirusMotherCellSettingsUi({
       document: this.document,
@@ -1066,6 +1081,7 @@ export class MenuFeature {
       this.virusMotherCellSettingsUi,
       this.gameBackgroundSettingsUi,
       this.virusPelletColorSettingsUi,
+      this.cellMassSettingsUi,
       this.jellyShaderSettingsUi,
     ]) {
       if (ui && ui !== except) {
@@ -1239,6 +1255,7 @@ export class MenuFeature {
     }
 
     this.jellyShaderSettingsUi?.sync?.();
+    this.cellMassSettingsUi?.sync?.();
     this.syncAdminSettingVisibility(panel);
   }
 
