@@ -10,7 +10,7 @@ export function pageCellMassBootstrap(initialSettings = {}, pageWindow = globalT
     return true;
   }
 
-  const SCRIPT_VERSION = '0.1.2';
+  const SCRIPT_VERSION = '0.1.3';
   const CACHE_SCRIPT_RE = /\/html\/[a-f0-9]{32}\.cache\.js(?:[?#].*)?$/i;
   const DRAW_HOOK_NAME = 'BlobioCellMassDraw';
   const PATCH_MARKER = 'BlobioCellMassDraw';
@@ -135,7 +135,7 @@ export function pageCellMassBootstrap(initialSettings = {}, pageWindow = globalT
       state.counters.primaryLabels += 1;
     }
 
-    const color = getLabelColor(safeMass, totalMass);
+    const color = getLabelColor();
     const result = {
       text: textEntry.text,
       scale,
@@ -144,8 +144,6 @@ export function pageCellMassBootstrap(initialSettings = {}, pageWindow = globalT
       maxWidth: MAX_LABEL_WIDTH,
       maxHeight: primary ? PRIMARY_MAX_LABEL_HEIGHT : MAX_LABEL_HEIGHT,
       color,
-      outlineColor: getOutlineColor(color),
-      outlineSize: getOutlineSize(scale, safeRawSize, safeRenderSize),
       cached: textEntry.cached,
       primary,
     };
@@ -245,7 +243,7 @@ export function pageCellMassBootstrap(initialSettings = {}, pageWindow = globalT
     return 0.18;
   }
 
-  function getLabelColor(mass, totalMass) {
+  function getLabelColor() {
     return colorToObject(settings.solid.color, settings.alpha);
   }
 
@@ -260,12 +258,11 @@ export function pageCellMassBootstrap(initialSettings = {}, pageWindow = globalT
       primary: Boolean(result.primary),
       cached: Boolean(result.cached),
       color: cloneColor(result.color),
-      outlineColor: cloneColor(result.outlineColor),
-      outlineSize: roundNumber(result.outlineSize),
     };
   }
 
   function captureDrawState(cellId, label, nativeColor, x, y) {
+    const native = cloneColor(nativeColor);
     state.lastDrawCapture = {
       at: Date.now(),
       cellId: String(cellId ?? ''),
@@ -273,10 +270,9 @@ export function pageCellMassBootstrap(initialSettings = {}, pageWindow = globalT
       scale: roundNumber(label?.scale),
       x: roundNumber(x),
       y: roundNumber(y),
-      appliedColor: cloneColor(label?.color),
-      outlineColor: cloneColor(label?.outlineColor),
-      outlineSize: roundNumber(label?.outlineSize),
-      nativeColor: cloneColor(nativeColor),
+      configuredColor: cloneColor(label?.color),
+      appliedColor: native,
+      nativeColor: native,
     };
     return state.lastDrawCapture;
   }
@@ -289,28 +285,6 @@ export function pageCellMassBootstrap(initialSettings = {}, pageWindow = globalT
       b: rgb.blue / 255,
       a: normalizeAlpha(alpha, 100) / 100,
     };
-  }
-
-  function getOutlineColor(color) {
-    const red = Number(color?.d) || 0;
-    const green = Number(color?.c) || 0;
-    const blue = Number(color?.b) || 0;
-    const alpha = Math.min(0.9, Math.max(0.55, Number(color?.a) || 1));
-    const luminance = red * 0.2126 + green * 0.7152 + blue * 0.0722;
-    return luminance > 0.5
-      ? { d: 0, c: 0, b: 0, a: alpha }
-      : { d: 1, c: 1, b: 1, a: alpha };
-  }
-
-  function getOutlineSize(scale, rawSize, renderSize) {
-    const size = Math.max(Number(rawSize) || 0, Number(renderSize) || 0);
-    if (size >= 150) {
-      return 4;
-    }
-    if (size >= 80) {
-      return 3;
-    }
-    return Math.max(1, Math.min(3, Math.round((Number(scale) || 1) * 3)));
   }
 
   function hexToRgb(value, fallback) {
@@ -452,7 +426,7 @@ export function pageCellMassBootstrap(initialSettings = {}, pageWindow = globalT
       'h=$wnd.BlobioCellMassDraw(g.n,g.w*g.w/100,g.w,g.M,g.N,g.B,d,d?f:0,0,qxe.g/100);',
       'if(h&&h.text){',
       'f=d?a.o.b:0;',
-      'Mm(a.i,h.color);',
+      'Mm(a.i,a.B);',
       'Nn(a.i.b,h.scale);',
       'xp(a.o,a.i,h.text);',
       'if(a.o.d>g.N*h.maxWidth){h.scale*=g.N*h.maxWidth/a.o.d;Nn(a.i.b,h.scale);xp(a.o,a.i,h.text)}',
@@ -464,21 +438,8 @@ export function pageCellMassBootstrap(initialSettings = {}, pageWindow = globalT
       'c=$wnd.Math.max(g.S-g.M,c);',
       'c=$wnd.Math.min(g.S+g.M-a.o.b,c);',
       '$wnd.__blobioCellMassCaptureDraw&&$wnd.__blobioCellMassCaptureDraw(g.n,h,a.B,b,c);',
-      'if(h.outlineColor&&h.outlineSize>0){',
-      'Mm(a.i,h.outlineColor);',
-      'Gm(a.i,a.c,h.text,b-h.outlineSize,c);',
-      'Gm(a.i,a.c,h.text,b+h.outlineSize,c);',
-      'Gm(a.i,a.c,h.text,b,c-h.outlineSize);',
-      'Gm(a.i,a.c,h.text,b,c+h.outlineSize);',
-      'Gm(a.i,a.c,h.text,b-h.outlineSize,c-h.outlineSize);',
-      'Gm(a.i,a.c,h.text,b+h.outlineSize,c-h.outlineSize);',
-      'Gm(a.i,a.c,h.text,b-h.outlineSize,c+h.outlineSize);',
-      'Gm(a.i,a.c,h.text,b+h.outlineSize,c+h.outlineSize)',
-      '}',
-      'Mm(a.i,h.color);',
       'Gm(a.i,a.c,h.text,b,c);',
-      'Nn(a.i.b,1);',
-      'Mm(a.i,a.B)',
+      'Nn(a.i.b,1)',
       '}}}}',
     ].join('');
 
@@ -516,8 +477,6 @@ export function pageCellMassBootstrap(initialSettings = {}, pageWindow = globalT
       primary: result.primary,
       cached: result.cached,
       color: cloneColor(result.color),
-      outlineColor: cloneColor(result.outlineColor),
-      outlineSize: Math.round(result.outlineSize * 1000) / 1000,
     });
 
     if (state.samples.length > 12) {
