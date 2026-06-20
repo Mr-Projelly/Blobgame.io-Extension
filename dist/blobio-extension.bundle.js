@@ -81,9 +81,7 @@
     textScale: 0.65,
     yOffset: 10,
     nameGap: 1.2,
-    updateDelayMs: 3e3,
-    solid: Object.freeze({ color: "#ffffff" }),
-    alpha: 100
+    updateDelayMs: 3e3
   });
   function readCellMassSettings(storage, document = globalThis.document) {
     const storedSnapshot = parseCellMassSnapshot(storage?.getItem?.(CELL_MASS_SNAPSHOT_KEY));
@@ -138,7 +136,6 @@
     const source = settings && typeof settings === "object" ? settings : {};
     const mode = normalizeMode(source.mode);
     const preset = CELL_MASS_MODE_PRESETS[mode];
-    const solid = source.solid && typeof source.solid === "object" ? source.solid : {};
     return {
       enabled: source.enabled === void 0 ? DEFAULT_CELL_MASS_SETTINGS.enabled : Boolean(source.enabled),
       compact: source.compact === void 0 ? DEFAULT_CELL_MASS_SETTINGS.compact : Boolean(source.compact),
@@ -148,30 +145,12 @@
       textScale: clampNumber(source.textScale, 0.35, 1.4, preset.textScale),
       yOffset: clampNumber(source.yOffset, -120, 120, preset.yOffset),
       nameGap: clampNumber(source.nameGap, 0.1, 3, preset.nameGap),
-      updateDelayMs: Math.round(clampNumber(source.updateDelayMs, 0, 1e4, DEFAULT_CELL_MASS_SETTINGS.updateDelayMs)),
-      solid: {
-        color: normalizeColor(solid.color, DEFAULT_CELL_MASS_SETTINGS.solid.color)
-      },
-      alpha: normalizeAlpha(source.alpha, DEFAULT_CELL_MASS_SETTINGS.alpha)
+      updateDelayMs: Math.round(clampNumber(source.updateDelayMs, 0, 1e4, DEFAULT_CELL_MASS_SETTINGS.updateDelayMs))
     };
   }
   function normalizeMode(value) {
     const mode = String(value || "").trim().toLowerCase();
     return CELL_MASS_MODES.includes(mode) ? mode : DEFAULT_CELL_MASS_SETTINGS.mode;
-  }
-  function normalizeColor(value, fallback) {
-    const color = String(value || "").trim().toLowerCase();
-    return /^#[0-9a-f]{6}$/.test(color) ? color : fallback;
-  }
-  function normalizeAlpha(value, fallback) {
-    const alpha = Number(value);
-    if (!Number.isFinite(alpha)) {
-      return fallback;
-    }
-    if (alpha > 0 && alpha <= 1) {
-      return Math.round(alpha * 100);
-    }
-    return Math.max(0, Math.min(100, Math.round(alpha)));
   }
   function clampNumber(value, min, max, fallback) {
     if (value === null || value === void 0 || value === "") {
@@ -211,7 +190,7 @@
       win.__blobioCellMassRefresh?.(initialSettings);
       return true;
     }
-    const SCRIPT_VERSION = "0.1.6";
+    const SCRIPT_VERSION = "0.1.7";
     const CACHE_SCRIPT_RE2 = /\/html\/[a-f0-9]{32}\.cache\.js(?:[?#].*)?$/i;
     const DRAW_HOOK_NAME = "BlobioCellMassDraw";
     const PATCH_MARKER = "BlobioCellMassDraw";
@@ -272,11 +251,7 @@
       const previous = settings;
       settings = normalizeSettings({
         ...settings,
-        ...nextSettings || {},
-        solid: {
-          ...settings.solid,
-          ...nextSettings?.solid || {}
-        }
+        ...nextSettings || {}
       });
       state.settings = settings;
       if (previous.compact !== settings.compact || previous.updateDelayMs !== settings.updateDelayMs) {
@@ -315,7 +290,6 @@
         scale = Math.max(scale, readableScaleFloor(safeRawSize, safeRenderSize));
         state.counters.primaryLabels += 1;
       }
-      const color = getLabelColor();
       const result = {
         text: textEntry.text,
         scale,
@@ -323,7 +297,6 @@
         lineGap: settings.nameGap,
         maxWidth: MAX_LABEL_WIDTH,
         maxHeight: primary ? PRIMARY_MAX_LABEL_HEIGHT : MAX_LABEL_HEIGHT,
-        color,
         cached: textEntry.cached,
         primary
       };
@@ -407,9 +380,6 @@
       }
       return 0.18;
     }
-    function getLabelColor() {
-      return colorToObject(settings.solid.color, settings.alpha);
-    }
     function cloneLabelResult(cellId, mass, result) {
       return {
         at: Date.now(),
@@ -419,11 +389,11 @@
         scale: roundNumber(result.scale),
         offset: roundNumber(result.offset),
         primary: Boolean(result.primary),
-        cached: Boolean(result.cached),
-        color: cloneColor(result.color)
+        cached: Boolean(result.cached)
       };
     }
-    function captureDrawState(cellId, label, appliedColor, x, y, rendererColorBefore = null, rendererMode = "native-text-color") {
+    function captureDrawState(cellId, label, nativeColor, x, y) {
+      const native = cloneRendererColor(nativeColor);
       state.lastDrawCapture = {
         at: Date.now(),
         cellId: String(cellId ?? ""),
@@ -431,33 +401,11 @@
         scale: roundNumber(label?.scale),
         x: roundNumber(x),
         y: roundNumber(y),
-        rendererMode,
-        configuredColor: cloneColor(label?.color),
-        appliedColor: cloneColor(appliedColor)
+        rendererMode: "native-text-color",
+        appliedColor: native,
+        nativeColor: native
       };
-      if (rendererColorBefore) {
-        state.lastDrawCapture.rendererColorBefore = cloneColor(rendererColorBefore);
-      } else {
-        state.lastDrawCapture.nativeColor = cloneColor(appliedColor);
-      }
       return state.lastDrawCapture;
-    }
-    function colorToObject(color, alpha = 100) {
-      const rgb = hexToRgb(color, "#ffffff");
-      return {
-        d: rgb.red / 255,
-        c: rgb.green / 255,
-        b: rgb.blue / 255,
-        a: normalizeAlpha7(alpha, 100) / 100
-      };
-    }
-    function hexToRgb(value, fallback) {
-      const clean = normalizeColor7(value, fallback).slice(1);
-      return {
-        red: Number.parseInt(clean.slice(0, 2), 16),
-        green: Number.parseInt(clean.slice(2, 4), 16),
-        blue: Number.parseInt(clean.slice(4, 6), 16)
-      };
     }
     function sweepLabelCache(now) {
       if (now - lastCacheSweep < 5e3 || labelCache.size < 64) {
@@ -560,9 +508,7 @@
         "h=$wnd.BlobioCellMassDraw(g.n,g.w*g.w/100,g.w,g.M,g.N,g.B,d,d?f:0,0,qxe.g/100);",
         "if(h&&h.text){",
         "f=d?a.o.b:0;",
-        "h._bd=a.b.d;h._bc=a.b.c;h._bb=a.b.b;h._ba=a.b.a;",
-        "h.color&&(a.b.d=h.color.d,a.b.c=h.color.c,a.b.b=h.color.b,a.b.a=h.color.a);",
-        "Mm(a.i,a.b);",
+        "Mm(a.i,a.B);",
         "Nn(a.i.b,h.scale);",
         "xp(a.o,a.i,h.text);",
         "if(a.o.d>g.N*h.maxWidth){h.scale*=g.N*h.maxWidth/a.o.d;Nn(a.i.b,h.scale);xp(a.o,a.i,h.text)}",
@@ -573,9 +519,9 @@
         "c+=h.offset;",
         "c=$wnd.Math.max(g.S-g.M,c);",
         "c=$wnd.Math.min(g.S+g.M-a.o.b,c);",
-        "$wnd.__blobioCellMassCaptureDraw&&$wnd.__blobioCellMassCaptureDraw(g.n,h,a.b,b,c,{d:h._bd,c:h._bc,b:h._bb,a:h._ba},'vip-name-color-slot');",
+        "$wnd.__blobioCellMassCaptureDraw&&$wnd.__blobioCellMassCaptureDraw(g.n,h,a.B,b,c);",
         "Gm(a.i,a.c,h.text,b,c);",
-        "a.b.d=h._bd;a.b.c=h._bc;a.b.b=h._bb;a.b.a=h._ba;Mm(a.i,a.B);Nn(a.i.b,1)",
+        "Nn(a.i.b,1)",
         "}}}}"
       ].join("");
       patched = patched.replace(nameDrawEnd, drawPatch);
@@ -606,8 +552,7 @@
         text: result.text,
         scale: Math.round(result.scale * 1e3) / 1e3,
         primary: result.primary,
-        cached: result.cached,
-        color: cloneColor(result.color)
+        cached: result.cached
       });
       if (state.samples.length > 12) {
         state.samples.shift();
@@ -619,7 +564,7 @@
         version: SCRIPT_VERSION,
         url: win.location?.href || "",
         uptimeMs: Date.now() - state.startedAt,
-        settings: { ...settings, solid: { ...settings.solid } },
+        settings: { ...settings },
         counters: { ...state.counters, cachedCells: labelCache.size },
         patch: {
           seenCacheScripts: state.seenCacheScripts,
@@ -655,11 +600,8 @@
         textScale: 0.65,
         yOffset: 10,
         nameGap: 1.2,
-        updateDelayMs: 3e3,
-        solid: { color: "#ffffff" },
-        alpha: 100
+        updateDelayMs: 3e3
       };
-      const solid = source.solid && typeof source.solid === "object" ? source.solid : {};
       return {
         enabled: source.enabled === void 0 ? defaults.enabled : Boolean(source.enabled),
         compact: source.compact === void 0 ? defaults.compact : Boolean(source.compact),
@@ -669,26 +611,8 @@
         textScale: clampNumber2(source.textScale, 0.35, 1.4, defaults.textScale),
         yOffset: clampNumber2(source.yOffset, -120, 120, defaults.yOffset),
         nameGap: clampNumber2(source.nameGap, 0.1, 3, defaults.nameGap),
-        updateDelayMs: Math.round(clampNumber2(source.updateDelayMs, 0, 1e4, defaults.updateDelayMs)),
-        solid: {
-          color: normalizeColor7(solid.color, defaults.solid.color)
-        },
-        alpha: normalizeAlpha7(source.alpha, defaults.alpha)
+        updateDelayMs: Math.round(clampNumber2(source.updateDelayMs, 0, 1e4, defaults.updateDelayMs))
       };
-    }
-    function normalizeColor7(value, fallback) {
-      const color = String(value || "").trim().toLowerCase();
-      return /^#[0-9a-f]{6}$/.test(color) ? color : fallback;
-    }
-    function normalizeAlpha7(value, fallback) {
-      const alpha = Number(value);
-      if (!Number.isFinite(alpha)) {
-        return fallback;
-      }
-      if (alpha > 0 && alpha <= 1) {
-        return Math.round(alpha * 100);
-      }
-      return Math.max(0, Math.min(100, Math.round(alpha)));
     }
     function clampNumber2(value, min, max, fallback) {
       if (value === null || value === void 0 || value === "") {
@@ -706,7 +630,7 @@
         state.errors.shift();
       }
     }
-    function cloneColor(color) {
+    function cloneRendererColor(color) {
       if (!color || typeof color !== "object") {
         return null;
       }
@@ -810,31 +734,31 @@
     };
   }
   function colorToRgba(color, alpha = 100) {
-    const clean = normalizeColor2(color, "#000000").slice(1);
+    const clean = normalizeColor(color, "#000000").slice(1);
     const red = Number.parseInt(clean.slice(0, 2), 16);
     const green = Number.parseInt(clean.slice(2, 4), 16);
     const blue = Number.parseInt(clean.slice(4, 6), 16);
-    return `rgba(${red}, ${green}, ${blue}, ${normalizeAlpha2(alpha, 100) / 100})`;
+    return `rgba(${red}, ${green}, ${blue}, ${normalizeAlpha(alpha, 100) / 100})`;
   }
   function normalizeTargetSettings(value, fallback) {
     const source = value && typeof value === "object" ? value : {};
     const gradient = source.gradient && typeof source.gradient === "object" ? source.gradient : {};
     return {
       mode: source.mode === "gradient" ? "gradient" : "solid",
-      alpha: normalizeAlpha2(source.alpha, fallback.alpha),
-      solid: normalizeColor2(source.solid, fallback.solid),
+      alpha: normalizeAlpha(source.alpha, fallback.alpha),
+      solid: normalizeColor(source.solid, fallback.solid),
       gradient: {
-        from: normalizeColor2(gradient.from, fallback.gradient.from),
-        to: normalizeColor2(gradient.to, fallback.gradient.to),
+        from: normalizeColor(gradient.from, fallback.gradient.from),
+        to: normalizeColor(gradient.to, fallback.gradient.to),
         angle: normalizeAngle(gradient.angle, fallback.gradient.angle)
       }
     };
   }
-  function normalizeColor2(value, fallback) {
+  function normalizeColor(value, fallback) {
     const color = String(value || "").trim().toLowerCase();
     return /^#[0-9a-f]{6}$/.test(color) ? color : fallback;
   }
-  function normalizeAlpha2(value, fallback) {
+  function normalizeAlpha(value, fallback) {
     const alpha = Number(value);
     return Number.isFinite(alpha) ? Math.max(0, Math.min(100, Math.round(alpha))) : fallback;
   }
@@ -1483,20 +1407,20 @@
     const gradient = source.gradient && typeof source.gradient === "object" ? source.gradient : {};
     return {
       mode: source.mode === "gradient" ? "gradient" : "solid",
-      alpha: normalizeAlpha3(source.alpha, fallback.alpha),
-      solid: normalizeColor3(source.solid, fallback.solid),
+      alpha: normalizeAlpha2(source.alpha, fallback.alpha),
+      solid: normalizeColor2(source.solid, fallback.solid),
       gradient: {
-        from: normalizeColor3(gradient.from, fallback.gradient.from),
-        to: normalizeColor3(gradient.to, fallback.gradient.to),
+        from: normalizeColor2(gradient.from, fallback.gradient.from),
+        to: normalizeColor2(gradient.to, fallback.gradient.to),
         angle: normalizeAngle2(gradient.angle, fallback.gradient.angle)
       }
     };
   }
-  function normalizeColor3(value, fallback) {
+  function normalizeColor2(value, fallback) {
     const color = String(value || "").trim().toLowerCase();
     return /^#[0-9a-f]{6}$/.test(color) ? color : fallback;
   }
-  function normalizeAlpha3(value, fallback) {
+  function normalizeAlpha2(value, fallback) {
     const alpha = Number(value);
     return Number.isFinite(alpha) ? Math.max(0, Math.min(100, Math.round(alpha))) : fallback;
   }
@@ -5586,11 +5510,11 @@ iframe.blobio-captcha-anchor-hidden,
       return fallback;
     }
   }
-  function normalizeColor4(value, fallback = DEFAULT_HUD_INFO_SETTINGS.color) {
+  function normalizeColor3(value, fallback = DEFAULT_HUD_INFO_SETTINGS.color) {
     const color = String(value || "").trim().toLowerCase();
     return /^#[0-9a-f]{6}$/.test(color) ? color : fallback;
   }
-  function normalizeAlpha4(value, fallback = DEFAULT_HUD_INFO_SETTINGS.alpha) {
+  function normalizeAlpha3(value, fallback = DEFAULT_HUD_INFO_SETTINGS.alpha) {
     if (value === null || value === void 0 || value === "") {
       return fallback;
     }
@@ -5631,8 +5555,8 @@ iframe.blobio-captcha-anchor-hidden,
       boosterDurationMode: normalizeMode2(source.boosterDurationMode, HUD_INFO_BOOSTER_COLOR_MODES, DEFAULT_HUD_INFO_SETTINGS.boosterDurationMode),
       boosterLastSecFlash: source.boosterLastSecFlash === void 0 ? DEFAULT_HUD_INFO_SETTINGS.boosterLastSecFlash : Boolean(source.boosterLastSecFlash),
       fontSize: normalizeFontSize(source.fontSize),
-      color: normalizeColor4(source.color),
-      alpha: normalizeAlpha4(source.alpha)
+      color: normalizeColor3(source.color),
+      alpha: normalizeAlpha3(source.alpha)
     };
   }
   function readHudInfoSettings(storage) {
@@ -5753,11 +5677,11 @@ iframe.blobio-captcha-anchor-hidden,
     }
     return Boolean(enabled);
   }
-  function normalizeColor5(value, fallback) {
+  function normalizeColor4(value, fallback) {
     const color = String(value || "").trim().toLowerCase();
     return /^#[0-9a-f]{6}$/.test(color) ? color : fallback;
   }
-  function normalizeAlpha5(value, fallback) {
+  function normalizeAlpha4(value, fallback) {
     const alpha = Number(value);
     return Number.isFinite(alpha) ? Math.max(0, Math.min(1, alpha)) : fallback;
   }
@@ -5780,8 +5704,8 @@ iframe.blobio-captcha-anchor-hidden,
     let color = fallback.color;
     let alpha = fallback.alpha;
     try {
-      color = normalizeColor5(storage?.getItem?.(keys.color), fallback.color);
-      alpha = normalizeAlpha5(storage?.getItem?.(keys.alpha), fallback.alpha);
+      color = normalizeColor4(storage?.getItem?.(keys.color), fallback.color);
+      alpha = normalizeAlpha4(storage?.getItem?.(keys.alpha), fallback.alpha);
     } catch {
     }
     return {
@@ -5794,8 +5718,8 @@ iframe.blobio-captcha-anchor-hidden,
     const current = getColorSetting(storage, keys, defaults);
     const next = {
       enabled: changes.enabled === void 0 ? current.enabled : Boolean(changes.enabled),
-      color: normalizeColor5(changes.color ?? current.color, current.color),
-      alpha: normalizeAlpha5(changes.alpha ?? current.alpha, current.alpha)
+      color: normalizeColor4(changes.color ?? current.color, current.color),
+      alpha: normalizeAlpha4(changes.alpha ?? current.alpha, current.alpha)
     };
     try {
       storage?.setItem?.(keys.enabled, next.enabled ? "1" : "0");
@@ -9944,8 +9868,7 @@ html.${className} app-settings .blobio-cell-mass-checkbox-row input {
 }
 
 html.${className} app-settings .blobio-cell-mass-mode-row,
-html.${className} app-settings .blobio-cell-mass-slider-row,
-html.${className} app-settings .blobio-cell-mass-alpha-row {
+html.${className} app-settings .blobio-cell-mass-slider-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(110px, 1.2fr) 54px;
   align-items: center;
@@ -10023,8 +9946,7 @@ html.${className} app-settings .blobio-cell-mass-preset-mode-button.is-custom .b
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.38);
 }
 
-html.${className} app-settings .blobio-cell-mass-slider-input,
-html.${className} app-settings .blobio-cell-mass-alpha-input {
+html.${className} app-settings .blobio-cell-mass-slider-input {
   width: 100%;
   min-width: 0;
   height: 18px;
@@ -10036,8 +9958,7 @@ html.${className} app-settings .blobio-cell-mass-alpha-input {
   cursor: pointer;
 }
 
-html.${className} app-settings .blobio-cell-mass-slider-input::-webkit-slider-runnable-track,
-html.${className} app-settings .blobio-cell-mass-alpha-input::-webkit-slider-runnable-track {
+html.${className} app-settings .blobio-cell-mass-slider-input::-webkit-slider-runnable-track {
   height: 6px;
   border: 1px solid rgba(147, 255, 177, 0.62);
   border-radius: 999px;
@@ -10045,8 +9966,7 @@ html.${className} app-settings .blobio-cell-mass-alpha-input::-webkit-slider-run
   box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.58), 0 0 8px rgba(79, 255, 130, 0.28);
 }
 
-html.${className} app-settings .blobio-cell-mass-slider-input::-webkit-slider-thumb,
-html.${className} app-settings .blobio-cell-mass-alpha-input::-webkit-slider-thumb {
+html.${className} app-settings .blobio-cell-mass-slider-input::-webkit-slider-thumb {
   width: 16px;
   height: 16px;
   margin-top: -6px;
@@ -10058,8 +9978,7 @@ html.${className} app-settings .blobio-cell-mass-alpha-input::-webkit-slider-thu
   box-shadow: 0 0 10px rgba(79, 255, 130, 0.72), inset 0 0 5px rgba(255, 255, 255, 0.42);
 }
 
-html.${className} app-settings .blobio-cell-mass-slider-input::-moz-range-track,
-html.${className} app-settings .blobio-cell-mass-alpha-input::-moz-range-track {
+html.${className} app-settings .blobio-cell-mass-slider-input::-moz-range-track {
   height: 6px;
   border: 1px solid rgba(147, 255, 177, 0.62);
   border-radius: 999px;
@@ -10067,8 +9986,7 @@ html.${className} app-settings .blobio-cell-mass-alpha-input::-moz-range-track {
   box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.58), 0 0 8px rgba(79, 255, 130, 0.28);
 }
 
-html.${className} app-settings .blobio-cell-mass-slider-input::-moz-range-thumb,
-html.${className} app-settings .blobio-cell-mass-alpha-input::-moz-range-thumb {
+html.${className} app-settings .blobio-cell-mass-slider-input::-moz-range-thumb {
   width: 16px;
   height: 16px;
   border: 1px solid rgba(225, 255, 233, 0.96);
@@ -10077,55 +9995,10 @@ html.${className} app-settings .blobio-cell-mass-alpha-input::-moz-range-thumb {
   box-shadow: 0 0 10px rgba(79, 255, 130, 0.72), inset 0 0 5px rgba(255, 255, 255, 0.42);
 }
 
-html.${className} app-settings .blobio-cell-mass-slider-value,
-html.${className} app-settings .blobio-cell-mass-alpha-value {
+html.${className} app-settings .blobio-cell-mass-slider-value {
   color: #c8ffd4;
   font-variant-numeric: tabular-nums;
   text-align: right;
-}
-
-html.${className} app-settings .blobio-cell-mass-color-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 42px;
-  align-items: center;
-  gap: 7px;
-  min-width: 0;
-  color: #dfffe6;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-html.${className} app-settings .blobio-cell-mass-color-wheel {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  overflow: hidden;
-  border: 1px solid rgba(232, 255, 238, 0.7);
-  border-radius: 50%;
-  background: conic-gradient(#ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000);
-  box-shadow: 0 0 10px rgba(79, 255, 130, 0.24);
-}
-
-html.${className} app-settings .blobio-cell-mass-color-swatch {
-  width: 17px;
-  height: 17px;
-  border: 2px solid rgba(0, 0, 0, 0.78);
-  border-radius: 50%;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.62);
-  pointer-events: none;
-}
-
-html.${className} app-settings .blobio-cell-mass-color-input {
-  position: absolute;
-  inset: 0;
-  width: 100% !important;
-  height: 100% !important;
-  padding: 0 !important;
-  border: 0 !important;
-  opacity: 0;
-  cursor: pointer;
 }
 
 html.${className} app-settings .blobio-virus-setting-group {
@@ -11538,11 +11411,11 @@ html.${className} .blobio-watermark-extension::after {
     }
     return value === true || value === 1 || value === "1" || String(value).toLowerCase() === "true";
   }
-  function normalizeColor6(value, fallback) {
+  function normalizeColor5(value, fallback) {
     const color = String(value || "").trim().toLowerCase();
     return /^#[0-9a-f]{6}$/.test(color) ? color : fallback;
   }
-  function normalizeAlpha6(value, fallback) {
+  function normalizeAlpha5(value, fallback) {
     const alpha = Number(value);
     return Number.isFinite(alpha) ? Math.max(0, Math.min(100, Math.round(alpha))) : fallback;
   }
@@ -11564,17 +11437,17 @@ html.${className} .blobio-watermark-extension::after {
       enabled: Boolean(source.enabled),
       mode: normalizeMode3(source.mode),
       solid: {
-        color: normalizeColor6(solid.color, defaults.solid.color),
-        alpha: normalizeAlpha6(solid.alpha, defaults.solid.alpha)
+        color: normalizeColor5(solid.color, defaults.solid.color),
+        alpha: normalizeAlpha5(solid.alpha, defaults.solid.alpha)
       },
       gradient: {
         from: {
-          color: normalizeColor6(from.color, defaults.gradient.from.color),
-          alpha: normalizeAlpha6(from.alpha, defaults.gradient.from.alpha)
+          color: normalizeColor5(from.color, defaults.gradient.from.color),
+          alpha: normalizeAlpha5(from.alpha, defaults.gradient.from.alpha)
         },
         to: {
-          color: normalizeColor6(to.color, defaults.gradient.to.color),
-          alpha: normalizeAlpha6(to.alpha, defaults.gradient.to.alpha)
+          color: normalizeColor5(to.color, defaults.gradient.to.color),
+          alpha: normalizeAlpha5(to.alpha, defaults.gradient.to.alpha)
         },
         angle: normalizeAngle3(gradient.angle, defaults.gradient.angle)
       }
@@ -11622,11 +11495,11 @@ html.${className} .blobio-watermark-extension::after {
     return clean;
   }
   function backgroundColorToRgba(color, alpha) {
-    const normalized = normalizeColor6(color, "#000000").slice(1);
+    const normalized = normalizeColor5(color, "#000000").slice(1);
     const red = Number.parseInt(normalized.slice(0, 2), 16);
     const green = Number.parseInt(normalized.slice(2, 4), 16);
     const blue = Number.parseInt(normalized.slice(4, 6), 16);
-    return `rgba(${red}, ${green}, ${blue}, ${normalizeAlpha6(alpha, 100) / 100})`;
+    return `rgba(${red}, ${green}, ${blue}, ${normalizeAlpha5(alpha, 100) / 100})`;
   }
   function gameBackgroundCss(settings) {
     const clean = normalizeGameBackgroundSettings(settings);
@@ -12022,11 +11895,7 @@ html.${className} .blobio-watermark-extension::after {
         modeButton: menu.querySelector(".blobio-cell-mass-preset-mode-button"),
         checkboxes: Array.from(menu.querySelectorAll(".blobio-cell-mass-checkbox-input") || []),
         sliders: Array.from(menu.querySelectorAll(".blobio-cell-mass-slider-input") || []),
-        sliderValues: Array.from(menu.querySelectorAll(".blobio-cell-mass-slider-value") || []),
-        colorInputs: Array.from(menu.querySelectorAll(".blobio-cell-mass-color-input") || []),
-        colorSwatches: Array.from(menu.querySelectorAll(".blobio-cell-mass-color-swatch") || []),
-        alphaInput: menu.querySelector(".blobio-cell-mass-alpha-input"),
-        alphaValue: menu.querySelector(".blobio-cell-mass-alpha-value")
+        sliderValues: Array.from(menu.querySelectorAll(".blobio-cell-mass-slider-value") || [])
       };
       this.sync();
       return group;
@@ -12099,10 +11968,8 @@ html.${className} .blobio-watermark-extension::after {
         this.createSectionTitle("Offset/Scale"),
         this.createModeRow(),
         ...SLIDERS.map((slider) => this.createSliderRow(slider)),
-        this.createSectionTitle("Update/RGBA"),
-        this.createUpdateDelayRow(),
-        this.createColorControl("Color", "solid.color"),
-        this.createAlphaRow()
+        this.createSectionTitle("Update"),
+        this.createUpdateDelayRow()
       );
       return menu;
     }
@@ -12187,57 +12054,6 @@ html.${className} .blobio-watermark-extension::after {
         step: 100
       });
     }
-    createColorControl(labelText, path) {
-      const row = this.document.createElement("label");
-      row.classList.add("blobio-cell-mass-color-row");
-      const label = this.document.createElement("span");
-      label.textContent = labelText;
-      const wheel = this.document.createElement("span");
-      wheel.classList.add("blobio-cell-mass-color-wheel");
-      const swatch = this.document.createElement("span");
-      swatch.classList.add("blobio-cell-mass-color-swatch");
-      swatch.dataset.cellMassColor = path;
-      const input = this.document.createElement("input");
-      input.type = "color";
-      input.classList.add("blobio-cell-mass-color-input");
-      input.dataset.cellMassColor = path;
-      input.setAttribute("aria-label", `${labelText} mass color`);
-      wheel.append(swatch, input);
-      row.append(label, wheel);
-      this.listen(input, "input", () => {
-        this.settings = this.save(this.colorChange(path, input.value));
-        this.sync();
-      });
-      return row;
-    }
-    createAlphaRow() {
-      const row = this.document.createElement("label");
-      row.classList.add("blobio-cell-mass-alpha-row");
-      const label = this.document.createElement("span");
-      label.textContent = "Alpha";
-      const input = this.document.createElement("input");
-      input.type = "range";
-      input.min = "0";
-      input.max = "100";
-      input.step = "1";
-      input.classList.add("blobio-cell-mass-alpha-input");
-      const value = this.document.createElement("span");
-      value.classList.add("blobio-cell-mass-alpha-value");
-      row.append(label, input, value);
-      this.listen(input, "input", () => {
-        this.settings = this.save({ alpha: Number(input.value) });
-        this.sync();
-      });
-      return row;
-    }
-    colorChange(path, color) {
-      return {
-        solid: {
-          ...this.settings.solid,
-          color
-        }
-      };
-    }
     installTooltip(node, text) {
       if (!node || !text) {
         return;
@@ -12254,11 +12070,7 @@ html.${className} .blobio-watermark-extension::after {
     save(changes) {
       return saveCellMassSettings(this.storage, {
         ...this.settings,
-        ...changes,
-        solid: {
-          ...this.settings.solid,
-          ...changes.solid || {}
-        }
+        ...changes
       }, this.document);
     }
     setOpen(open) {
@@ -12276,8 +12088,6 @@ html.${className} .blobio-watermark-extension::after {
       }
       this.elements.enabled.checked = this.settings.enabled;
       this.syncPresetModeButton();
-      this.elements.alphaInput.value = String(this.settings.alpha);
-      this.elements.alphaValue.textContent = `${this.settings.alpha}%`;
       for (const input of this.elements.checkboxes) {
         input.checked = Boolean(this.settings[input.dataset.cellMassCheckbox]);
       }
@@ -12289,15 +12099,6 @@ html.${className} .blobio-watermark-extension::after {
         const key = value.dataset.cellMassSlider;
         value.textContent = key === "updateDelayMs" ? `${this.settings[key]}ms` : String(this.settings[key]);
       }
-      for (const input of this.elements.colorInputs) {
-        input.value = this.colorValue(input.dataset.cellMassColor);
-      }
-      for (const swatch of this.elements.colorSwatches) {
-        swatch.style.backgroundColor = this.colorValue(swatch.dataset.cellMassColor);
-      }
-    }
-    colorValue(path) {
-      return this.settings.solid.color;
     }
     syncPresetModeButton() {
       const modeButton = this.elements.modeButton;

@@ -66,10 +66,6 @@ export class CellMassSettingsUi {
       checkboxes: Array.from(menu.querySelectorAll('.blobio-cell-mass-checkbox-input') || []),
       sliders: Array.from(menu.querySelectorAll('.blobio-cell-mass-slider-input') || []),
       sliderValues: Array.from(menu.querySelectorAll('.blobio-cell-mass-slider-value') || []),
-      colorInputs: Array.from(menu.querySelectorAll('.blobio-cell-mass-color-input') || []),
-      colorSwatches: Array.from(menu.querySelectorAll('.blobio-cell-mass-color-swatch') || []),
-      alphaInput: menu.querySelector('.blobio-cell-mass-alpha-input'),
-      alphaValue: menu.querySelector('.blobio-cell-mass-alpha-value'),
     };
 
     this.sync();
@@ -157,10 +153,8 @@ export class CellMassSettingsUi {
       this.createSectionTitle('Offset/Scale'),
       this.createModeRow(),
       ...SLIDERS.map((slider) => this.createSliderRow(slider)),
-      this.createSectionTitle('Update/RGBA'),
+      this.createSectionTitle('Update'),
       this.createUpdateDelayRow(),
-      this.createColorControl('Color', 'solid.color'),
-      this.createAlphaRow(),
     );
 
     return menu;
@@ -264,69 +258,6 @@ export class CellMassSettingsUi {
     });
   }
 
-  createColorControl(labelText, path) {
-    const row = this.document.createElement('label');
-    row.classList.add('blobio-cell-mass-color-row');
-
-    const label = this.document.createElement('span');
-    label.textContent = labelText;
-
-    const wheel = this.document.createElement('span');
-    wheel.classList.add('blobio-cell-mass-color-wheel');
-
-    const swatch = this.document.createElement('span');
-    swatch.classList.add('blobio-cell-mass-color-swatch');
-    swatch.dataset.cellMassColor = path;
-
-    const input = this.document.createElement('input');
-    input.type = 'color';
-    input.classList.add('blobio-cell-mass-color-input');
-    input.dataset.cellMassColor = path;
-    input.setAttribute('aria-label', `${labelText} mass color`);
-
-    wheel.append(swatch, input);
-    row.append(label, wheel);
-    this.listen(input, 'input', () => {
-      this.settings = this.save(this.colorChange(path, input.value));
-      this.sync();
-    });
-    return row;
-  }
-
-  createAlphaRow() {
-    const row = this.document.createElement('label');
-    row.classList.add('blobio-cell-mass-alpha-row');
-
-    const label = this.document.createElement('span');
-    label.textContent = 'Alpha';
-
-    const input = this.document.createElement('input');
-    input.type = 'range';
-    input.min = '0';
-    input.max = '100';
-    input.step = '1';
-    input.classList.add('blobio-cell-mass-alpha-input');
-
-    const value = this.document.createElement('span');
-    value.classList.add('blobio-cell-mass-alpha-value');
-    row.append(label, input, value);
-
-    this.listen(input, 'input', () => {
-      this.settings = this.save({ alpha: Number(input.value) });
-      this.sync();
-    });
-    return row;
-  }
-
-  colorChange(path, color) {
-    return {
-      solid: {
-        ...this.settings.solid,
-        color,
-      },
-    };
-  }
-
   installTooltip(node, text) {
     if (!node || !text) {
       return;
@@ -345,10 +276,6 @@ export class CellMassSettingsUi {
     return saveCellMassSettings(this.storage, {
       ...this.settings,
       ...changes,
-      solid: {
-        ...this.settings.solid,
-        ...(changes.solid || {}),
-      },
     }, this.document);
   }
 
@@ -370,8 +297,6 @@ export class CellMassSettingsUi {
 
     this.elements.enabled.checked = this.settings.enabled;
     this.syncPresetModeButton();
-    this.elements.alphaInput.value = String(this.settings.alpha);
-    this.elements.alphaValue.textContent = `${this.settings.alpha}%`;
 
     for (const input of this.elements.checkboxes) {
       input.checked = Boolean(this.settings[input.dataset.cellMassCheckbox]);
@@ -388,18 +313,6 @@ export class CellMassSettingsUi {
         ? `${this.settings[key]}ms`
         : String(this.settings[key]);
     }
-
-    for (const input of this.elements.colorInputs) {
-      input.value = this.colorValue(input.dataset.cellMassColor);
-    }
-
-    for (const swatch of this.elements.colorSwatches) {
-      swatch.style.backgroundColor = this.colorValue(swatch.dataset.cellMassColor);
-    }
-  }
-
-  colorValue(path) {
-    return this.settings.solid.color;
   }
 
   syncPresetModeButton() {

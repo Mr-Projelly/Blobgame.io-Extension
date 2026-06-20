@@ -19,8 +19,6 @@ export const DEFAULT_CELL_MASS_SETTINGS = Object.freeze({
   yOffset: 10,
   nameGap: 1.2,
   updateDelayMs: 3000,
-  solid: Object.freeze({ color: '#ffffff' }),
-  alpha: 100,
 });
 
 export function readCellMassSettings(storage, document = globalThis.document) {
@@ -85,7 +83,6 @@ export function normalizeCellMassSettings(settings = {}) {
   const source = settings && typeof settings === 'object' ? settings : {};
   const mode = normalizeMode(source.mode);
   const preset = CELL_MASS_MODE_PRESETS[mode];
-  const solid = source.solid && typeof source.solid === 'object' ? source.solid : {};
 
   return {
     enabled: source.enabled === undefined ? DEFAULT_CELL_MASS_SETTINGS.enabled : Boolean(source.enabled),
@@ -101,42 +98,12 @@ export function normalizeCellMassSettings(settings = {}) {
     yOffset: clampNumber(source.yOffset, -120, 120, preset.yOffset),
     nameGap: clampNumber(source.nameGap, 0.1, 3, preset.nameGap),
     updateDelayMs: Math.round(clampNumber(source.updateDelayMs, 0, 10000, DEFAULT_CELL_MASS_SETTINGS.updateDelayMs)),
-    solid: {
-      color: normalizeColor(solid.color, DEFAULT_CELL_MASS_SETTINGS.solid.color),
-    },
-    alpha: normalizeAlpha(source.alpha, DEFAULT_CELL_MASS_SETTINGS.alpha),
-  };
-}
-
-export function cellMassColorToObject(color, alpha = 100) {
-  const clean = normalizeColor(color, '#ffffff').slice(1);
-  return {
-    d: Number.parseInt(clean.slice(0, 2), 16) / 255,
-    c: Number.parseInt(clean.slice(2, 4), 16) / 255,
-    b: Number.parseInt(clean.slice(4, 6), 16) / 255,
-    a: normalizeAlpha(alpha, 100) / 100,
   };
 }
 
 function normalizeMode(value) {
   const mode = String(value || '').trim().toLowerCase();
   return CELL_MASS_MODES.includes(mode) ? mode : DEFAULT_CELL_MASS_SETTINGS.mode;
-}
-
-function normalizeColor(value, fallback) {
-  const color = String(value || '').trim().toLowerCase();
-  return /^#[0-9a-f]{6}$/.test(color) ? color : fallback;
-}
-
-function normalizeAlpha(value, fallback) {
-  const alpha = Number(value);
-  if (!Number.isFinite(alpha)) {
-    return fallback;
-  }
-  if (alpha > 0 && alpha <= 1) {
-    return Math.round(alpha * 100);
-  }
-  return Math.max(0, Math.min(100, Math.round(alpha)));
 }
 
 function clampNumber(value, min, max, fallback) {

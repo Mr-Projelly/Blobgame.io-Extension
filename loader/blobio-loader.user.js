@@ -620,20 +620,7 @@
     yOffset: 10,
     nameGap: 1.2,
     updateDelayMs: 3000,
-    solid: { color: '#ffffff' },
-    alpha: 100,
   };
-
-  function normalizeCellMassRuntimeAlpha(value, fallback) {
-    const alpha = Number(value);
-    if (!Number.isFinite(alpha)) {
-      return fallback;
-    }
-    if (alpha > 0 && alpha <= 1) {
-      return Math.round(alpha * 100);
-    }
-    return Math.max(0, Math.min(100, Math.round(alpha)));
-  }
 
   function normalizeCellMassRuntimeSnapshot(value) {
     if (!value || typeof value !== 'object') {
@@ -641,7 +628,6 @@
     }
 
     const updatedAt = Number(value.updatedAt);
-    const solid = value.solid && typeof value.solid === 'object' ? value.solid : {};
     return {
       enabled: value.enabled === undefined ? DEFAULT_CELL_MASS_RUNTIME_SETTINGS.enabled : readBooleanValue(value.enabled),
       compact: value.compact === undefined ? DEFAULT_CELL_MASS_RUNTIME_SETTINGS.compact : readBooleanValue(value.compact),
@@ -652,10 +638,6 @@
       yOffset: normalizeHudInfoRuntimeNumber(value.yOffset, -120, 120, DEFAULT_CELL_MASS_RUNTIME_SETTINGS.yOffset),
       nameGap: normalizeHudInfoRuntimeNumber(value.nameGap, 0.1, 3, DEFAULT_CELL_MASS_RUNTIME_SETTINGS.nameGap),
       updateDelayMs: Math.round(normalizeHudInfoRuntimeNumber(value.updateDelayMs, 0, 10000, DEFAULT_CELL_MASS_RUNTIME_SETTINGS.updateDelayMs)),
-      solid: {
-        color: normalizeHexColor(solid.color, DEFAULT_CELL_MASS_RUNTIME_SETTINGS.solid.color),
-      },
-      alpha: normalizeCellMassRuntimeAlpha(value.alpha, DEFAULT_CELL_MASS_RUNTIME_SETTINGS.alpha),
       updatedAt: Number.isFinite(updatedAt) && updatedAt > 0 ? updatedAt : 0,
     };
   }
@@ -6288,7 +6270,7 @@
       return true;
     }
 
-    const SCRIPT_VERSION = '0.1.6';
+    const SCRIPT_VERSION = '0.1.7';
     const CACHE_SCRIPT_RE = /\/html\/[a-f0-9]{32}\.cache\.js(?:[?#].*)?$/i;
     const DRAW_HOOK_NAME = 'BlobioCellMassDraw';
     const PATCH_MARKER = 'BlobioCellMassDraw';
@@ -6356,10 +6338,6 @@
       settings = normalizeSettings({
         ...settings,
         ...(nextSettings || {}),
-        solid: {
-          ...settings.solid,
-          ...(nextSettings?.solid || {}),
-        },
       });
       state.settings = settings;
 
@@ -6413,7 +6391,6 @@
         state.counters.primaryLabels += 1;
       }
 
-      const color = getLabelColor();
       const result = {
         text: textEntry.text,
         scale,
@@ -6421,7 +6398,6 @@
         lineGap: settings.nameGap,
         maxWidth: MAX_LABEL_WIDTH,
         maxHeight: primary ? PRIMARY_MAX_LABEL_HEIGHT : MAX_LABEL_HEIGHT,
-        color,
         cached: textEntry.cached,
         primary,
       };
@@ -6521,10 +6497,6 @@
       return 0.18;
     }
 
-    function getLabelColor() {
-      return colorToObject(settings.solid.color, settings.alpha);
-    }
-
     function cloneLabelResult(cellId, mass, result) {
       return {
         at: Date.now(),
@@ -6535,11 +6507,11 @@
         offset: roundNumber(result.offset),
         primary: Boolean(result.primary),
         cached: Boolean(result.cached),
-        color: cloneColor(result.color),
       };
     }
 
-    function captureDrawState(cellId, label, appliedColor, x, y, rendererColorBefore = null, rendererMode = 'native-text-color') {
+    function captureDrawState(cellId, label, nativeColor, x, y) {
+      const native = cloneRendererColor(nativeColor);
       state.lastDrawCapture = {
         at: Date.now(),
         cellId: String(cellId ?? ''),
@@ -6547,35 +6519,11 @@
         scale: roundNumber(label?.scale),
         x: roundNumber(x),
         y: roundNumber(y),
-        rendererMode,
-        configuredColor: cloneColor(label?.color),
-        appliedColor: cloneColor(appliedColor),
+        rendererMode: 'native-text-color',
+        appliedColor: native,
+        nativeColor: native,
       };
-      if (rendererColorBefore) {
-        state.lastDrawCapture.rendererColorBefore = cloneColor(rendererColorBefore);
-      } else {
-        state.lastDrawCapture.nativeColor = cloneColor(appliedColor);
-      }
       return state.lastDrawCapture;
-    }
-
-    function colorToObject(color, alpha = 100) {
-      const rgb = hexToRgb(color, '#ffffff');
-      return {
-        d: rgb.red / 255,
-        c: rgb.green / 255,
-        b: rgb.blue / 255,
-        a: normalizeAlpha(alpha, 100) / 100,
-      };
-    }
-
-    function hexToRgb(value, fallback) {
-      const clean = normalizeColor(value, fallback).slice(1);
-      return {
-        red: Number.parseInt(clean.slice(0, 2), 16),
-        green: Number.parseInt(clean.slice(2, 4), 16),
-        blue: Number.parseInt(clean.slice(4, 6), 16),
-      };
     }
 
     function sweepLabelCache(now) {
@@ -6708,9 +6656,7 @@
         'h=$wnd.BlobioCellMassDraw(g.n,g.w*g.w/100,g.w,g.M,g.N,g.B,d,d?f:0,0,qxe.g/100);',
         'if(h&&h.text){',
         'f=d?a.o.b:0;',
-        'h._bd=a.b.d;h._bc=a.b.c;h._bb=a.b.b;h._ba=a.b.a;',
-        'h.color&&(a.b.d=h.color.d,a.b.c=h.color.c,a.b.b=h.color.b,a.b.a=h.color.a);',
-        'Mm(a.i,a.b);',
+        'Mm(a.i,a.B);',
         'Nn(a.i.b,h.scale);',
         'xp(a.o,a.i,h.text);',
         'if(a.o.d>g.N*h.maxWidth){h.scale*=g.N*h.maxWidth/a.o.d;Nn(a.i.b,h.scale);xp(a.o,a.i,h.text)}',
@@ -6721,9 +6667,9 @@
         'c+=h.offset;',
         'c=$wnd.Math.max(g.S-g.M,c);',
         'c=$wnd.Math.min(g.S+g.M-a.o.b,c);',
-        "$wnd.__blobioCellMassCaptureDraw&&$wnd.__blobioCellMassCaptureDraw(g.n,h,a.b,b,c,{d:h._bd,c:h._bc,b:h._bb,a:h._ba},'vip-name-color-slot');",
+        '$wnd.__blobioCellMassCaptureDraw&&$wnd.__blobioCellMassCaptureDraw(g.n,h,a.B,b,c);',
         'Gm(a.i,a.c,h.text,b,c);',
-        'a.b.d=h._bd;a.b.c=h._bc;a.b.b=h._bb;a.b.a=h._ba;Mm(a.i,a.B);Nn(a.i.b,1)',
+        'Nn(a.i.b,1)',
         '}}}}',
       ].join('');
 
@@ -6760,7 +6706,6 @@
         scale: Math.round(result.scale * 1000) / 1000,
         primary: result.primary,
         cached: result.cached,
-        color: cloneColor(result.color),
       });
 
       if (state.samples.length > 12) {
@@ -6774,7 +6719,7 @@
         version: SCRIPT_VERSION,
         url: win.location?.href || '',
         uptimeMs: Date.now() - state.startedAt,
-        settings: { ...settings, solid: { ...settings.solid } },
+        settings: { ...settings },
         counters: { ...state.counters, cachedCells: labelCache.size },
         patch: {
           seenCacheScripts: state.seenCacheScripts,
@@ -6812,10 +6757,7 @@
         yOffset: 10,
         nameGap: 1.2,
         updateDelayMs: 3000,
-        solid: { color: '#ffffff' },
-        alpha: 100,
       };
-      const solid = source.solid && typeof source.solid === 'object' ? source.solid : {};
 
       return {
         enabled: source.enabled === undefined ? defaults.enabled : Boolean(source.enabled),
@@ -6827,27 +6769,7 @@
         yOffset: clampNumber(source.yOffset, -120, 120, defaults.yOffset),
         nameGap: clampNumber(source.nameGap, 0.1, 3, defaults.nameGap),
         updateDelayMs: Math.round(clampNumber(source.updateDelayMs, 0, 10000, defaults.updateDelayMs)),
-        solid: {
-          color: normalizeColor(solid.color, defaults.solid.color),
-        },
-        alpha: normalizeAlpha(source.alpha, defaults.alpha),
       };
-    }
-
-    function normalizeColor(value, fallback) {
-      const color = String(value || '').trim().toLowerCase();
-      return /^#[0-9a-f]{6}$/.test(color) ? color : fallback;
-    }
-
-    function normalizeAlpha(value, fallback) {
-      const alpha = Number(value);
-      if (!Number.isFinite(alpha)) {
-        return fallback;
-      }
-      if (alpha > 0 && alpha <= 1) {
-        return Math.round(alpha * 100);
-      }
-      return Math.max(0, Math.min(100, Math.round(alpha)));
     }
 
     function clampNumber(value, min, max, fallback) {
@@ -6868,7 +6790,7 @@
       }
     }
 
-    function cloneColor(color) {
+    function cloneRendererColor(color) {
       if (!color || typeof color !== 'object') {
         return null;
       }
