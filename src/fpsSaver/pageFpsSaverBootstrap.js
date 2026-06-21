@@ -292,6 +292,7 @@ function createCullBudget(limit) {
     pending: null,
     pendingAt: 0,
     lastObserved: 0,
+    emptyFrames: 0,
   };
 }
 
@@ -330,6 +331,11 @@ function updateCullBudget(budget, observedCount, limit, delayMs, timestamp) {
 
   budget.lastObserved = observed;
   budget.committed = current;
+
+  if (observed === 0) {
+    budget.emptyFrames = (Number(budget.emptyFrames) || 0) + 1;
+    return;
+  }
 
   if (delay <= 0 || nextBudget < current) {
     budget.committed = nextBudget;

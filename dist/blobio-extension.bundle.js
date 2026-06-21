@@ -3816,7 +3816,8 @@
       committed: Math.max(0, Math.round(Number(limit)) || 0),
       pending: null,
       pendingAt: 0,
-      lastObserved: 0
+      lastObserved: 0,
+      emptyFrames: 0
     };
   }
   function ensureCullBudgets(state) {
@@ -3850,6 +3851,10 @@
     const time = Math.max(0, Number(timestamp) || 0);
     budget.lastObserved = observed;
     budget.committed = current;
+    if (observed === 0) {
+      budget.emptyFrames = (Number(budget.emptyFrames) || 0) + 1;
+      return;
+    }
     if (delay <= 0 || nextBudget < current) {
       budget.committed = nextBudget;
       budget.pending = null;
