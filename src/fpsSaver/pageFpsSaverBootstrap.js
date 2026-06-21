@@ -1,14 +1,14 @@
 const FPS_SAVER_VERSION = '0.1.0';
-const PAGE_HOOK = '__BlobPerfSaver';
-const RUNTIME_HOOK = '__BlobioFpsSaver';
-const STYLE_ID = 'blobio-fps-saver-style';
-const CACHE_SCRIPT_RE = /\/html\/[a-f0-9]{32}\.cache\.js(?:[?#].*)?$/i;
-const PARTICLE_LOOP_RE = /if\(!a\.c\|\|!g\|\|!g\.K\|\|!g\.c\)\{continue\}[A-Za-z_$][\w$]*\(g\);/;
-const FOOD_CASE_RE = /case 2:case 5:case 0:/;
-const WORK_CULL_HOOK = 'if($wnd.__BlobPerfSaver&&$wnd.__BlobPerfSaver.skipParticleWork(g)){continue;}';
-const DRAW_CULL_HOOK = 'if($wnd.__BlobPerfSaver&&$wnd.__BlobPerfSaver.skipParticleDraw(g)){break;}';
+const FPS_SAVER_PAGE_HOOK = '__BlobPerfSaver';
+const FPS_SAVER_RUNTIME_HOOK = '__BlobioFpsSaver';
+const FPS_SAVER_STYLE_ID = 'blobio-fps-saver-style';
+const FPS_SAVER_CACHE_SCRIPT_RE = /\/html\/[a-f0-9]{32}\.cache\.js(?:[?#].*)?$/i;
+const FPS_SAVER_PARTICLE_LOOP_RE = /if\(!a\.c\|\|!g\|\|!g\.K\|\|!g\.c\)\{continue\}[A-Za-z_$][\w$]*\(g\);/;
+const FPS_SAVER_FOOD_CASE_RE = /case 2:case 5:case 0:/;
+const FPS_SAVER_WORK_CULL_HOOK = 'if($wnd.__BlobPerfSaver&&$wnd.__BlobPerfSaver.skipParticleWork(g)){continue;}';
+const FPS_SAVER_DRAW_CULL_HOOK = 'if($wnd.__BlobPerfSaver&&$wnd.__BlobPerfSaver.skipParticleDraw(g)){break;}';
 
-const DEFAULT_SETTINGS = {
+const FPS_SAVER_DEFAULT_SETTINGS = {
   liteMode: true,
   noTransitions: false,
   hiddenTab: true,
@@ -104,19 +104,19 @@ function createState(settings, isGameClient, isMainPage) {
 function normalizeSettings(source = {}) {
   const data = source && typeof source === 'object' ? source : {};
   return {
-    liteMode: boolSetting(data.liteMode, DEFAULT_SETTINGS.liteMode),
-    noTransitions: boolSetting(data.noTransitions, DEFAULT_SETTINGS.noTransitions),
-    hiddenTab: boolSetting(data.hiddenTab, DEFAULT_SETTINGS.hiddenTab),
-    hiddenFps: clampInteger(data.hiddenFps, 1, 10, DEFAULT_SETTINGS.hiddenFps),
-    gameOverlay: boolSetting(data.gameOverlay, DEFAULT_SETTINGS.gameOverlay),
-    toastModalAnim: boolSetting(data.toastModalAnim, DEFAULT_SETTINGS.toastModalAnim),
-    chatGuard: boolSetting(data.chatGuard, DEFAULT_SETTINGS.chatGuard),
-    maxChatRows: clampInteger(data.maxChatRows, 20, 120, DEFAULT_SETTINGS.maxChatRows),
-    objectRenderer: boolSetting(data.objectRenderer, DEFAULT_SETTINGS.objectRenderer),
-    foodCulling: boolSetting(data.foodCulling, DEFAULT_SETTINGS.foodCulling),
-    foodLimit: clampInteger(data.foodLimit, 0, 900, DEFAULT_SETTINGS.foodLimit),
-    massCulling: boolSetting(data.massCulling, DEFAULT_SETTINGS.massCulling),
-    massLimit: clampInteger(data.massLimit, 0, 900, DEFAULT_SETTINGS.massLimit),
+    liteMode: boolSetting(data.liteMode, FPS_SAVER_DEFAULT_SETTINGS.liteMode),
+    noTransitions: boolSetting(data.noTransitions, FPS_SAVER_DEFAULT_SETTINGS.noTransitions),
+    hiddenTab: boolSetting(data.hiddenTab, FPS_SAVER_DEFAULT_SETTINGS.hiddenTab),
+    hiddenFps: clampInteger(data.hiddenFps, 1, 10, FPS_SAVER_DEFAULT_SETTINGS.hiddenFps),
+    gameOverlay: boolSetting(data.gameOverlay, FPS_SAVER_DEFAULT_SETTINGS.gameOverlay),
+    toastModalAnim: boolSetting(data.toastModalAnim, FPS_SAVER_DEFAULT_SETTINGS.toastModalAnim),
+    chatGuard: boolSetting(data.chatGuard, FPS_SAVER_DEFAULT_SETTINGS.chatGuard),
+    maxChatRows: clampInteger(data.maxChatRows, 20, 120, FPS_SAVER_DEFAULT_SETTINGS.maxChatRows),
+    objectRenderer: boolSetting(data.objectRenderer, FPS_SAVER_DEFAULT_SETTINGS.objectRenderer),
+    foodCulling: boolSetting(data.foodCulling, FPS_SAVER_DEFAULT_SETTINGS.foodCulling),
+    foodLimit: clampInteger(data.foodLimit, 0, 900, FPS_SAVER_DEFAULT_SETTINGS.foodLimit),
+    massCulling: boolSetting(data.massCulling, FPS_SAVER_DEFAULT_SETTINGS.massCulling),
+    massLimit: clampInteger(data.massLimit, 0, 900, FPS_SAVER_DEFAULT_SETTINGS.massLimit),
   };
 }
 
@@ -136,7 +136,7 @@ function clampInteger(value, min, max, fallback) {
 }
 
 function exposeHooks(root, state) {
-  root[PAGE_HOOK] = {
+  root[FPS_SAVER_PAGE_HOOK] = {
     version: FPS_SAVER_VERSION,
     settings: state.settings,
     beginFrame: (timestamp) => beginRenderFrame(root, state, timestamp),
@@ -145,7 +145,7 @@ function exposeHooks(root, state) {
     skipParticleDraw: (object) => skipParticleWork(root, state, object),
     debug: () => buildDebug(root, state.document, state),
   };
-  root[RUNTIME_HOOK] = root[PAGE_HOOK];
+  root[FPS_SAVER_RUNTIME_HOOK] = root[FPS_SAVER_PAGE_HOOK];
 }
 
 function installRequestAnimationFrameHook(root, doc, state) {
@@ -315,7 +315,7 @@ function shouldWatchScript(node) {
     && node.src
     && node.dataset
     && !node.dataset.blobioFpsSaverScriptPatch
-    && CACHE_SCRIPT_RE.test(node.src);
+    && FPS_SAVER_CACHE_SCRIPT_RE.test(node.src);
 }
 
 function installGwtCallbackPatch(root, state) {
@@ -366,22 +366,22 @@ function patchGameCode(code) {
     return { code, changed: false, result: null };
   }
 
-  const loopSeen = PARTICLE_LOOP_RE.test(code);
-  const caseSeen = FOOD_CASE_RE.test(code);
+  const loopSeen = FPS_SAVER_PARTICLE_LOOP_RE.test(code);
+  const caseSeen = FPS_SAVER_FOOD_CASE_RE.test(code);
   const workAlreadyPatched = code.includes('$wnd.__BlobPerfSaver.skipParticleWork(g)');
   const drawAlreadyPatched = code.includes('$wnd.__BlobPerfSaver.skipParticleDraw(g)')
     || code.includes('$wnd.__BlobPerfSaver.skipParticle(g)');
   let patched = code;
 
   if (loopSeen && !workAlreadyPatched) {
-    patched = patched.replace(PARTICLE_LOOP_RE, (match) => match.replace(
+    patched = patched.replace(FPS_SAVER_PARTICLE_LOOP_RE, (match) => match.replace(
       /([A-Za-z_$][\w$]*\(g\);)$/,
-      `${WORK_CULL_HOOK}$1`,
+      `${FPS_SAVER_WORK_CULL_HOOK}$1`,
     ));
   }
 
   if (!patched.includes('$wnd.__BlobPerfSaver.skipParticleWork(g)') && caseSeen && !drawAlreadyPatched) {
-    patched = patched.replace(FOOD_CASE_RE, (match) => `${match}${DRAW_CULL_HOOK}`);
+    patched = patched.replace(FPS_SAVER_FOOD_CASE_RE, (match) => `${match}${FPS_SAVER_DRAW_CULL_HOOK}`);
   }
 
   const result = {
@@ -401,12 +401,12 @@ function patchGameCode(code) {
 }
 
 function installStyle(doc) {
-  if (doc.getElementById?.(STYLE_ID)) {
+  if (doc.getElementById?.(FPS_SAVER_STYLE_ID)) {
     return;
   }
 
   const style = doc.createElement('style');
-  style.id = STYLE_ID;
+  style.id = FPS_SAVER_STYLE_ID;
   style.textContent = `
 html.blobio-fps-saver-no-transitions *,
 html.blobio-fps-saver-no-transitions *::before,

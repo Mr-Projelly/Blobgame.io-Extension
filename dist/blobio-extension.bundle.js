@@ -191,7 +191,7 @@
       return true;
     }
     const SCRIPT_VERSION = "0.1.7";
-    const CACHE_SCRIPT_RE3 = /\/html\/[a-f0-9]{32}\.cache\.js(?:[?#].*)?$/i;
+    const CACHE_SCRIPT_RE2 = /\/html\/[a-f0-9]{32}\.cache\.js(?:[?#].*)?$/i;
     const DRAW_HOOK_NAME = "BlobioCellMassDraw";
     const PATCH_MARKER = "BlobioCellMassDraw";
     const MIN_RENDER_SIZE = 13;
@@ -451,7 +451,7 @@
       win.setTimeout?.(() => win.clearInterval?.(timer), 3e4);
     }
     function shouldWatchScript2(node) {
-      return node && node.tagName === "SCRIPT" && node.src && node.dataset && !node.dataset.blobioCellMassScriptPatch && CACHE_SCRIPT_RE3.test(node.src);
+      return node && node.tagName === "SCRIPT" && node.src && node.dataset && !node.dataset.blobioCellMassScriptPatch && CACHE_SCRIPT_RE2.test(node.src);
     }
     function installGwtCallbackPatch2() {
       const html = win.html;
@@ -3555,15 +3555,15 @@
 
   // src/fpsSaver/pageFpsSaverBootstrap.js
   var FPS_SAVER_VERSION = "0.1.0";
-  var PAGE_HOOK2 = "__BlobPerfSaver";
-  var RUNTIME_HOOK = "__BlobioFpsSaver";
-  var STYLE_ID = "blobio-fps-saver-style";
-  var CACHE_SCRIPT_RE2 = /\/html\/[a-f0-9]{32}\.cache\.js(?:[?#].*)?$/i;
-  var PARTICLE_LOOP_RE = /if\(!a\.c\|\|!g\|\|!g\.K\|\|!g\.c\)\{continue\}[A-Za-z_$][\w$]*\(g\);/;
-  var FOOD_CASE_RE2 = /case 2:case 5:case 0:/;
-  var WORK_CULL_HOOK = "if($wnd.__BlobPerfSaver&&$wnd.__BlobPerfSaver.skipParticleWork(g)){continue;}";
-  var DRAW_CULL_HOOK = "if($wnd.__BlobPerfSaver&&$wnd.__BlobPerfSaver.skipParticleDraw(g)){break;}";
-  var DEFAULT_SETTINGS2 = {
+  var FPS_SAVER_PAGE_HOOK = "__BlobPerfSaver";
+  var FPS_SAVER_RUNTIME_HOOK = "__BlobioFpsSaver";
+  var FPS_SAVER_STYLE_ID = "blobio-fps-saver-style";
+  var FPS_SAVER_CACHE_SCRIPT_RE = /\/html\/[a-f0-9]{32}\.cache\.js(?:[?#].*)?$/i;
+  var FPS_SAVER_PARTICLE_LOOP_RE = /if\(!a\.c\|\|!g\|\|!g\.K\|\|!g\.c\)\{continue\}[A-Za-z_$][\w$]*\(g\);/;
+  var FPS_SAVER_FOOD_CASE_RE = /case 2:case 5:case 0:/;
+  var FPS_SAVER_WORK_CULL_HOOK = "if($wnd.__BlobPerfSaver&&$wnd.__BlobPerfSaver.skipParticleWork(g)){continue;}";
+  var FPS_SAVER_DRAW_CULL_HOOK = "if($wnd.__BlobPerfSaver&&$wnd.__BlobPerfSaver.skipParticleDraw(g)){break;}";
+  var FPS_SAVER_DEFAULT_SETTINGS = {
     liteMode: true,
     noTransitions: false,
     hiddenTab: true,
@@ -3652,19 +3652,19 @@
   function normalizeSettings(source = {}) {
     const data = source && typeof source === "object" ? source : {};
     return {
-      liteMode: boolSetting2(data.liteMode, DEFAULT_SETTINGS2.liteMode),
-      noTransitions: boolSetting2(data.noTransitions, DEFAULT_SETTINGS2.noTransitions),
-      hiddenTab: boolSetting2(data.hiddenTab, DEFAULT_SETTINGS2.hiddenTab),
-      hiddenFps: clampInteger2(data.hiddenFps, 1, 10, DEFAULT_SETTINGS2.hiddenFps),
-      gameOverlay: boolSetting2(data.gameOverlay, DEFAULT_SETTINGS2.gameOverlay),
-      toastModalAnim: boolSetting2(data.toastModalAnim, DEFAULT_SETTINGS2.toastModalAnim),
-      chatGuard: boolSetting2(data.chatGuard, DEFAULT_SETTINGS2.chatGuard),
-      maxChatRows: clampInteger2(data.maxChatRows, 20, 120, DEFAULT_SETTINGS2.maxChatRows),
-      objectRenderer: boolSetting2(data.objectRenderer, DEFAULT_SETTINGS2.objectRenderer),
-      foodCulling: boolSetting2(data.foodCulling, DEFAULT_SETTINGS2.foodCulling),
-      foodLimit: clampInteger2(data.foodLimit, 0, 900, DEFAULT_SETTINGS2.foodLimit),
-      massCulling: boolSetting2(data.massCulling, DEFAULT_SETTINGS2.massCulling),
-      massLimit: clampInteger2(data.massLimit, 0, 900, DEFAULT_SETTINGS2.massLimit)
+      liteMode: boolSetting2(data.liteMode, FPS_SAVER_DEFAULT_SETTINGS.liteMode),
+      noTransitions: boolSetting2(data.noTransitions, FPS_SAVER_DEFAULT_SETTINGS.noTransitions),
+      hiddenTab: boolSetting2(data.hiddenTab, FPS_SAVER_DEFAULT_SETTINGS.hiddenTab),
+      hiddenFps: clampInteger2(data.hiddenFps, 1, 10, FPS_SAVER_DEFAULT_SETTINGS.hiddenFps),
+      gameOverlay: boolSetting2(data.gameOverlay, FPS_SAVER_DEFAULT_SETTINGS.gameOverlay),
+      toastModalAnim: boolSetting2(data.toastModalAnim, FPS_SAVER_DEFAULT_SETTINGS.toastModalAnim),
+      chatGuard: boolSetting2(data.chatGuard, FPS_SAVER_DEFAULT_SETTINGS.chatGuard),
+      maxChatRows: clampInteger2(data.maxChatRows, 20, 120, FPS_SAVER_DEFAULT_SETTINGS.maxChatRows),
+      objectRenderer: boolSetting2(data.objectRenderer, FPS_SAVER_DEFAULT_SETTINGS.objectRenderer),
+      foodCulling: boolSetting2(data.foodCulling, FPS_SAVER_DEFAULT_SETTINGS.foodCulling),
+      foodLimit: clampInteger2(data.foodLimit, 0, 900, FPS_SAVER_DEFAULT_SETTINGS.foodLimit),
+      massCulling: boolSetting2(data.massCulling, FPS_SAVER_DEFAULT_SETTINGS.massCulling),
+      massLimit: clampInteger2(data.massLimit, 0, 900, FPS_SAVER_DEFAULT_SETTINGS.massLimit)
     };
   }
   function boolSetting2(value, fallback) {
@@ -3681,7 +3681,7 @@
     return Number.isFinite(number) ? Math.max(min, Math.min(max, number)) : fallback;
   }
   function exposeHooks(root, state) {
-    root[PAGE_HOOK2] = {
+    root[FPS_SAVER_PAGE_HOOK] = {
       version: FPS_SAVER_VERSION,
       settings: state.settings,
       beginFrame: (timestamp) => beginRenderFrame(root, state, timestamp),
@@ -3690,7 +3690,7 @@
       skipParticleDraw: (object) => skipParticleWork(root, state, object),
       debug: () => buildDebug(root, state.document, state)
     };
-    root[RUNTIME_HOOK] = root[PAGE_HOOK2];
+    root[FPS_SAVER_RUNTIME_HOOK] = root[FPS_SAVER_PAGE_HOOK];
   }
   function installRequestAnimationFrameHook(root, doc, state) {
     if (state.rafHooked || root.__blobioFpsSaverRafHooked || typeof root.requestAnimationFrame !== "function") {
@@ -3824,7 +3824,7 @@
     root.setTimeout?.(() => root.clearInterval?.(timer), 3e4);
   }
   function shouldWatchScript(node) {
-    return node && node.tagName === "SCRIPT" && node.src && node.dataset && !node.dataset.blobioFpsSaverScriptPatch && CACHE_SCRIPT_RE2.test(node.src);
+    return node && node.tagName === "SCRIPT" && node.src && node.dataset && !node.dataset.blobioFpsSaverScriptPatch && FPS_SAVER_CACHE_SCRIPT_RE.test(node.src);
   }
   function installGwtCallbackPatch(root, state) {
     const html = root.html;
@@ -3863,19 +3863,19 @@
     if (typeof code !== "string") {
       return { code, changed: false, result: null };
     }
-    const loopSeen = PARTICLE_LOOP_RE.test(code);
-    const caseSeen = FOOD_CASE_RE2.test(code);
+    const loopSeen = FPS_SAVER_PARTICLE_LOOP_RE.test(code);
+    const caseSeen = FPS_SAVER_FOOD_CASE_RE.test(code);
     const workAlreadyPatched = code.includes("$wnd.__BlobPerfSaver.skipParticleWork(g)");
     const drawAlreadyPatched = code.includes("$wnd.__BlobPerfSaver.skipParticleDraw(g)") || code.includes("$wnd.__BlobPerfSaver.skipParticle(g)");
     let patched = code;
     if (loopSeen && !workAlreadyPatched) {
-      patched = patched.replace(PARTICLE_LOOP_RE, (match) => match.replace(
+      patched = patched.replace(FPS_SAVER_PARTICLE_LOOP_RE, (match) => match.replace(
         /([A-Za-z_$][\w$]*\(g\);)$/,
-        `${WORK_CULL_HOOK}$1`
+        `${FPS_SAVER_WORK_CULL_HOOK}$1`
       ));
     }
     if (!patched.includes("$wnd.__BlobPerfSaver.skipParticleWork(g)") && caseSeen && !drawAlreadyPatched) {
-      patched = patched.replace(FOOD_CASE_RE2, (match) => `${match}${DRAW_CULL_HOOK}`);
+      patched = patched.replace(FPS_SAVER_FOOD_CASE_RE, (match) => `${match}${FPS_SAVER_DRAW_CULL_HOOK}`);
     }
     const result = {
       changed: patched !== code,
@@ -3891,11 +3891,11 @@
     };
   }
   function installStyle(doc) {
-    if (doc.getElementById?.(STYLE_ID)) {
+    if (doc.getElementById?.(FPS_SAVER_STYLE_ID)) {
       return;
     }
     const style = doc.createElement("style");
-    style.id = STYLE_ID;
+    style.id = FPS_SAVER_STYLE_ID;
     style.textContent = `
 html.blobio-fps-saver-no-transitions *,
 html.blobio-fps-saver-no-transitions *::before,
@@ -20102,7 +20102,7 @@ ${buildJellyGlsl(settings.noSkinCells)}`);
       return true;
     }
     win[INSTALL_KEY] = true;
-    const CACHE_SCRIPT_RE3 = /\/html\/[a-f0-9]{32}\.cache\.js(?:[?#].*)?$/i;
+    const CACHE_SCRIPT_RE2 = /\/html\/[a-f0-9]{32}\.cache\.js(?:[?#].*)?$/i;
     const GLOW_MASK_RE = /(?:^|\/)(?:assets\/)?skins\/system\/_glow_mask\.png(?:[?#].*)?$/i;
     const RENDER_LOOP_RE = /var b,c,d,e,f,g,h;for\(e=0;e<\(([$A-Za-z_][$\w]*)\(\),([$A-Za-z_][$\w]*)\)\.d\.a\.length;e\+\+\)\{/;
     const RENDER_CELL_RE = /g=[$A-Za-z_][$\w]*\([$A-Za-z_][$\w]*\.d,e\);if\(!a\.c\|\|!g\|\|!g\.K\|\|!g\.c\)\{continue\}[$A-Za-z_][$\w]*\(g\);/;
@@ -20537,7 +20537,7 @@ ${buildJellyGlsl(settings.noSkinCells)}`);
       return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     }
     function shouldPatchScript(node) {
-      return Boolean(node && node.tagName === "SCRIPT" && node.src && !node.dataset.blobVirusGlowPatched && CACHE_SCRIPT_RE3.test(node.src));
+      return Boolean(node && node.tagName === "SCRIPT" && node.src && !node.dataset.blobVirusGlowPatched && CACHE_SCRIPT_RE2.test(node.src));
     }
     function rememberError2(error) {
       const message = error?.message || String(error);
