@@ -81,7 +81,7 @@ export class VirusMotherCellSettingsUi {
   createHeaderRow() {
     const row = this.document.createElement('div');
     row.classList.add('grid-item', 'blobio-extension-setting-row', 'blobio-virus-setting-row');
-    row.dataset.blobioTooltip = 'Replace in-game virus and mother-cell rendering with a selected extension mask after reloading the game tab.';
+    row.dataset.blobioTooltip = 'FPS-Impact: Medium[20-80]\nReplace in-game virus and mother-cell rendering with a selected extension mask after reloading the game tab.';
     row.setAttribute('_ngcontent-c3', '');
 
     const switchLabel = this.document.createElement('label');

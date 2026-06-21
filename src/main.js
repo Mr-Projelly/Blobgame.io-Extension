@@ -26,6 +26,8 @@ import { pageVirusPelletColorsBootstrap } from './cellColors/pageVirusPelletColo
 import { MutedPlayersStore } from './chat/MutedPlayersStore.js';
 import { EmoteSkinFeature } from './emotes/EmoteSkinFeature.js';
 import { pageEmoteSkinBootstrap } from './emotes/pageEmoteSkinBootstrap.js';
+import { readFpsSaverSettings } from './fpsSaver/FpsSaverSettings.js';
+import { pageFpsSaverBootstrap } from './fpsSaver/pageFpsSaverBootstrap.js';
 import { BackgroundFeature } from './features/BackgroundFeature.js';
 import { ChatRoleFeature } from './features/ChatRoleFeature.js';
 import { ChatSettingsFeature } from './features/ChatSettingsFeature.js';
@@ -97,6 +99,8 @@ class BlobioExtension {
     }
 
     const logger = this.window.console || console;
+    this.installFpsSaverFallback(document, logger);
+
     if (hostMode === 'runtime') {
       this.installEmoteSkinFallback(document, logger);
       this.installJellyShaderFallback(document, logger);
@@ -269,6 +273,22 @@ class BlobioExtension {
       status.reason = 'bundle-bootstrap-error';
       status.error = error?.message || String(error);
       logger.warn?.('[Blobio] Virus | Mother-cell fallback failed.', error);
+      return false;
+    }
+  }
+
+  installFpsSaverFallback(document, logger) {
+    const windowRef = this.window;
+    const pageWindow = getTampermonkeyPageWindow(windowRef);
+    if (pageWindow.__blobioFpsSaverInstalled) {
+      return true;
+    }
+
+    const storage = createBlobioStorage(document);
+    try {
+      return Boolean(pageFpsSaverBootstrap(readFpsSaverSettings(storage, document), pageWindow));
+    } catch (error) {
+      logger.warn?.('[Blobio] FPS saver fallback failed.', error);
       return false;
     }
   }

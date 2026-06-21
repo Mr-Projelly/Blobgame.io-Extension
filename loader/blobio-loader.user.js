@@ -97,6 +97,8 @@
   const VIRUS_PELLET_COLOR_COOKIE_NAME = 'blobioVirusPelletColors';
   const CELL_MASS_SNAPSHOT_KEY = 'blobio.settings.cellMass.snapshot';
   const CELL_MASS_COOKIE_NAME = 'blobioCellMass';
+  const FPS_SAVER_SNAPSHOT_KEY = 'blobio.settings.fpsSaver.snapshot';
+  const FPS_SAVER_COOKIE_NAME = 'blobioFpsSaver';
   /* VIRUS_ASSETS_START */
   const VIRUS_MOTHER_CELL_ASSET_URLS = {
     halo: 'data:image/png;base64,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',
@@ -669,6 +671,87 @@
     if (selected.source === 'domain-cookie'
       && (!sharedSnapshot || cookieSnapshot.updatedAt > sharedSnapshot.updatedAt)) {
       setSharedValue(CELL_MASS_SNAPSHOT_KEY, JSON.stringify(cookieSnapshot));
+    }
+
+    return {
+      ...selected.value,
+      source: selected.source,
+      diagnostics: {
+        sharedSnapshotPresent: Boolean(sharedSnapshot),
+        sharedSnapshotUpdatedAt: sharedSnapshot?.updatedAt || 0,
+        cookieSnapshotPresent: Boolean(cookieSnapshot),
+        cookieSnapshotUpdatedAt: cookieSnapshot?.updatedAt || 0,
+      },
+    };
+  }
+
+  const DEFAULT_FPS_SAVER_RUNTIME_SETTINGS = {
+    liteMode: true,
+    noTransitions: false,
+    hiddenTab: true,
+    hiddenFps: 2,
+    gameOverlay: true,
+    toastModalAnim: true,
+    chatGuard: true,
+    maxChatRows: 40,
+    objectRenderer: true,
+    foodCulling: true,
+    foodLimit: 90,
+    massCulling: true,
+    massLimit: 30,
+  };
+
+  function normalizeFpsSaverRuntimeSnapshot(value) {
+    if (!value || typeof value !== 'object') {
+      return null;
+    }
+
+    const updatedAt = Number(value.updatedAt);
+    return {
+      liteMode: value.liteMode === undefined ? DEFAULT_FPS_SAVER_RUNTIME_SETTINGS.liteMode : readBooleanValue(value.liteMode),
+      noTransitions: value.noTransitions === undefined ? DEFAULT_FPS_SAVER_RUNTIME_SETTINGS.noTransitions : readBooleanValue(value.noTransitions),
+      hiddenTab: value.hiddenTab === undefined ? DEFAULT_FPS_SAVER_RUNTIME_SETTINGS.hiddenTab : readBooleanValue(value.hiddenTab),
+      hiddenFps: Math.round(normalizeHudInfoRuntimeNumber(value.hiddenFps, 1, 10, DEFAULT_FPS_SAVER_RUNTIME_SETTINGS.hiddenFps)),
+      gameOverlay: value.gameOverlay === undefined ? DEFAULT_FPS_SAVER_RUNTIME_SETTINGS.gameOverlay : readBooleanValue(value.gameOverlay),
+      toastModalAnim: value.toastModalAnim === undefined ? DEFAULT_FPS_SAVER_RUNTIME_SETTINGS.toastModalAnim : readBooleanValue(value.toastModalAnim),
+      chatGuard: value.chatGuard === undefined ? DEFAULT_FPS_SAVER_RUNTIME_SETTINGS.chatGuard : readBooleanValue(value.chatGuard),
+      maxChatRows: Math.round(normalizeHudInfoRuntimeNumber(value.maxChatRows, 20, 120, DEFAULT_FPS_SAVER_RUNTIME_SETTINGS.maxChatRows)),
+      objectRenderer: value.objectRenderer === undefined ? DEFAULT_FPS_SAVER_RUNTIME_SETTINGS.objectRenderer : readBooleanValue(value.objectRenderer),
+      foodCulling: value.foodCulling === undefined ? DEFAULT_FPS_SAVER_RUNTIME_SETTINGS.foodCulling : readBooleanValue(value.foodCulling),
+      foodLimit: Math.round(normalizeHudInfoRuntimeNumber(value.foodLimit, 0, 900, DEFAULT_FPS_SAVER_RUNTIME_SETTINGS.foodLimit)),
+      massCulling: value.massCulling === undefined ? DEFAULT_FPS_SAVER_RUNTIME_SETTINGS.massCulling : readBooleanValue(value.massCulling),
+      massLimit: Math.round(normalizeHudInfoRuntimeNumber(value.massLimit, 0, 900, DEFAULT_FPS_SAVER_RUNTIME_SETTINGS.massLimit)),
+      updatedAt: Number.isFinite(updatedAt) && updatedAt > 0 ? updatedAt : 0,
+    };
+  }
+
+  function parseFpsSaverRuntimeSnapshot(value) {
+    if (!value) {
+      return null;
+    }
+    try {
+      return normalizeFpsSaverRuntimeSnapshot(typeof value === 'string' ? JSON.parse(value) : value);
+    } catch {
+      return null;
+    }
+  }
+
+  function readFpsSaverRuntimeSettings() {
+    const sharedSnapshotRaw = getSharedValue(FPS_SAVER_SNAPSHOT_KEY);
+    const sharedSnapshot = parseFpsSaverRuntimeSnapshot(sharedSnapshotRaw);
+    const cookieSnapshotRaw = getCookieValue(FPS_SAVER_COOKIE_NAME);
+    const cookieSnapshot = parseFpsSaverRuntimeSnapshot(cookieSnapshotRaw);
+    const fallback = normalizeFpsSaverRuntimeSnapshot(DEFAULT_FPS_SAVER_RUNTIME_SETTINGS);
+
+    const candidates = [
+      sharedSnapshot && { source: 'gm-snapshot', value: sharedSnapshot },
+      cookieSnapshot && { source: 'domain-cookie', value: cookieSnapshot },
+    ].filter(Boolean).sort((left, right) => right.value.updatedAt - left.value.updatedAt);
+    const selected = candidates[0] || { source: 'defaults', value: fallback };
+
+    if (selected.source === 'domain-cookie'
+      && (!sharedSnapshot || cookieSnapshot.updatedAt > sharedSnapshot.updatedAt)) {
+      setSharedValue(FPS_SAVER_SNAPSHOT_KEY, JSON.stringify(cookieSnapshot));
     }
 
     return {
@@ -6813,6 +6896,680 @@
   }
   /* CELL_MASS_RUNTIME_END */
 
+  /* FPS_SAVER_RUNTIME_START */
+  const FPS_SAVER_VERSION = '0.1.0';
+  const PAGE_HOOK = '__BlobPerfSaver';
+  const RUNTIME_HOOK = '__BlobioFpsSaver';
+  const STYLE_ID = 'blobio-fps-saver-style';
+  const CACHE_SCRIPT_RE = /\/html\/[a-f0-9]{32}\.cache\.js(?:[?#].*)?$/i;
+  const PARTICLE_LOOP_RE = /if\(!a\.c\|\|!g\|\|!g\.K\|\|!g\.c\)\{continue\}[A-Za-z_$][\w$]*\(g\);/;
+  const FOOD_CASE_RE = /case 2:case 5:case 0:/;
+  const WORK_CULL_HOOK = 'if($wnd.__BlobPerfSaver&&$wnd.__BlobPerfSaver.skipParticleWork(g)){continue;}';
+  const DRAW_CULL_HOOK = 'if($wnd.__BlobPerfSaver&&$wnd.__BlobPerfSaver.skipParticleDraw(g)){break;}';
+
+  const DEFAULT_SETTINGS = {
+    liteMode: true,
+    noTransitions: false,
+    hiddenTab: true,
+    hiddenFps: 2,
+    gameOverlay: true,
+    toastModalAnim: true,
+    chatGuard: true,
+    maxChatRows: 40,
+    objectRenderer: true,
+    foodCulling: true,
+    foodLimit: 90,
+    massCulling: true,
+    massLimit: 30,
+  };
+
+  function pageFpsSaverBootstrap(initialSettings = {}, pageWindow = globalThis) {
+    const root = pageWindow || globalThis;
+    const doc = root.document || globalThis.document;
+    if (!doc?.documentElement) {
+      return false;
+    }
+
+    const host = String(root.location?.hostname || globalThis.location?.hostname || '').toLowerCase();
+    const isGameClient = host === 'custom.client.blobgame.io';
+    const isMainPage = (host === 'blobgame.io' || host.endsWith('.blobgame.io')) && !isGameClient;
+    const state = root.__blobioFpsSaverState || createState(initialSettings, isGameClient, isMainPage);
+    state.settings = normalizeSettings(initialSettings);
+    state.isGameClient = isGameClient;
+    state.isMainPage = isMainPage;
+    state.document = doc;
+    root.__blobioFpsSaverState = state;
+
+    exposeHooks(root, state);
+    installStyle(doc);
+    installRequestAnimationFrameHook(root, doc, state);
+    installGameScriptPatch(root, state);
+    applySettings(root, doc, state);
+    onReady(doc, root, () => applySettings(root, doc, state));
+
+    root.__blobioFpsSaverRefresh = (nextSettings = {}) => {
+      state.settings = normalizeSettings(nextSettings);
+      exposeHooks(root, state);
+      applySettings(root, doc, state);
+      return { ...state.settings };
+    };
+
+    root.BlobioFpsSaverDebug = () => buildDebug(root, doc, state);
+    root.__BlobioFpsSaverDebug = root.BlobioFpsSaverDebug;
+    root.__blobioFpsSaverInstalled = true;
+    return true;
+  }
+
+  function createState(settings, isGameClient, isMainPage) {
+    return {
+      version: FPS_SAVER_VERSION,
+      installedAt: Date.now(),
+      settings: normalizeSettings(settings),
+      isGameClient,
+      isMainPage,
+      rafHooked: false,
+      scriptPatchInstalled: false,
+      callbackWrapped: false,
+      chatObserver: null,
+      chatRetryTimer: null,
+      iframeObserver: null,
+      frameCull: {
+        id: 0,
+        startedAt: 0,
+        foodSeen: 0,
+        foodSkipped: 0,
+        massSeen: 0,
+        massSkipped: 0,
+      },
+      counters: {
+        rafFrames: 0,
+        hiddenFrames: 0,
+        seenCacheScripts: 0,
+        callbackCalls: 0,
+        patchedChunks: 0,
+        foodSeen: 0,
+        foodSkipped: 0,
+        massSeen: 0,
+        massSkipped: 0,
+        chatTrimmed: 0,
+      },
+      patch: {
+        lastPatchResult: null,
+      },
+      errors: [],
+    };
+  }
+
+  function normalizeSettings(source = {}) {
+    const data = source && typeof source === 'object' ? source : {};
+    return {
+      liteMode: boolSetting(data.liteMode, DEFAULT_SETTINGS.liteMode),
+      noTransitions: boolSetting(data.noTransitions, DEFAULT_SETTINGS.noTransitions),
+      hiddenTab: boolSetting(data.hiddenTab, DEFAULT_SETTINGS.hiddenTab),
+      hiddenFps: clampInteger(data.hiddenFps, 1, 10, DEFAULT_SETTINGS.hiddenFps),
+      gameOverlay: boolSetting(data.gameOverlay, DEFAULT_SETTINGS.gameOverlay),
+      toastModalAnim: boolSetting(data.toastModalAnim, DEFAULT_SETTINGS.toastModalAnim),
+      chatGuard: boolSetting(data.chatGuard, DEFAULT_SETTINGS.chatGuard),
+      maxChatRows: clampInteger(data.maxChatRows, 20, 120, DEFAULT_SETTINGS.maxChatRows),
+      objectRenderer: boolSetting(data.objectRenderer, DEFAULT_SETTINGS.objectRenderer),
+      foodCulling: boolSetting(data.foodCulling, DEFAULT_SETTINGS.foodCulling),
+      foodLimit: clampInteger(data.foodLimit, 0, 900, DEFAULT_SETTINGS.foodLimit),
+      massCulling: boolSetting(data.massCulling, DEFAULT_SETTINGS.massCulling),
+      massLimit: clampInteger(data.massLimit, 0, 900, DEFAULT_SETTINGS.massLimit),
+    };
+  }
+
+  function boolSetting(value, fallback) {
+    if (value === undefined || value === null || value === '') {
+      return fallback;
+    }
+    return value === true || value === 1 || value === '1' || String(value).toLowerCase() === 'true';
+  }
+
+  function clampInteger(value, min, max, fallback) {
+    if (value === null || value === undefined || value === '') {
+      return fallback;
+    }
+    const number = Math.round(Number(value));
+    return Number.isFinite(number) ? Math.max(min, Math.min(max, number)) : fallback;
+  }
+
+  function exposeHooks(root, state) {
+    root[PAGE_HOOK] = {
+      version: FPS_SAVER_VERSION,
+      settings: state.settings,
+      beginFrame: (timestamp) => beginRenderFrame(root, state, timestamp),
+      skipParticle: (object) => skipParticleWork(root, state, object),
+      skipParticleWork: (object) => skipParticleWork(root, state, object),
+      skipParticleDraw: (object) => skipParticleWork(root, state, object),
+      debug: () => buildDebug(root, state.document, state),
+    };
+    root[RUNTIME_HOOK] = root[PAGE_HOOK];
+  }
+
+  function installRequestAnimationFrameHook(root, doc, state) {
+    if (state.rafHooked || root.__blobioFpsSaverRafHooked || typeof root.requestAnimationFrame !== 'function') {
+      state.rafHooked = Boolean(root.__blobioFpsSaverRafHooked);
+      return;
+    }
+
+    const nativeRaf = root.requestAnimationFrame.bind(root);
+    const nativeCancel = typeof root.cancelAnimationFrame === 'function'
+      ? root.cancelAnimationFrame.bind(root)
+      : null;
+    const handles = new Map();
+    let nextId = -1;
+    let lastHiddenTs = 0;
+
+    root.requestAnimationFrame = function blobioFpsSaverRequestAnimationFrame(callback) {
+      if (typeof callback !== 'function') {
+        return nativeRaf(callback);
+      }
+
+      const id = nextId--;
+      const handle = { active: true, nativeId: 0 };
+
+      const tick = (timestamp) => {
+        if (!handle.active) {
+          return;
+        }
+
+        if (state.settings.hiddenTab && doc.hidden) {
+          const hiddenDelay = 1000 / Math.max(1, state.settings.hiddenFps);
+          if (lastHiddenTs && timestamp - lastHiddenTs < hiddenDelay) {
+            handle.nativeId = nativeRaf(tick);
+            return;
+          }
+          lastHiddenTs = timestamp;
+          state.counters.hiddenFrames += 1;
+        }
+
+        handles.delete(id);
+        state.counters.rafFrames += 1;
+        beginRenderFrame(root, state, timestamp);
+        callback.call(root, timestamp);
+      };
+
+      handle.nativeId = nativeRaf(tick);
+      handles.set(id, handle);
+      return id;
+    };
+
+    root.cancelAnimationFrame = function blobioFpsSaverCancelAnimationFrame(id) {
+      const handle = handles.get(id);
+      if (handle) {
+        handle.active = false;
+        handles.delete(id);
+        nativeCancel?.(handle.nativeId);
+        return;
+      }
+      nativeCancel?.(id);
+    };
+
+    root.__blobioFpsSaverRafHooked = true;
+    state.rafHooked = true;
+  }
+
+  function beginRenderFrame(root, state, timestamp) {
+    const frame = state.frameCull;
+    frame.id += 1;
+    frame.startedAt = Number(timestamp) || now(root);
+    frame.foodSeen = 0;
+    frame.foodSkipped = 0;
+    frame.massSeen = 0;
+    frame.massSkipped = 0;
+  }
+
+  function ensureCullFrame(root, state) {
+    const current = now(root);
+    if (!state.frameCull.startedAt || current - state.frameCull.startedAt > 250) {
+      beginRenderFrame(root, state, current);
+    }
+  }
+
+  function skipParticleWork(root, state, object) {
+    if (!state.settings.objectRenderer) {
+      return false;
+    }
+
+    const type = object?.c?.M;
+    if (type !== 2 && type !== 5 && type !== 0) {
+      return false;
+    }
+
+    ensureCullFrame(root, state);
+
+    if (type === 2) {
+      state.frameCull.foodSeen += 1;
+      state.counters.foodSeen += 1;
+
+      if (!state.settings.foodCulling || state.frameCull.foodSeen <= state.settings.foodLimit) {
+        return false;
+      }
+
+      state.frameCull.foodSkipped += 1;
+      state.counters.foodSkipped += 1;
+      return true;
+    }
+
+    state.frameCull.massSeen += 1;
+    state.counters.massSeen += 1;
+
+    if (!state.settings.massCulling || state.frameCull.massSeen <= state.settings.massLimit) {
+      return false;
+    }
+
+    state.frameCull.massSkipped += 1;
+    state.counters.massSkipped += 1;
+    return true;
+  }
+
+  function installGameScriptPatch(root, state) {
+    if (!state.isGameClient) {
+      return;
+    }
+
+    const NodeCtor = root.Node || globalThis.Node;
+    if (!NodeCtor?.prototype || NodeCtor.prototype.__blobioFpsSaverScriptPatchInstalled) {
+      installGwtCallbackPatch(root, state);
+      return;
+    }
+
+    const originalAppendChild = NodeCtor.prototype.appendChild;
+    const originalInsertBefore = NodeCtor.prototype.insertBefore;
+
+    NodeCtor.prototype.appendChild = function blobioFpsSaverAppendChild(node) {
+      if (shouldWatchScript(node)) {
+        node.dataset.blobioFpsSaverScriptPatch = 'seen';
+        state.counters.seenCacheScripts += 1;
+        installGwtCallbackPatch(root, state);
+      }
+      return originalAppendChild.call(this, node);
+    };
+
+    NodeCtor.prototype.insertBefore = function blobioFpsSaverInsertBefore(node, child) {
+      if (shouldWatchScript(node)) {
+        node.dataset.blobioFpsSaverScriptPatch = 'seen';
+        state.counters.seenCacheScripts += 1;
+        installGwtCallbackPatch(root, state);
+      }
+      return originalInsertBefore.call(this, node, child);
+    };
+
+    NodeCtor.prototype.__blobioFpsSaverScriptPatchInstalled = true;
+    state.scriptPatchInstalled = true;
+
+    installGwtCallbackPatch(root, state);
+    const timer = root.setInterval?.(() => {
+      if (installGwtCallbackPatch(root, state)) {
+        root.clearInterval?.(timer);
+      }
+    }, 10);
+    root.setTimeout?.(() => root.clearInterval?.(timer), 30000);
+  }
+
+  function shouldWatchScript(node) {
+    return node
+      && node.tagName === 'SCRIPT'
+      && node.src
+      && node.dataset
+      && !node.dataset.blobioFpsSaverScriptPatch
+      && CACHE_SCRIPT_RE.test(node.src);
+  }
+
+  function installGwtCallbackPatch(root, state) {
+    const html = root.html;
+    if (!html || html.__blobioFpsSaverCallbackWrapped || typeof html.onScriptDownloaded !== 'function') {
+      state.callbackWrapped = Boolean(html?.__blobioFpsSaverCallbackWrapped);
+      return state.callbackWrapped;
+    }
+
+    const original = html.onScriptDownloaded;
+    html.onScriptDownloaded = function blobioFpsSaverOnScriptDownloaded(chunks) {
+      state.counters.callbackCalls += 1;
+      let patchedChunks = chunks;
+
+      try {
+        patchedChunks = Array.isArray(chunks)
+          ? chunks.map((chunk) => patchDownloadedChunk(chunk, state))
+          : patchDownloadedChunk(chunks, state);
+      } catch (error) {
+        rememberError(state, error);
+      }
+
+      return original.call(this, patchedChunks);
+    };
+
+    html.__blobioFpsSaverCallbackWrapped = true;
+    state.callbackWrapped = true;
+    return true;
+  }
+
+  function patchDownloadedChunk(chunk, state) {
+    if (typeof chunk !== 'string') {
+      return chunk;
+    }
+
+    const result = patchGameCode(chunk);
+    state.patch.lastPatchResult = result.result;
+    if (!result.changed) {
+      return chunk;
+    }
+
+    state.counters.patchedChunks += 1;
+    return result.code;
+  }
+
+  function patchGameCode(code) {
+    if (typeof code !== 'string') {
+      return { code, changed: false, result: null };
+    }
+
+    const loopSeen = PARTICLE_LOOP_RE.test(code);
+    const caseSeen = FOOD_CASE_RE.test(code);
+    const workAlreadyPatched = code.includes('$wnd.__BlobPerfSaver.skipParticleWork(g)');
+    const drawAlreadyPatched = code.includes('$wnd.__BlobPerfSaver.skipParticleDraw(g)')
+      || code.includes('$wnd.__BlobPerfSaver.skipParticle(g)');
+    let patched = code;
+
+    if (loopSeen && !workAlreadyPatched) {
+      patched = patched.replace(PARTICLE_LOOP_RE, (match) => match.replace(
+        /([A-Za-z_$][\w$]*\(g\);)$/,
+        `${WORK_CULL_HOOK}$1`,
+      ));
+    }
+
+    if (!patched.includes('$wnd.__BlobPerfSaver.skipParticleWork(g)') && caseSeen && !drawAlreadyPatched) {
+      patched = patched.replace(FOOD_CASE_RE, (match) => `${match}${DRAW_CULL_HOOK}`);
+    }
+
+    const result = {
+      changed: patched !== code,
+      particleLoopSeen: loopSeen,
+      foodAndMassCaseSeen: caseSeen,
+      earlyCullHookInstalled: patched.includes('$wnd.__BlobPerfSaver.skipParticleWork(g)'),
+      drawCullHookInstalled: patched.includes('$wnd.__BlobPerfSaver.skipParticleDraw(g)')
+        || patched.includes('$wnd.__BlobPerfSaver.skipParticle(g)'),
+    };
+
+    return {
+      code: patched,
+      changed: result.changed,
+      result,
+    };
+  }
+
+  function installStyle(doc) {
+    if (doc.getElementById?.(STYLE_ID)) {
+      return;
+    }
+
+    const style = doc.createElement('style');
+    style.id = STYLE_ID;
+    style.textContent = `
+  html.blobio-fps-saver-no-transitions *,
+  html.blobio-fps-saver-no-transitions *::before,
+  html.blobio-fps-saver-no-transitions *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+
+  html.blobio-fps-saver-main-lite body > div,
+  html.blobio-fps-saver-main-lite body > main,
+  html.blobio-fps-saver-main-lite body > section,
+  html.blobio-fps-saver-main-lite iframe {
+    contain: layout paint style;
+  }
+
+  html.blobio-fps-saver-main-lite iframe {
+    content-visibility: auto;
+    contain-intrinsic-size: 360px 240px;
+  }
+
+  html.blobio-fps-saver-overlay-contain #chat-wrapper,
+  html.blobio-fps-saver-overlay-contain #chat,
+  html.blobio-fps-saver-overlay-contain #leader-board,
+  html.blobio-fps-saver-overlay-contain #leader-board-wrapper,
+  html.blobio-fps-saver-overlay-contain #score-wrapper,
+  html.blobio-fps-saver-overlay-contain #toast,
+  html.blobio-fps-saver-overlay-contain #mouseMenu,
+  html.blobio-fps-saver-overlay-contain #aslist-outer,
+  html.blobio-fps-saver-overlay-contain #plist-outer,
+  html.blobio-fps-saver-overlay-contain #rlist-outer,
+  html.blobio-fps-saver-overlay-contain .swal2-container {
+    contain: layout paint style;
+  }
+
+  html.blobio-fps-saver-toast-lite #toast,
+  html.blobio-fps-saver-toast-lite .toast,
+  html.blobio-fps-saver-toast-lite .toast *,
+  html.blobio-fps-saver-toast-lite .swal2-popup,
+  html.blobio-fps-saver-toast-lite .swal2-backdrop-show,
+  html.blobio-fps-saver-toast-lite .swal2-show,
+  html.blobio-fps-saver-toast-lite .swal2-hide {
+    animation: none !important;
+    transition: none !important;
+  }
+  `;
+    (doc.head || doc.documentElement).appendChild(style);
+  }
+
+  function applySettings(root, doc, state) {
+    const html = doc.documentElement;
+    if (!html) {
+      return;
+    }
+
+    toggleClass(html, 'blobio-fps-saver-no-transitions', state.settings.noTransitions);
+    toggleClass(html, 'blobio-fps-saver-main-lite', state.settings.liteMode && state.isMainPage);
+    toggleClass(html, 'blobio-fps-saver-overlay-contain', state.settings.gameOverlay && state.isGameClient);
+    toggleClass(html, 'blobio-fps-saver-toast-lite', state.settings.toastModalAnim);
+
+    installChatGuard(root, doc, state);
+    optimizeMainPageIframes(root, doc, state);
+    exposeHooks(root, state);
+  }
+
+  function optimizeMainPageIframes(root, doc, state) {
+    if (!state.isMainPage || !state.settings.liteMode || !doc.querySelectorAll) {
+      disconnectIframeObserver(state);
+      return;
+    }
+
+    const applyIframeHints = () => {
+      for (const frame of doc.querySelectorAll('iframe') || []) {
+        frame.loading = 'lazy';
+        frame.style.contain = 'layout paint style';
+        frame.style.contentVisibility = 'auto';
+        frame.style.containIntrinsicSize = '360px 240px';
+      }
+    };
+
+    applyIframeHints();
+
+    if (!state.iframeObserver && typeof root.MutationObserver === 'function' && doc.body) {
+      state.iframeObserver = new root.MutationObserver(() => {
+        scheduleFrame(root, applyIframeHints);
+      });
+      state.iframeObserver.observe(doc.body, { childList: true, subtree: true });
+    }
+  }
+
+  function disconnectIframeObserver(state) {
+    state.iframeObserver?.disconnect?.();
+    state.iframeObserver = null;
+  }
+
+  function installChatGuard(root, doc, state) {
+    if (!state.isGameClient || !state.settings.chatGuard || typeof root.MutationObserver !== 'function') {
+      disconnectChatGuard(root, state);
+      return;
+    }
+
+    const chat = doc.getElementById?.('chat');
+    if (!chat) {
+      if (!state.chatRetryTimer && doc.body) {
+        state.chatRetryTimer = root.setInterval?.(() => {
+          if (doc.getElementById?.('chat')) {
+            root.clearInterval?.(state.chatRetryTimer);
+            state.chatRetryTimer = null;
+            installChatGuard(root, doc, state);
+          }
+        }, 1000) || null;
+        root.setTimeout?.(() => {
+          if (state.chatRetryTimer) {
+            root.clearInterval?.(state.chatRetryTimer);
+            state.chatRetryTimer = null;
+          }
+        }, 30000);
+      }
+      return;
+    }
+
+    if (state.chatObserver) {
+      trimChat(chat, state);
+      return;
+    }
+
+    let cleanupScheduled = false;
+    state.chatObserver = new root.MutationObserver(() => {
+      if (cleanupScheduled) {
+        return;
+      }
+      cleanupScheduled = true;
+      scheduleFrame(root, () => {
+        cleanupScheduled = false;
+        trimChat(chat, state);
+      });
+    });
+    state.chatObserver.observe(chat, { childList: true });
+    trimChat(chat, state);
+  }
+
+  function trimChat(chat, state) {
+    const max = state.settings.maxChatRows;
+    let removed = 0;
+    while (chat.children && chat.children.length > max) {
+      chat.removeChild(chat.firstElementChild || chat.firstChild);
+      removed += 1;
+    }
+    state.counters.chatTrimmed += removed;
+  }
+
+  function disconnectChatGuard(root, state) {
+    state.chatObserver?.disconnect?.();
+    state.chatObserver = null;
+    if (state.chatRetryTimer) {
+      root.clearInterval?.(state.chatRetryTimer);
+      state.chatRetryTimer = null;
+    }
+  }
+
+  function onReady(doc, root, callback) {
+    if (doc.readyState === 'loading') {
+      doc.addEventListener?.('DOMContentLoaded', callback, { once: true });
+      return;
+    }
+    root.setTimeout?.(callback, 0);
+  }
+
+  function scheduleFrame(root, callback) {
+    if (typeof root.requestAnimationFrame === 'function') {
+      root.requestAnimationFrame(callback);
+      return;
+    }
+    root.setTimeout?.(callback, 16);
+  }
+
+  function toggleClass(node, className, enabled) {
+    if (enabled) {
+      node.classList?.add?.(className);
+    } else {
+      node.classList?.remove?.(className);
+    }
+  }
+
+  function now(root) {
+    return Number(root.performance?.now?.()) || Date.now();
+  }
+
+  function rememberError(state, error) {
+    const message = error?.message || String(error);
+    state.errors.push({ message, at: Date.now() });
+    state.errors = state.errors.slice(-8);
+  }
+
+  function buildDebug(root, doc, state) {
+    return {
+      installed: Boolean(root.__blobioFpsSaverInstalled),
+      version: FPS_SAVER_VERSION,
+      url: String(root.location?.href || ''),
+      uptimeMs: Date.now() - state.installedAt,
+      isGameClient: state.isGameClient,
+      isMainPage: state.isMainPage,
+      settings: { ...state.settings },
+      counters: { ...state.counters },
+      frameCull: { ...state.frameCull },
+      patch: {
+        scriptPatchInstalled: state.scriptPatchInstalled,
+        callbackWrapped: state.callbackWrapped,
+        lastPatchResult: state.patch.lastPatchResult,
+      },
+      dom: {
+        noTransitions: Boolean(doc?.documentElement?.classList?.contains?.('blobio-fps-saver-no-transitions')),
+        mainLite: Boolean(doc?.documentElement?.classList?.contains?.('blobio-fps-saver-main-lite')),
+        overlayContain: Boolean(doc?.documentElement?.classList?.contains?.('blobio-fps-saver-overlay-contain')),
+        toastLite: Boolean(doc?.documentElement?.classList?.contains?.('blobio-fps-saver-toast-lite')),
+        chatRows: Number(doc?.getElementById?.('chat')?.children?.length) || 0,
+      },
+      errors: state.errors.slice(),
+    };
+  }
+
+  pageFpsSaverBootstrap.__test = {
+    normalizeSettings,
+    patchGameCode,
+  };
+  /* FPS_SAVER_RUNTIME_END */
+
+  function installFpsSaverRuntime() {
+    const host = String(location.hostname || '').toLowerCase();
+    if (host !== CUSTOM_CLIENT_HOST && host !== 'blobgame.io' && host !== 'www.blobgame.io') {
+      return;
+    }
+
+    const pageWindow = typeof unsafeWindow !== 'undefined' ? unsafeWindow : window;
+
+    try {
+      pageFpsSaverBootstrap(readFpsSaverRuntimeSettings(), pageWindow);
+    } catch (error) {
+      logError('Failed to install FPS saver runtime.', error);
+      return;
+    }
+
+    const refresh = () => {
+      try {
+        pageWindow.__blobioFpsSaverRefresh?.(readFpsSaverRuntimeSettings());
+      } catch (error) {
+        logError('Failed to refresh FPS saver runtime.', error);
+      }
+    };
+
+    if (typeof GM_addValueChangeListener === 'function') {
+      try {
+        GM_addValueChangeListener(FPS_SAVER_SNAPSHOT_KEY, refresh);
+      } catch {}
+    }
+
+    window.addEventListener?.('message', (event) => {
+      const message = event.data;
+      if (message?.source === STORAGE_BRIDGE_SOURCE && message.key === FPS_SAVER_SNAPSHOT_KEY) {
+        refresh();
+      }
+    });
+  }
+
   function getVirusResourceUrl(maskId) {
     const normalizedMaskId = Object.hasOwn(VIRUS_MOTHER_CELL_ASSET_URLS, maskId) ? maskId : 'halo';
     return VIRUS_MOTHER_CELL_ASSET_URLS[normalizedMaskId] || '';
@@ -7231,6 +7988,7 @@
   installExtensionInputKeyboardIsolation();
   installEarlyKeyboardRuntime();
   installSharedStorageBridge();
+  installFpsSaverRuntime();
   installEmoteSkinRuntime();
   installVirusMotherCellRuntime();
   installVirusPelletColorRuntime();

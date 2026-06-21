@@ -2,6 +2,8 @@ import { buildMenuCss } from '../css/MenuFeatureStyles.js';
 import { GameBackgroundSettingsUi } from '../background/GameBackgroundSettingsUi.js';
 import { CellMassSettingsUi } from '../cellMass/CellMassSettingsUi.js';
 import { VirusPelletColorSettingsUi } from '../cellColors/VirusPelletColorSettingsUi.js';
+import { FpsSaverSettingsUi } from '../fpsSaver/FpsSaverSettingsUi.js';
+import { readFpsSaverSettings, saveFpsSaverSettings } from '../fpsSaver/FpsSaverSettings.js';
 import { createBlobioStorage } from '../storage/BlobioStorage.js';
 import { JellyShaderSettingsUi } from '../jelly/JellyShaderSettingsUi.js';
 import { isHideAdminMdEnabled, setHideAdminMdEnabled } from '../roles/RoleSettings.js';
@@ -44,11 +46,16 @@ const EXTENSION_SETTING_CATEGORIES = [
 ];
 
 const EXTENSION_OPTION_TOOLTIPS = {
-  watermark: 'This option will display the Extension name text, alongside its current version.',
-  customSkin: 'Replace one of your owned skin assets locally with a saved direct i.imgur.com image. Only you see the custom image.',
-  hideAdminMd: 'Hide the built-in [MD] tag from extension ADMIN users in chat. This is enabled by default.',
-  friendHighlight: 'Load accepted friends from Blobgame and color their chat name and message green. Friend requests and declined users are ignored.',
-  fpsUncap: 'Uncap the in-game render loop after a safe startup delay, periodically yield to native frames, keep the game active when unfocused, and smooth camera zoom using the real frame delta. Off by default and applies immediately.',
+  watermark: 'FPS-Impact: Low[1-5]\nThis option will display the Extension name text, alongside its current version.',
+  customSkin: 'FPS-Impact: Low[5-20]\nReplace one of your owned skin assets locally with a saved direct i.imgur.com image. Only you see the custom image.',
+  hideAdminMd: 'FPS-Impact: Low[0-2]\nHide the built-in [MD] tag from extension ADMIN users in chat. This is enabled by default.',
+  friendHighlight: 'FPS-Impact: Low[5-15]\nLoad accepted friends from Blobgame and color their chat name and message green. Friend requests and declined users are ignored.',
+  fpsUncap: 'FPS-Impact: Medium[0-80]\nUncap the in-game render loop after a safe startup delay, periodically yield to native frames, keep the game active when unfocused, and smooth camera zoom using the real frame delta. Off by default and applies immediately.',
+  liteMode: 'FPS-Gain: Low[5-20]\nAdds CSS containment and offscreen rendering hints to heavy sections and third-party iframe surfaces without hiding videos or promos.',
+  noTransitions: 'FPS-Gain: Medium[10-35]\nRemoves CSS transitions and animations from menus, panels, toasts, and modals. Expected save: low to medium smoothness gain.\n[WARNING: This is disabled by default because it will drastically reduce HUD-options.]',
+  gameOverlay: 'FPS-Gain: Medium[10-40]\nGame client only. Isolates chat, leaderboard, score, lists, menu, and toast layout/paint from the rest of the page. Expected save: low to medium repaint gain.',
+  toastModalAnim: 'FPS-Gain: Low[3-15]\nDisables toast and modal animation work while keeping the UI visible. Expected save: low gain, more noticeable during repeated popups.',
+  chatGuard: 'FPS-Gain: Medium[10-60]\nKeeps chat usable but cut old chat rows in batches. Expected save: low normally, medium in full servers with many chatter.',
 };
 
 const DEFAULT_VIDEO = {
@@ -173,6 +180,7 @@ export class MenuFeature {
     this.virusPelletColorSettingsUi = null;
     this.cellMassSettingsUi = null;
     this.jellyShaderSettingsUi = null;
+    this.fpsSaverSettingsUi = null;
   }
 
   start() {
@@ -265,6 +273,8 @@ export class MenuFeature {
     this.cellMassSettingsUi = null;
     this.jellyShaderSettingsUi?.destroy?.();
     this.jellyShaderSettingsUi = null;
+    this.fpsSaverSettingsUi?.destroy?.();
+    this.fpsSaverSettingsUi = null;
     this.cleanupExtensionSettings();
     this.cleanupCustomSkinUi();
 
@@ -943,7 +953,54 @@ export class MenuFeature {
       categoryPanels.set(key, categoryPanel);
     }
 
-    categoryPanels.get('fps').appendChild(
+    this.fpsSaverSettingsUi?.destroy?.();
+    this.fpsSaverSettingsUi = new FpsSaverSettingsUi({
+      document: this.document,
+      storage: this.storage,
+      showTooltip: (row, event) => this.showExtensionTooltip(row, event),
+      moveTooltip: (event) => this.moveExtensionTooltip(event),
+      hideTooltip: () => this.hideExtensionTooltip(),
+      onOpen: (ui) => this.closeExtensionSettingMenus(ui),
+    });
+    categoryPanels.get('fps').append(...this.fpsSaverSettingsUi.create());
+
+    const fpsSaverSettings = readFpsSaverSettings(this.storage, this.document);
+    categoryPanels.get('fps').append(
+      this.createFpsSaverSwitchRow({
+        id: 'config-switch-fps-saver-lite-mode',
+        key: 'liteMode',
+        label: 'Lite-Mode',
+        description: EXTENSION_OPTION_TOOLTIPS.liteMode,
+        checked: fpsSaverSettings.liteMode,
+      }),
+      this.createFpsSaverSwitchRow({
+        id: 'config-switch-fps-saver-no-transitions',
+        key: 'noTransitions',
+        label: 'No-Transitions',
+        description: EXTENSION_OPTION_TOOLTIPS.noTransitions,
+        checked: fpsSaverSettings.noTransitions,
+      }),
+      this.createFpsSaverSwitchRow({
+        id: 'config-switch-fps-saver-game-overlay',
+        key: 'gameOverlay',
+        label: 'Game-Overlay',
+        description: EXTENSION_OPTION_TOOLTIPS.gameOverlay,
+        checked: fpsSaverSettings.gameOverlay,
+      }),
+      this.createFpsSaverSwitchRow({
+        id: 'config-switch-fps-saver-toast-modal-anim',
+        key: 'toastModalAnim',
+        label: 'Toast-Modal-Anim',
+        description: EXTENSION_OPTION_TOOLTIPS.toastModalAnim,
+        checked: fpsSaverSettings.toastModalAnim,
+      }),
+      this.createFpsSaverSwitchRow({
+        id: 'config-switch-fps-saver-chat-guard',
+        key: 'chatGuard',
+        label: 'Chat-Guard',
+        description: EXTENSION_OPTION_TOOLTIPS.chatGuard,
+        checked: fpsSaverSettings.chatGuard,
+      }),
       this.createExtensionSwitchRow({
         id: 'config-switch-fps-uncap',
         label: 'FPS-uncap',
@@ -954,6 +1011,17 @@ export class MenuFeature {
         },
       }),
     );
+
+    this.cellMassSettingsUi?.destroy?.();
+    this.cellMassSettingsUi = new CellMassSettingsUi({
+      document: this.document,
+      storage: this.storage,
+      showTooltip: (row, event) => this.showExtensionTooltip(row, event),
+      moveTooltip: (event) => this.moveExtensionTooltip(event),
+      hideTooltip: () => this.hideExtensionTooltip(),
+      onOpen: (ui) => this.closeExtensionSettingMenus(ui),
+    });
+    categoryPanels.get('cell').appendChild(this.cellMassSettingsUi.create());
 
     categoryPanels.get('cell').appendChild(
       this.createExtensionSwitchRow({
@@ -974,17 +1042,6 @@ export class MenuFeature {
         },
       }),
     );
-
-    this.cellMassSettingsUi?.destroy?.();
-    this.cellMassSettingsUi = new CellMassSettingsUi({
-      document: this.document,
-      storage: this.storage,
-      showTooltip: (row, event) => this.showExtensionTooltip(row, event),
-      moveTooltip: (event) => this.moveExtensionTooltip(event),
-      hideTooltip: () => this.hideExtensionTooltip(),
-      onOpen: (ui) => this.closeExtensionSettingMenus(ui),
-    });
-    categoryPanels.get('cell').appendChild(this.cellMassSettingsUi.create());
 
     this.virusMotherCellSettingsUi?.destroy?.();
     this.virusMotherCellSettingsUi = new VirusMotherCellSettingsUi({
@@ -1083,6 +1140,7 @@ export class MenuFeature {
       this.virusPelletColorSettingsUi,
       this.cellMassSettingsUi,
       this.jellyShaderSettingsUi,
+      this.fpsSaverSettingsUi,
     ]) {
       if (ui && ui !== except) {
         ui.setOpen?.(false);
@@ -1153,8 +1211,12 @@ export class MenuFeature {
     textLabel.setAttribute('for', checkbox.id);
     textLabel.textContent = label;
 
+    const spacer = this.document.createElement('span');
+    spacer.classList.add('blobio-extension-row-spacer');
+    spacer.setAttribute('aria-hidden', 'true');
+
     switchLabel.append(checkbox, slider);
-    row.append(switchLabel, textLabel);
+    row.append(switchLabel, textLabel, spacer);
 
     this.addSettingsListener(checkbox, 'change', () => {
       onChange(Boolean(checkbox.checked), checkbox);
@@ -1167,6 +1229,27 @@ export class MenuFeature {
     }
 
     return row;
+  }
+
+  createFpsSaverSwitchRow({ id, key, label, description, checked }) {
+    return this.createExtensionSwitchRow({
+      id,
+      label,
+      description,
+      checked,
+      onChange: (enabled, checkbox) => {
+        const settings = this.setFpsSaverSetting({ [key]: enabled });
+        checkbox.checked = Boolean(settings[key]);
+        this.fpsSaverSettingsUi?.sync?.();
+      },
+    });
+  }
+
+  setFpsSaverSetting(changes) {
+    return saveFpsSaverSettings(this.storage, {
+      ...readFpsSaverSettings(this.storage, this.document),
+      ...changes,
+    }, this.document);
   }
 
   activateExtensionSettings(settings) {
@@ -1244,6 +1327,21 @@ export class MenuFeature {
       fpsUncap.checked = isFpsUncapEnabled(this.storage);
     }
 
+    const fpsSaverSettings = readFpsSaverSettings(this.storage, this.document);
+    const fpsSaverSwitches = {
+      '#config-switch-fps-saver-lite-mode': 'liteMode',
+      '#config-switch-fps-saver-no-transitions': 'noTransitions',
+      '#config-switch-fps-saver-game-overlay': 'gameOverlay',
+      '#config-switch-fps-saver-toast-modal-anim': 'toastModalAnim',
+      '#config-switch-fps-saver-chat-guard': 'chatGuard',
+    };
+    for (const [selector, key] of Object.entries(fpsSaverSwitches)) {
+      const checkbox = panel.querySelector?.(selector);
+      if (checkbox) {
+        checkbox.checked = Boolean(fpsSaverSettings[key]);
+      }
+    }
+
     const friendHighlight = panel.querySelector?.('#config-switch-friend-highlight');
     if (friendHighlight) {
       friendHighlight.checked = Boolean(this.friendHighlightStore?.isEnabled?.());
@@ -1256,6 +1354,7 @@ export class MenuFeature {
 
     this.jellyShaderSettingsUi?.sync?.();
     this.cellMassSettingsUi?.sync?.();
+    this.fpsSaverSettingsUi?.sync?.();
     this.syncAdminSettingVisibility(panel);
   }
 
@@ -1344,8 +1443,51 @@ export class MenuFeature {
       this.document.body?.appendChild(this.extensionTooltip);
     }
 
-    this.extensionTooltip.textContent = text;
+    this.renderExtensionTooltip(text);
     this.moveExtensionTooltip(event);
+  }
+
+  renderExtensionTooltip(text) {
+    if (!this.extensionTooltip) {
+      return;
+    }
+
+    while (this.extensionTooltip.firstChild || this.extensionTooltip.children?.length) {
+      this.extensionTooltip.removeChild(this.extensionTooltip.firstChild || this.extensionTooltip.children[0]);
+    }
+
+    const lines = String(text || '').split(/\r?\n/).filter((line) => line.trim());
+    for (const line of lines) {
+      const metric = line.match(/^FPS-(Impact|Gain):\s*([A-Za-z]+)\[([^\]]+)\]$/);
+      const warning = line.match(/^\[(WARNING:[^\]]+)\]$/);
+      const item = this.document.createElement('div');
+      item.classList.add('blobio-extension-tooltip-line');
+
+      if (metric) {
+        item.classList.add('blobio-extension-tooltip-metric', `is-${metric[1].toLowerCase()}`);
+
+        const label = this.document.createElement('span');
+        label.classList.add('blobio-extension-tooltip-metric-label');
+        label.textContent = `FPS-${metric[1]}: `;
+
+        const level = this.document.createElement('span');
+        level.classList.add('blobio-extension-tooltip-metric-level');
+        level.textContent = metric[2];
+
+        const range = this.document.createElement('span');
+        range.classList.add('blobio-extension-tooltip-metric-range');
+        range.textContent = `[${metric[3]}]`;
+
+        item.append(label, level, range);
+      } else if (warning) {
+        item.classList.add('blobio-extension-tooltip-warning');
+        item.textContent = `[${warning[1]}]`;
+      } else {
+        item.textContent = line;
+      }
+
+      this.extensionTooltip.appendChild(item);
+    }
   }
 
   moveExtensionTooltip(event) {

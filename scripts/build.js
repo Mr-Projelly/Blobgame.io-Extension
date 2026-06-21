@@ -12,6 +12,7 @@ const jellyShaderRuntimeFile = resolve(rootDir, 'src/jelly/pageJellyShaderBootst
 const hudInfoRuntimeFile = resolve(rootDir, 'src/hud/pageHudInfoBootstrap.js');
 const emoteSkinRuntimeFile = resolve(rootDir, 'src/emotes/pageEmoteSkinBootstrap.js');
 const cellMassRuntimeFile = resolve(rootDir, 'src/cellMass/pageCellMassBootstrap.js');
+const fpsSaverRuntimeFile = resolve(rootDir, 'src/fpsSaver/pageFpsSaverBootstrap.js');
 const virusAssetFiles = {
   halo: resolve(rootDir, 'assets/virus_glow_1 _mask.png'),
   rotate: resolve(rootDir, 'assets/viurs_glow_2_random_rotate_mask.png'),
@@ -51,6 +52,7 @@ const [
   hudInfoRuntimeSource,
   emoteSkinRuntimeSource,
   cellMassRuntimeSource,
+  fpsSaverRuntimeSource,
   virusHalo,
   virusRotate,
   virusRing,
@@ -69,6 +71,7 @@ const [
   readFile(hudInfoRuntimeFile, 'utf8'),
   readFile(emoteSkinRuntimeFile, 'utf8'),
   readFile(cellMassRuntimeFile, 'utf8'),
+  readFile(fpsSaverRuntimeFile, 'utf8'),
   readFile(virusAssetFiles.halo),
   readFile(virusAssetFiles.rotate),
   readFile(virusAssetFiles.ring),
@@ -166,6 +169,14 @@ nextLoader = embedRuntime(
   '  /* CELL_MASS_RUNTIME_END */',
   cellMassRuntimeSource,
   'pageCellMassBootstrap',
+);
+
+nextLoader = embedRuntime(
+  nextLoader,
+  '  /* FPS_SAVER_RUNTIME_START */',
+  '  /* FPS_SAVER_RUNTIME_END */',
+  fpsSaverRuntimeSource,
+  'pageFpsSaverBootstrap',
 );
 
 const assetStartMarker = '  /* VIRUS_ASSETS_START */';

@@ -797,9 +797,12 @@ html.${className} app-settings .blobio-extension-category-panel[hidden] {
 }
 
 html.${className} app-settings .blobio-extension-setting-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 34px;
   align-items: center;
   gap: 10px;
+  grid-column: 1 / -1;
+  width: 100%;
   padding: 10px 12px;
   border: 1px solid rgba(142, 255, 174, 0.34);
   border-radius: 8px;
@@ -808,6 +811,13 @@ html.${className} app-settings .blobio-extension-setting-row {
   font-weight: 700;
   text-shadow: 0 0 6px rgba(118, 255, 154, 0.62);
   box-shadow: 0 0 14px rgba(79, 255, 130, 0.18), inset 0 0 10px rgba(79, 255, 130, 0.1);
+  box-sizing: border-box;
+}
+
+html.${className} app-settings .blobio-extension-row-spacer {
+  display: block;
+  width: 32px;
+  height: 32px;
 }
 
 html.${className} app-settings .blobio-admin-only-setting-row.is-hidden {
@@ -1160,6 +1170,197 @@ html.${className} app-settings .blobio-cell-mass-slider-input::-moz-range-thumb 
 }
 
 html.${className} app-settings .blobio-cell-mass-slider-value {
+  color: #c8ffd4;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+html.${className} app-settings .blobio-fps-saver-setting-group {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 8px;
+  min-width: 0;
+}
+
+html.${className} app-settings .blobio-fps-saver-setting-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 34px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+html.${className} app-settings .blobio-fps-saver-dropdown-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid rgba(130, 255, 166, 0.72);
+  border-radius: 5px;
+  outline: none;
+  background: rgba(0, 0, 0, 0.74);
+  color: #ecfff1;
+  text-align: center;
+  text-shadow: 0 0 5px rgba(255, 255, 255, 0.76), 0 0 12px rgba(77, 255, 126, 0.74);
+  box-shadow: inset 0 0 9px rgba(79, 255, 130, 0.12), 0 0 12px rgba(79, 255, 130, 0.26);
+  cursor: pointer;
+}
+
+html.${className} app-settings .blobio-fps-saver-dropdown-button:hover,
+html.${className} app-settings .blobio-fps-saver-dropdown-button:focus-visible {
+  border-color: rgba(151, 255, 181, 0.96);
+  box-shadow: inset 0 0 11px rgba(79, 255, 130, 0.18), 0 0 15px rgba(79, 255, 130, 0.42);
+}
+
+html.${className} app-settings .blobio-fps-saver-dropdown-symbol {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0 1px;
+  color: inherit;
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1;
+  text-align: center;
+  text-shadow: inherit;
+  pointer-events: none;
+}
+
+html.${className} app-settings .blobio-fps-saver-button-menu {
+  display: grid;
+  gap: 9px;
+  width: 100%;
+  min-width: 0;
+  max-height: 520px;
+  padding: 11px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid rgba(142, 255, 174, 0.38);
+  border-radius: 9px;
+  background: linear-gradient(145deg, rgba(3, 31, 19, 0.94), rgba(1, 10, 7, 0.94));
+  box-shadow: inset 0 0 18px rgba(79, 255, 130, 0.12), 0 0 14px rgba(79, 255, 130, 0.16);
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 232, 133, 0.88) rgba(0, 18, 10, 0.72);
+}
+
+html.${className} app-settings .blobio-fps-saver-button-menu[hidden] {
+  display: none !important;
+}
+
+html.${className} app-settings .blobio-fps-saver-section-title {
+  display: grid;
+  grid-template-columns: minmax(16px, 1fr) auto minmax(16px, 1fr);
+  align-items: center;
+  gap: 8px;
+  margin-top: 5px;
+  padding: 4px 0;
+  color: #c8ffd4;
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1.2;
+  text-align: center;
+  text-shadow: 0 0 7px rgba(77, 255, 126, 0.5);
+}
+
+html.${className} app-settings .blobio-fps-saver-section-title::before,
+html.${className} app-settings .blobio-fps-saver-section-title::after {
+  content: "";
+  height: 1px;
+  background: linear-gradient(90deg, rgba(112, 255, 153, 0), rgba(112, 255, 153, 0.68));
+  box-shadow: 0 0 7px rgba(79, 255, 130, 0.26);
+}
+
+html.${className} app-settings .blobio-fps-saver-section-title::after {
+  background: linear-gradient(90deg, rgba(112, 255, 153, 0.68), rgba(112, 255, 153, 0));
+}
+
+html.${className} app-settings .blobio-fps-saver-checkbox-row {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: #dfffe6;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+html.${className} app-settings .blobio-fps-saver-checkbox-row input {
+  width: 16px !important;
+  height: 16px !important;
+  margin: 0 !important;
+  accent-color: rgb(74, 229, 111);
+}
+
+html.${className} app-settings .blobio-fps-saver-slider-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(110px, 1.2fr) 54px;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: #dfffe6;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+html.${className} app-settings .blobio-fps-saver-slider-input {
+  width: 100%;
+  min-width: 0;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+html.${className} app-settings .blobio-fps-saver-slider-input::-webkit-slider-runnable-track {
+  height: 6px;
+  border: 1px solid rgba(147, 255, 177, 0.62);
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(13, 76, 34, 0.94), rgba(91, 238, 124, 0.94));
+  box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.58), 0 0 8px rgba(79, 255, 130, 0.28);
+}
+
+html.${className} app-settings .blobio-fps-saver-slider-input::-webkit-slider-thumb {
+  width: 16px;
+  height: 16px;
+  margin-top: -6px;
+  border: 1px solid rgba(225, 255, 233, 0.96);
+  border-radius: 50%;
+  appearance: none;
+  -webkit-appearance: none;
+  background: linear-gradient(145deg, #c5ffd2, #37cb69);
+  box-shadow: 0 0 10px rgba(79, 255, 130, 0.72), inset 0 0 5px rgba(255, 255, 255, 0.42);
+}
+
+html.${className} app-settings .blobio-fps-saver-slider-input::-moz-range-track {
+  height: 6px;
+  border: 1px solid rgba(147, 255, 177, 0.62);
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(13, 76, 34, 0.94), rgba(91, 238, 124, 0.94));
+  box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.58), 0 0 8px rgba(79, 255, 130, 0.28);
+}
+
+html.${className} app-settings .blobio-fps-saver-slider-input::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: 1px solid rgba(225, 255, 233, 0.96);
+  border-radius: 50%;
+  background: linear-gradient(145deg, #c5ffd2, #37cb69);
+  box-shadow: 0 0 10px rgba(79, 255, 130, 0.72), inset 0 0 5px rgba(255, 255, 255, 0.42);
+}
+
+html.${className} app-settings .blobio-fps-saver-slider-value {
   color: #c8ffd4;
   font-variant-numeric: tabular-nums;
   text-align: right;
@@ -2152,6 +2353,35 @@ html.${className} app-settings .blobio-extension-setting-row label[for="config-s
   text-shadow: 0 0 6px rgba(118, 255, 154, 0.46);
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.38), 0 0 16px rgba(79, 255, 130, 0.24);
   pointer-events: none;
+}
+
+.blobio-extension-tooltip-line + .blobio-extension-tooltip-line {
+  margin-top: 5px;
+}
+
+.blobio-extension-tooltip-metric {
+  color: #90ffad;
+  font-weight: 900;
+  text-shadow: 0 0 6px rgba(109, 255, 143, 0.78), 0 0 12px rgba(34, 205, 87, 0.5);
+}
+
+.blobio-extension-tooltip-metric-label {
+  color: #c9ffd4;
+}
+
+.blobio-extension-tooltip-metric-level {
+  color: #8effa9;
+}
+
+.blobio-extension-tooltip-metric-range {
+  margin-left: 2px;
+  color: #e9ffee;
+}
+
+.blobio-extension-tooltip-warning {
+  color: #ff6b6b;
+  font-weight: 900;
+  text-shadow: 0 0 8px rgba(255, 56, 56, 0.58);
 }
 
 html.${className} app-skins .blobio-custom-skin-tab {
