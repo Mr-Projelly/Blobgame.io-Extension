@@ -2360,17 +2360,36 @@ html.${className} app-settings .blobio-extension-setting-row label[for="config-s
 }
 
 .blobio-extension-tooltip-metric {
-  color: #90ffad;
   font-weight: 900;
+}
+
+.blobio-extension-tooltip-metric.is-gain .blobio-extension-tooltip-metric-label {
+  color: #7dff9c;
   text-shadow: 0 0 6px rgba(109, 255, 143, 0.78), 0 0 12px rgba(34, 205, 87, 0.5);
 }
 
-.blobio-extension-tooltip-metric-label {
-  color: #c9ffd4;
+.blobio-extension-tooltip-metric.is-impact .blobio-extension-tooltip-metric-label {
+  color: #ff6969;
+  text-shadow: 0 0 6px rgba(255, 85, 85, 0.78), 0 0 12px rgba(214, 38, 38, 0.46);
 }
 
 .blobio-extension-tooltip-metric-level {
+  font-weight: 900;
+}
+
+.blobio-extension-tooltip-metric-level.is-low {
   color: #8effa9;
+  text-shadow: 0 0 6px rgba(109, 255, 143, 0.7), 0 0 12px rgba(34, 205, 87, 0.42);
+}
+
+.blobio-extension-tooltip-metric-level.is-medium {
+  color: #ffe16b;
+  text-shadow: 0 0 6px rgba(255, 225, 107, 0.72), 0 0 12px rgba(216, 166, 34, 0.42);
+}
+
+.blobio-extension-tooltip-metric-level.is-high {
+  color: #ff6969;
+  text-shadow: 0 0 6px rgba(255, 85, 85, 0.76), 0 0 12px rgba(214, 38, 38, 0.46);
 }
 
 .blobio-extension-tooltip-metric-range {

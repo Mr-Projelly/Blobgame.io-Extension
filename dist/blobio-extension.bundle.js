@@ -3450,8 +3450,10 @@
     objectRenderer: true,
     foodCulling: true,
     foodLimit: 90,
+    foodCalcDelayMs: 0,
     massCulling: true,
-    massLimit: 30
+    massLimit: 30,
+    massCalcDelayMs: 0
   });
   function readFpsSaverSettings(storage, document = globalThis.document) {
     const storedSnapshot = parseFpsSaverSnapshot(storage?.getItem?.(FPS_SAVER_SNAPSHOT_KEY));
@@ -3516,8 +3518,10 @@
       objectRenderer: boolSetting(source.objectRenderer, DEFAULT_FPS_SAVER_SETTINGS.objectRenderer),
       foodCulling: boolSetting(source.foodCulling, DEFAULT_FPS_SAVER_SETTINGS.foodCulling),
       foodLimit: clampInteger(source.foodLimit, 0, 900, DEFAULT_FPS_SAVER_SETTINGS.foodLimit),
+      foodCalcDelayMs: clampInteger(source.foodCalcDelayMs, 0, 1e3, DEFAULT_FPS_SAVER_SETTINGS.foodCalcDelayMs),
       massCulling: boolSetting(source.massCulling, DEFAULT_FPS_SAVER_SETTINGS.massCulling),
-      massLimit: clampInteger(source.massLimit, 0, 900, DEFAULT_FPS_SAVER_SETTINGS.massLimit)
+      massLimit: clampInteger(source.massLimit, 0, 900, DEFAULT_FPS_SAVER_SETTINGS.massLimit),
+      massCalcDelayMs: clampInteger(source.massCalcDelayMs, 0, 1e3, DEFAULT_FPS_SAVER_SETTINGS.massCalcDelayMs)
     };
   }
   function boolSetting(value, fallback) {
@@ -3575,8 +3579,10 @@
     objectRenderer: true,
     foodCulling: true,
     foodLimit: 90,
+    foodCalcDelayMs: 0,
     massCulling: true,
-    massLimit: 30
+    massLimit: 30,
+    massCalcDelayMs: 0
   };
   function pageFpsSaverBootstrap(initialSettings = {}, pageWindow = globalThis) {
     const root = pageWindow || globalThis;
@@ -3589,6 +3595,8 @@
     const isMainPage = (host === "blobgame.io" || host.endsWith(".blobgame.io")) && !isGameClient;
     const state = root.__blobioFpsSaverState || createState(initialSettings, isGameClient, isMainPage);
     state.settings = normalizeSettings(initialSettings);
+    ensureCullBudgets(state);
+    clampCullBudgets(state);
     state.isGameClient = isGameClient;
     state.isMainPage = isMainPage;
     state.document = doc;
@@ -3601,6 +3609,8 @@
     onReady(doc, root, () => applySettings(root, doc, state));
     root.__blobioFpsSaverRefresh = (nextSettings = {}) => {
       state.settings = normalizeSettings(nextSettings);
+      ensureCullBudgets(state);
+      clampCullBudgets(state);
       exposeHooks(root, state);
       applySettings(root, doc, state);
       return { ...state.settings };
@@ -3611,10 +3621,11 @@
     return true;
   }
   function createState(settings, isGameClient, isMainPage) {
+    const cleanSettings = normalizeSettings(settings);
     return {
       version: FPS_SAVER_VERSION,
       installedAt: Date.now(),
-      settings: normalizeSettings(settings),
+      settings: cleanSettings,
       isGameClient,
       isMainPage,
       rafHooked: false,
@@ -3630,6 +3641,10 @@
         foodSkipped: 0,
         massSeen: 0,
         massSkipped: 0
+      },
+      cullBudget: {
+        food: createCullBudget(cleanSettings.foodLimit),
+        mass: createCullBudget(cleanSettings.massLimit)
       },
       counters: {
         rafFrames: 0,
@@ -3663,8 +3678,10 @@
       objectRenderer: boolSetting2(data.objectRenderer, FPS_SAVER_DEFAULT_SETTINGS.objectRenderer),
       foodCulling: boolSetting2(data.foodCulling, FPS_SAVER_DEFAULT_SETTINGS.foodCulling),
       foodLimit: clampInteger2(data.foodLimit, 0, 900, FPS_SAVER_DEFAULT_SETTINGS.foodLimit),
+      foodCalcDelayMs: clampInteger2(data.foodCalcDelayMs, 0, 1e3, FPS_SAVER_DEFAULT_SETTINGS.foodCalcDelayMs),
       massCulling: boolSetting2(data.massCulling, FPS_SAVER_DEFAULT_SETTINGS.massCulling),
-      massLimit: clampInteger2(data.massLimit, 0, 900, FPS_SAVER_DEFAULT_SETTINGS.massLimit)
+      massLimit: clampInteger2(data.massLimit, 0, 900, FPS_SAVER_DEFAULT_SETTINGS.massLimit),
+      massCalcDelayMs: clampInteger2(data.massCalcDelayMs, 0, 1e3, FPS_SAVER_DEFAULT_SETTINGS.massCalcDelayMs)
     };
   }
   function boolSetting2(value, fallback) {
@@ -3745,8 +3762,16 @@
   }
   function beginRenderFrame(root, state, timestamp) {
     const frame = state.frameCull;
+    const startedAt = Number(timestamp) || now(root);
+    ensureCullBudgets(state);
+    if (frame.startedAt) {
+      updateCullBudget(state.cullBudget.food, frame.foodSeen, state.settings.foodLimit, state.settings.foodCalcDelayMs, startedAt);
+      updateCullBudget(state.cullBudget.mass, frame.massSeen, state.settings.massLimit, state.settings.massCalcDelayMs, startedAt);
+    } else {
+      clampCullBudgets(state);
+    }
     frame.id += 1;
-    frame.startedAt = Number(timestamp) || now(root);
+    frame.startedAt = startedAt;
     frame.foodSeen = 0;
     frame.foodSkipped = 0;
     frame.massSeen = 0;
@@ -3770,7 +3795,7 @@
     if (type === 2) {
       state.frameCull.foodSeen += 1;
       state.counters.foodSeen += 1;
-      if (!state.settings.foodCulling || state.frameCull.foodSeen <= state.settings.foodLimit) {
+      if (!state.settings.foodCulling || state.frameCull.foodSeen <= getCullBudget(state, "food")) {
         return false;
       }
       state.frameCull.foodSkipped += 1;
@@ -3779,12 +3804,79 @@
     }
     state.frameCull.massSeen += 1;
     state.counters.massSeen += 1;
-    if (!state.settings.massCulling || state.frameCull.massSeen <= state.settings.massLimit) {
+    if (!state.settings.massCulling || state.frameCull.massSeen <= getCullBudget(state, "mass")) {
       return false;
     }
     state.frameCull.massSkipped += 1;
     state.counters.massSkipped += 1;
     return true;
+  }
+  function createCullBudget(limit) {
+    return {
+      committed: Math.max(0, Math.round(Number(limit)) || 0),
+      pending: null,
+      pendingAt: 0,
+      lastObserved: 0
+    };
+  }
+  function ensureCullBudgets(state) {
+    if (!state.cullBudget || typeof state.cullBudget !== "object") {
+      state.cullBudget = {};
+    }
+    if (!state.cullBudget.food) {
+      state.cullBudget.food = createCullBudget(state.settings.foodLimit);
+    }
+    if (!state.cullBudget.mass) {
+      state.cullBudget.mass = createCullBudget(state.settings.massLimit);
+    }
+  }
+  function clampCullBudgets(state) {
+    clampCullBudget(state.cullBudget.food, state.settings.foodLimit);
+    clampCullBudget(state.cullBudget.mass, state.settings.massLimit);
+  }
+  function clampCullBudget(budget, limit) {
+    const max = Math.max(0, Math.round(Number(limit)) || 0);
+    budget.committed = Math.max(0, Math.min(max, Math.round(Number(budget.committed)) || 0));
+    if (budget.pending !== null) {
+      budget.pending = Math.max(0, Math.min(max, Math.round(Number(budget.pending)) || 0));
+    }
+  }
+  function updateCullBudget(budget, observedCount, limit, delayMs, timestamp) {
+    const max = Math.max(0, Math.round(Number(limit)) || 0);
+    const observed = Math.max(0, Math.round(Number(observedCount)) || 0);
+    const nextBudget = Math.min(max, observed);
+    const current = Math.max(0, Math.min(max, Math.round(Number(budget.committed)) || 0));
+    const delay = Math.max(0, Math.round(Number(delayMs)) || 0);
+    const time = Math.max(0, Number(timestamp) || 0);
+    budget.lastObserved = observed;
+    budget.committed = current;
+    if (delay <= 0 || nextBudget < current) {
+      budget.committed = nextBudget;
+      budget.pending = null;
+      budget.pendingAt = 0;
+      return;
+    }
+    if (nextBudget === current) {
+      budget.pending = null;
+      budget.pendingAt = 0;
+      return;
+    }
+    if (budget.pending !== nextBudget) {
+      budget.pending = nextBudget;
+      budget.pendingAt = time;
+      return;
+    }
+    if (time - budget.pendingAt >= delay) {
+      budget.committed = nextBudget;
+      budget.pending = null;
+      budget.pendingAt = 0;
+    }
+  }
+  function getCullBudget(state, kind) {
+    ensureCullBudgets(state);
+    const fallback = kind === "food" ? state.settings.foodLimit : state.settings.massLimit;
+    const budget = state.cullBudget[kind];
+    return Math.max(0, Math.min(fallback, Math.round(Number(budget?.committed)) || 0));
   }
   function installGameScriptPatch(root, state) {
     if (!state.isGameClient) {
@@ -4081,6 +4173,10 @@ html.blobio-fps-saver-toast-lite .swal2-hide {
       settings: { ...state.settings },
       counters: { ...state.counters },
       frameCull: { ...state.frameCull },
+      cullBudget: {
+        food: { ...state.cullBudget?.food },
+        mass: { ...state.cullBudget?.mass }
+      },
       patch: {
         scriptPatchInstalled: state.scriptPatchInstalled,
         callbackWrapped: state.callbackWrapped,
@@ -4098,7 +4194,15 @@ html.blobio-fps-saver-toast-lite .swal2-hide {
   }
   pageFpsSaverBootstrap.__test = {
     normalizeSettings,
-    patchGameCode
+    patchGameCode,
+    updateCullBudget,
+    runCullBudgetSequence({ limit = 30, delayMs = 0, observations = [], timestamps = [] } = {}) {
+      const budget = createCullBudget(limit);
+      return observations.map((observed, index) => {
+        updateCullBudget(budget, observed, limit, delayMs, timestamps[index] ?? index * 16);
+        return { ...budget };
+      });
+    }
   };
 
   // src/features/BackgroundFeature.js
@@ -11862,17 +11966,36 @@ html.${className} app-settings .blobio-extension-setting-row label[for="config-s
 }
 
 .blobio-extension-tooltip-metric {
-  color: #90ffad;
   font-weight: 900;
+}
+
+.blobio-extension-tooltip-metric.is-gain .blobio-extension-tooltip-metric-label {
+  color: #7dff9c;
   text-shadow: 0 0 6px rgba(109, 255, 143, 0.78), 0 0 12px rgba(34, 205, 87, 0.5);
 }
 
-.blobio-extension-tooltip-metric-label {
-  color: #c9ffd4;
+.blobio-extension-tooltip-metric.is-impact .blobio-extension-tooltip-metric-label {
+  color: #ff6969;
+  text-shadow: 0 0 6px rgba(255, 85, 85, 0.78), 0 0 12px rgba(214, 38, 38, 0.46);
 }
 
 .blobio-extension-tooltip-metric-level {
+  font-weight: 900;
+}
+
+.blobio-extension-tooltip-metric-level.is-low {
   color: #8effa9;
+  text-shadow: 0 0 6px rgba(109, 255, 143, 0.7), 0 0 12px rgba(34, 205, 87, 0.42);
+}
+
+.blobio-extension-tooltip-metric-level.is-medium {
+  color: #ffe16b;
+  text-shadow: 0 0 6px rgba(255, 225, 107, 0.72), 0 0 12px rgba(216, 166, 34, 0.42);
+}
+
+.blobio-extension-tooltip-metric-level.is-high {
+  color: #ff6969;
+  text-shadow: 0 0 6px rgba(255, 85, 85, 0.76), 0 0 12px rgba(214, 38, 38, 0.46);
 }
 
 .blobio-extension-tooltip-metric-range {
@@ -13546,12 +13669,28 @@ html.${className} .blobio-watermark-extension::after {
       tooltip: "FPS-Gain: High[40-200]\nMaximum food pellets rendered per frame when food culling is enabled. Lower numbers save more GPU work but hide more pellets."
     },
     {
+      key: "foodCalcDelayMs",
+      label: "F/P Calc-Delay",
+      min: 0,
+      max: 1e3,
+      step: 25,
+      tooltip: "FPS-Gain: Medium[10-80]\nDelay before raising the food pellet render budget after the count refills. Lower budgets still apply quickly, so this mainly reduces fast spawn/eat render churn."
+    },
+    {
       key: "massLimit",
       label: "T/M render limit",
       min: 0,
       max: 900,
       step: 1,
       tooltip: "FPS-Gain: Medium[20-120]\nMaximum thrown-mass pellets rendered per frame when thrown mass culling is enabled. Lower numbers save more GPU work but hide more thrown mass."
+    },
+    {
+      key: "massCalcDelayMs",
+      label: "T/M Calc-Delay",
+      min: 0,
+      max: 1e3,
+      step: 25,
+      tooltip: "FPS-Gain: Medium[10-80]\nDelay before raising the thrown-mass render budget after the count refills. Lower budgets still apply quickly, so this mainly reduces fast throw/eat render churn."
     },
     {
       key: "maxChatRows",
@@ -13653,9 +13792,11 @@ html.${className} .blobio-watermark-extension::after {
         this.createSectionTitle("Rainbow Food/Pellets"),
         this.createCheckboxRow({ key: "foodCulling", label: "F/P-Culling", tooltip: "FPS-Gain: High[40-200]\nSkips food pellet render work after the per-frame food limit is reached." }),
         this.createSliderRow(SLIDERS2.find((slider) => slider.key === "foodLimit")),
+        this.createSliderRow(SLIDERS2.find((slider) => slider.key === "foodCalcDelayMs")),
         this.createSectionTitle("Thrown Mass"),
         this.createCheckboxRow({ key: "massCulling", label: "T/M-Culling", tooltip: "FPS-Gain: Medium[20-120]\nSkips thrown-mass render work after the per-frame thrown-mass limit is reached." }),
         this.createSliderRow(SLIDERS2.find((slider) => slider.key === "massLimit")),
+        this.createSliderRow(SLIDERS2.find((slider) => slider.key === "massCalcDelayMs")),
         this.createSectionTitle("Chat"),
         this.createSliderRow(SLIDERS2.find((slider) => slider.key === "maxChatRows"))
       );
@@ -15798,12 +15939,14 @@ html.${className} .blobio-watermark-extension::after {
         const item = this.document.createElement("div");
         item.classList.add("blobio-extension-tooltip-line");
         if (metric) {
-          item.classList.add("blobio-extension-tooltip-metric", `is-${metric[1].toLowerCase()}`);
+          const metricKind = metric[1].toLowerCase();
+          const levelKind = metric[2].toLowerCase();
+          item.classList.add("blobio-extension-tooltip-metric", `is-${metricKind}`, `is-level-${levelKind}`);
           const label = this.document.createElement("span");
           label.classList.add("blobio-extension-tooltip-metric-label");
           label.textContent = `FPS-${metric[1]}: `;
           const level = this.document.createElement("span");
-          level.classList.add("blobio-extension-tooltip-metric-level");
+          level.classList.add("blobio-extension-tooltip-metric-level", `is-${levelKind}`);
           level.textContent = metric[2];
           const range = this.document.createElement("span");
           range.classList.add("blobio-extension-tooltip-metric-range");

@@ -1464,14 +1464,16 @@ export class MenuFeature {
       item.classList.add('blobio-extension-tooltip-line');
 
       if (metric) {
-        item.classList.add('blobio-extension-tooltip-metric', `is-${metric[1].toLowerCase()}`);
+        const metricKind = metric[1].toLowerCase();
+        const levelKind = metric[2].toLowerCase();
+        item.classList.add('blobio-extension-tooltip-metric', `is-${metricKind}`, `is-level-${levelKind}`);
 
         const label = this.document.createElement('span');
         label.classList.add('blobio-extension-tooltip-metric-label');
         label.textContent = `FPS-${metric[1]}: `;
 
         const level = this.document.createElement('span');
-        level.classList.add('blobio-extension-tooltip-metric-level');
+        level.classList.add('blobio-extension-tooltip-metric-level', `is-${levelKind}`);
         level.textContent = metric[2];
 
         const range = this.document.createElement('span');
